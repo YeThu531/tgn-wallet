@@ -1,4 +1,3 @@
-// External Web3 Libraries dynamically loading
 const loadScript = (src) => {
     return new Promise((resolve, reject) => {
         const script = document.createElement("script");
@@ -14,7 +13,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     app.innerHTML = `<div style="color:white; padding:20px; text-align:center;">Initializing Real Web3 Engine...</div>`;
 
     try {
-        // Load Ethers.js for EVM Chains
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js");
         
         let walletData = localStorage.getItem("TGN_SECURE_WALLET");
@@ -39,9 +37,6 @@ function renderCreateWalletUI() {
             <button id="createBtn" style="width: 100%; padding: 15px; border-radius: 12px; border: none; background: #0088cc; color: white; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 15px;">
                 Create New Wallet
             </button>
-            <button id="importBtn" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #0088cc; background: transparent; color: #0088cc; font-weight: bold; font-size: 16px; cursor: pointer;">
-                Import Existing Seed Phrase
-            </button>
         </div>
     `;
 
@@ -50,36 +45,33 @@ function renderCreateWalletUI() {
 
 function generateRealWallet() {
     const randomWallet = ethers.Wallet.createRandom();
-    const mnemonic = randomWallet.mnemonic.phrase;
-    const address = randomWallet.address;
-    const privateKey = randomWallet.privateKey;
-
     const secureData = {
-        address: address,
-        privateKey: privateKey,
-        mnemonic: mnemonic
+        address: randomWallet.address,
+        privateKey: randomWallet.privateKey,
+        mnemonic: randomWallet.mnemonic.phrase
     };
 
-    // Encrypt & Save to Browser LocalStorage
     localStorage.setItem("TGN_SECURE_WALLET", JSON.stringify(secureData));
     renderDashboardUI(secureData);
 }
 
-function renderDashboardUI(wallet) {
+async function renderDashboardUI(wallet) {
     const app = document.getElementById("app");
     app.innerHTML = `
         <div style="font-family: Arial, sans-serif; background-color: #121824; color: #ffffff; min-height: 100vh; padding: 20px; box-sizing: border-box;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div>
-                    <h3 style="margin: 0; color: #8a99ad; font-size: 14px;">EVM Address</h3>
-                    <p style="margin: 5px 0 0 0; font-size: 11px; color: #38bdf8; word-break: break-all;">${wallet.address}</p>
-                </div>
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #8a99ad; font-size: 12px;">EVM WALLET ADDRESS</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; color: #38bdf8; word-break: break-all; background: #1e293b; padding: 8px; border-radius: 6px;">${wallet.address}</p>
+            </div>
+
+            <div style="background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                <p style="margin: 0; color: #94a3b8; font-size: 12px;">BNB Smart Chain Balance</p>
+                <h1 id="bnbBalance" style="margin: 10px 0 0 0; font-size: 28px; color: #f59e0b;">Fetching...</h1>
             </div>
 
             <div style="background: #1e293b; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 10px 0; color: #f59e0b;">⚠️ Secret Recovery Phrase (12 Words)</h4>
-                <p style="font-size: 12px; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 8px; word-spacing: 5px;">${wallet.mnemonic}</p>
-                <small style="color: #ef4444;">ဒီ Mnemonic ကို ဘာမှမသိအောင် လုံခြုံစွာ သိမ်းထားပါ။</small>
+                <h4 style="margin: 0 0 10px 0; color: #f59e0b; font-size: 13px;">⚠️ Secret Recovery Phrase (12 Words)</h4>
+                <p style="font-size: 11px; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 8px; word-spacing: 4px;">${wallet.mnemonic}</p>
             </div>
 
             <div style="display: flex; gap: 10px;">
@@ -88,4 +80,13 @@ function renderDashboardUI(wallet) {
             </div>
         </div>
     `;
+
+    try {
+        const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+        const rawBalance = await provider.getBalance(wallet.address);
+        const formattedBalance = ethers.utils.formatEther(rawBalance);
+        document.getElementById("bnbBalance").innerText = parseFloat(formattedBalance).toFixed(4) + " BNB";
+    } catch (err) {
+        document.getElementById("bnbBalance").innerText = "0.0000 BNB";
+    }
 }
