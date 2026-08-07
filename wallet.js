@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     try {
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js");
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js");
         
         let walletData = localStorage.getItem("TGN_SECURE_WALLET");
 
@@ -33,8 +34,7 @@ function renderCreateWalletUI() {
         <div style="font-family: Arial, sans-serif; background-color: #121824; color: #ffffff; min-height: 100vh; padding: 20px; box-sizing: border-box; text-align: center;">
             <h2 style="margin-top: 40px; color: #0088cc;">TGN Web3 Wallet</h2>
             <p style="color: #8a99ad; font-size: 14px; margin-bottom: 40px;">Non-Custodial Multi-Chain Wallet</p>
-            
-            <button id="createBtn" style="width: 100%; padding: 15px; border-radius: 12px; border: none; background: #0088cc; color: white; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 15px;">
+            <button id="createBtn" style="width: 100%; padding: 15px; border-radius: 12px; border: none; background: #0088cc; color: white; font-weight: bold; font-size: 16px; cursor: pointer;">
                 Create New Wallet
             </button>
         </div>
@@ -69,14 +69,16 @@ async function renderDashboardUI(wallet) {
                 <h1 id="bnbBalance" style="margin: 10px 0 0 0; font-size: 28px; color: #f59e0b;">Fetching...</h1>
             </div>
 
-            <div style="background: #1e293b; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 10px 0; color: #f59e0b; font-size: 13px;">⚠️ Secret Recovery Phrase (12 Words)</h4>
-                <p style="font-size: 11px; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 8px; word-spacing: 4px;">${wallet.mnemonic}</p>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="receiveBtn" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #0088cc; color: white; font-weight: bold; cursor: pointer;">Receive</button>
+                <button id="sendBtn" style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #222d3d; color: #0088cc; font-weight: bold; cursor: pointer;">Send</button>
             </div>
 
-            <div style="display: flex; gap: 10px;">
-                <button style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #0088cc; color: white; font-weight: bold;">Receive</button>
-                <button style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #222d3d; color: #0088cc; font-weight: bold;">Send</button>
+            <div id="actionArea" style="background: #1e293b; border-radius: 12px; padding: 15px; margin-bottom: 20px; display: none;"></div>
+
+            <div style="background: #1e293b; border-radius: 12px; padding: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #f59e0b; font-size: 13px;">⚠️ Secret Recovery Phrase</h4>
+                <p style="font-size: 11px; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 8px; word-spacing: 4px;">${wallet.mnemonic}</p>
             </div>
         </div>
     `;
@@ -89,4 +91,41 @@ async function renderDashboardUI(wallet) {
     } catch (err) {
         document.getElementById("bnbBalance").innerText = "0.0000 BNB";
     }
+
+    document.getElementById("receiveBtn").addEventListener("click", () => {
+        const actionArea = document.getElementById("actionArea");
+        actionArea.style.display = "block";
+        actionArea.innerHTML = `
+            <h4 style="margin: 0 0 15px 0; color: #0088cc;">Send BNB</h4>
+            <input id="recipient" type="text" placeholder="Recipient Address (0x...)" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box;" />
+            <input id="amount" type="number" step="any" placeholder="Amount in BNB" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box;" />
+            <button id="confirmSendBtn" style="width: 100%; padding: 12px; border-radius: 8px; border: none; background: #22c55e; color: white; font-weight: bold; cursor: pointer;">Confirm Transaction</button>
+            <p id="txStatus" style="font-size: 11px; margin-top: 10px; text-align: center;"></p>
+        `;
+
+        document.getElementById("confirmSendBtn").addEventListener("click", async () => {
+            const recipient = document.getElementById("recipient").value.trim();
+            const amount = document.getElementById("amount").value.trim();
+            const txStatus = document.getElementById("txStatus");
+
+            if (!ethers.utils.isAddress(recipient) || !amount || amount <= 0) {
+                txStatus.style.color = "#ef4444";
+                txStatus.innerText = "Invalid inputs!";
+                return;
+            }
+
+            try {
+                txStatus.style.color = "#f59e0b";
+                txStatus.innerText = "Sending Transaction...";
+                const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+                const signer = new ethers.Wallet(wallet.privateKey, provider);
+                const tx = await signer.sendTransaction({ to: recipient, value: ethers.utils.parseEther(amount) });
+                txStatus.style.color = "#22c55e";
+                txStatus.innerText = `Success! Tx Hash: ${tx.hash.substring(0, 10)}...`;
+            } catch (err) {
+                txStatus.style.color = "#ef4444";
+                txStatus.innerText = "Transaction failed!";
+            }
+        });
+    });
 }
