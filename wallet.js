@@ -32,7 +32,7 @@ let activeTab = "WALLET";
 
 document.addEventListener("DOMContentLoaded", async () => {
     const app = document.getElementById("app");
-    app.innerHTML = `<div style="color:white; padding:50px; text-align:center;">Launching Tonkeeper Style Engine...</div>`;
+    app.innerHTML = `<div style="color:white; padding:50px; text-align:center;">Loading Wallet Engine...</div>`;
 
     try {
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js");
@@ -97,7 +97,7 @@ function saveAndLaunchWallet(walletObj) {
     const secureData = {
         address: walletObj.address,
         privateKey: walletObj.privateKey,
-        mnemonic: walletObj.mnemonic ? walletObj.mnemonic.phrase : "Imported via Key"
+        mnemonic: walletObj.mnemonic ? walletObj.mnemonic.phrase : "Imported via Private Key"
     };
     localStorage.setItem("TGN_SECURE_WALLET", JSON.stringify(secureData));
     renderMainLayout(secureData);
@@ -136,14 +136,14 @@ function renderMainLayout(wallet) {
                 <button class="nav-btn" data-tab="SETTINGS" style="background:none; border:none; color:#708499; font-size:11px; text-align:center; cursor:pointer;">
                     <div style="font-size:20px;">⚙️</div>Settings
                 </button>
-            </div><!-- Binance Style Token Picker Modal -->
-            <div id="tokenModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:200; padding:20px; box-sizing:border-box;">
-                <div style="background:#17212b; border-radius:16px; padding:20px; max-height:80vh; overflow-y:auto; position:relative; margin-top:10vh;">
+            </div><!-- Modal Container -->
+            <div id="actionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:200; padding:20px; box-sizing:border-box;">
+                <div style="background:#17212b; border-radius:16px; padding:20px; max-height:85vh; overflow-y:auto; position:relative; margin-top:5vh;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h4 id="modalTitle" style="margin:0; color:white; font-size:16px;">Select Asset</h4>
+                        <h4 id="modalTitle" style="margin:0; color:white; font-size:16px;">Action</h4>
                         <span id="closeModal" style="color:#708499; font-size:20px; cursor:pointer;">✕</span>
                     </div>
-                    <div id="modalList"></div>
+                    <div id="modalBody"></div>
                 </div>
             </div>
         </div>
@@ -156,7 +156,7 @@ function renderMainLayout(wallet) {
     });
 
     document.getElementById("closeModal").addEventListener("click", () => {
-        document.getElementById("tokenModal").style.display = "none";
+        document.getElementById("actionModal").style.display = "none";
     });
 
     document.querySelectorAll(".nav-btn").forEach(btn => {
@@ -177,29 +177,38 @@ function loadTab(tab, wallet) {
     
     if (tab === "WALLET") {
         container.innerHTML = `
-            <!-- Tonkeeper Balance Display -->
             <div style="text-align:center; padding:20px 0 10px 0;">
-                <div style="font-size:36px; font-weight:bold; color:white;">$0.00</div>
-                <div id="copyAddrBtn" style="font-size:12px; color:#708499; margin-top:5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; background:#17212b; padding:4px 10px; border-radius:12px;">
-                    Your address ${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)} 📋
+                <div style="font-size:38px; font-weight:800; color:white; letter-spacing:-0.5px;">$0.00</div>
+                <div id="copyAddrBtn" style="font-size:12px; color:#8e9bae; margin-top:6px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:rgba(23,33,43,0.8); padding:5px 12px; border-radius:20px; border:1px solid #242f3d;">
+                    <span>${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)}</span> 📋
                 </div>
             </div>
 
-            <!-- Tonkeeper Style Round Action Buttons -->
-            <div style="display:flex; justify-content:center; gap:25px; margin:25px 0 30px 0;">
+            <!-- Modern Action Buttons Layout -->
+            <div style="display:flex; justify-content:center; gap:28px; margin:28px 0 32px 0;">
+                <!-- Send Button -->
                 <div id="sendAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:50px; height:50px; border-radius:50%; background:#17212b; border:1px solid #242f3d; display:flex; justify-content:center; align-items:center; font-size:20px; margin:0 auto 6px auto; color:#248bca;">⬆</div>
-                    <span style="font-size:12px; color:#708499;">Send</span>
+                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #0088cc 0%, #005588 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(0, 136, 204, 0.3); transition: transform 0.15s ease;">
+                        ↗
+                    </div>
+                    <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Send</span>
                 </div>
+
+                <!-- Receive Button -->
                 <div id="receiveAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:50px; height:50px; border-radius:50%; background:#17212b; border:1px solid #242f3d; display:flex; justify-content:center; align-items:center; font-size:20px; margin:0 auto 6px auto; color:#248bca;">⬇</div>
-                    <span style="font-size:12px; color:#708499;">Receive</span>
-                </div>
+                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #10b981 0%, #047857 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); transition: transform 0.15s ease;">
+                        ↙
+                    </div>
+                    <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Receive</span>
+                </div><!-- Swap Button -->
                 <div id="swapAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:50px; height:50px; border-radius:50%; background:#17212b; border:1px solid #242f3d; display:flex; justify-content:center; align-items:center; font-size:20px; margin:0 auto 6px auto; color:#248bca;">🔄</div>
-                    <span style="font-size:12px; color:#708499;">Swap</span>
+                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #6366f1 0%, #4338ca 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3); transition: transform 0.15s ease;">
+                        🔄
+                    </div>
+                    <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Swap</span>
                 </div>
-            </div><!-- Token Assets List -->
+            </div>
+
             <div style="padding:0 20px;">
                 <div style="font-size:14px; font-weight:bold; color:#708499; margin-bottom:12px;">Assets</div>
                 <div id="tokenAssetList"></div>
@@ -229,7 +238,6 @@ function loadTab(tab, wallet) {
                     </div>
                 </div>
 
-                <!-- Tonkeeper Style Security & Backup Options -->
                 <div style="background:#17212b; border-radius:14px; overflow:hidden; margin-bottom:15px;">
                     <div id="backupMenu" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #242f3d; cursor:pointer;">
                         <div style="display:flex; align-items:center; gap:10px;">
@@ -247,7 +255,9 @@ function loadTab(tab, wallet) {
 
                 <div id="settingSubArea"></div>
             </div>
-        `;document.getElementById("backupMenu").addEventListener("click", () => {
+        `;
+
+        document.getElementById("backupMenu").addEventListener("click", () => {
             const sub = document.getElementById("settingSubArea");
             sub.innerHTML = `
                 <div style="background:#17212b; border-radius:14px; padding:15px; margin-top:10px;">
@@ -256,12 +266,11 @@ function loadTab(tab, wallet) {
                     <button id="showPhraseBtn" style="width:100%; padding:12px; background:#242f3d; border:1px solid #334155; border-radius:10px; color:#248bca; font-weight:bold; cursor:pointer;">
                         🔑 Show recovery phrase
                     </button>
-                    <div id="phraseDisplay" style="display:none; margin-top:15px; background:#0e1621; padding:12px; border-radius:8px; font-size:12px; color:#22c55e; word-spacing:4px;">
+                    <div id="phraseDisplay" style="display:none; margin-top:15px; background:#0e1621; padding:12px; border-radius:8px; font-size:12px; color:#22c55e; word-break:break-all;">
                         ${wallet.mnemonic}
                     </div>
                 </div>
-            `;
-            document.getElementById("showPhraseBtn").addEventListener("click", () => {
+            `;document.getElementById("showPhraseBtn").addEventListener("click", () => {
                 document.getElementById("phraseDisplay").style.display = "block";
             });
         });
@@ -304,30 +313,95 @@ function renderTokenAssets() {
 }
 
 function openTokenPicker(actionType, wallet) {
-    const modal = document.getElementById("tokenModal");
+    const modal = document.getElementById("actionModal");
     const title = document.getElementById("modalTitle");
-    const list = document.getElementById("modalList");
+    const body = document.getElementById("modalBody");
     
     title.innerText = `${actionType} - Select Token`;
     modal.style.display = "block";
 
-    list.innerHTML = TOKEN_LIST.map(t => `
+    body.innerHTML = TOKEN_LIST.map(t => `
         <div class="token-item" style="display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #242f3d; cursor:pointer;">
             <img src="${t.icon}" style="width:28px; height:28px; border-radius:50%;" />
             <div>
                 <div style="font-weight:bold; font-size:14px; color:white;">${t.symbol}</div>
-                <div style="font-size:11px; color:#708499;">${NETWORKS[currentNetwork].name} Network</div>
+                <div style="font-size:11px; color:#708499;">${NETWORKS[currentNetwork].name}</div>
             </div>
         </div>
-    `).join("");document.querySelectorAll(".token-item").forEach((item, idx) => {
+    `).join("");
+
+    document.querySelectorAll(".token-item").forEach((item, idx) => {
         item.addEventListener("click", () => {
-            modal.style.display = "none";
             const selectedToken = TOKEN_LIST[idx];
             if (actionType === "Receive") {
-                alert(`Deposit ${selectedToken.symbol} (${NETWORKS[currentNetwork].name})\nAddress: ${wallet.address}`);
+                renderReceiveUI(selectedToken, wallet);
             } else {
-                alert(`Send ${selectedToken.symbol} on ${NETWORKS[currentNetwork].name}`);
+                renderSendUI(selectedToken, wallet);
             }
         });
+    });
+}function renderReceiveUI(token, wallet) {
+    const title = document.getElementById("modalTitle");
+    const body = document.getElementById("modalBody");
+
+    title.innerText = `Receive ${token.symbol}`;
+    body.innerHTML = `
+        <div style="text-align:center; padding:10px 0;">
+            <div style="background:white; padding:15px; border-radius:12px; display:inline-block; margin-bottom:15px;">
+                <div id="qrcode"></div>
+            </div>
+            <div style="font-size:12px; color:#708499; margin-bottom:5px;">Network: ${NETWORKS[currentNetwork].name}</div>
+            <div style="font-size:11px; background:#0e1621; color:#22c55e; padding:10px; border-radius:8px; word-break:break-all; border:1px solid #242f3d;">
+                ${wallet.address}
+            </div>
+            <button id="copyRecAddr" style="width:100%; margin-top:15px; padding:12px; background:#248bca; border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer;">
+                📋 Copy Address
+            </button>
+        </div>
+    `;
+
+    new QRCode(document.getElementById("qrcode"), {
+        text: wallet.address,
+        width: 160,
+        height: 160
+    });
+
+    document.getElementById("copyRecAddr").addEventListener("click", () => {
+        navigator.clipboard.writeText(wallet.address);
+        alert("Address Copied!");
+    });
+}
+
+function renderSendUI(token, wallet) {
+    const title = document.getElementById("modalTitle");
+    const body = document.getElementById("modalBody");
+
+    title.innerText = `Send ${token.symbol}`;
+    body.innerHTML = `
+        <div style="padding:5px 0;">
+            <div style="font-size:12px; color:#708499; margin-bottom:15px;">Network: ${NETWORKS[currentNetwork].name}</div>
+            
+            <label style="font-size:12px; color:#708499;">Recipient Address:</label>
+            <input id="sendToAddr" type="text" placeholder="0x..." style="width:100%; margin:6px 0 15px 0; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:12px; box-sizing:border-box; font-size:13px;" />
+
+            <label style="font-size:12px; color:#708499;">Amount (${token.symbol}):</label>
+            <input id="sendAmount" type="number" placeholder="0.0" style="width:100%; margin:6px 0 20px 0; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:12px; box-sizing:border-box; font-size:13px;" />
+
+            <button id="submitSendBtn" style="width:100%; padding:14px; background:#248bca; border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer;">
+                Confirm & Send
+            </button>
+        </div>
+    `;
+
+    document.getElementById("submitSendBtn").addEventListener("click", () => {
+        const toAddr = document.getElementById("sendToAddr").value.trim();
+        const amt = document.getElementById("sendAmount").value.trim();
+
+        if (!toAddr || !amt) {
+            alert("Please fill in recipient address and amount!");
+            return;
+        }
+
+        alert(`Preparing to send ${amt} ${token.symbol} to ${toAddr}...`);
     });
 }
