@@ -9,6 +9,7 @@ const loadScript = (src) => {
 };
 
 const NETWORKS = {
+    TON: { name: "TON Network", symbol: "TON", rpc: "https://toncenter.com/api/v2/jsonRPC", icon: "https://assets.coingecko.com/coins/images/17980/small/ton_token_teal.png" },
     BSC: { name: "BNB Smart Chain", symbol: "BNB", rpc: "https://bsc-dataseed.binance.org/", icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
     ETH: { name: "Ethereum", symbol: "ETH", rpc: "https://cloudflare-eth.com", icon: "https://assets.coingecko.com/coins/images/279/small/ethereum.png" },
     POLYGON: { name: "Polygon", symbol: "MATIC", rpc: "https://polygon-rpc.com", icon: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" },
@@ -19,6 +20,8 @@ const NETWORKS = {
 };
 
 const TOKEN_LIST = [
+    { name: "Gram", symbol: "GRAM", icon: "https://cache.tonapi.io/imgproxy/Q3S-769q_aVl8H6598c4Z6a17gNl1w1939103929.png" },
+    { name: "Toncoin", symbol: "TON", icon: "https://assets.coingecko.com/coins/images/17980/small/ton_token_teal.png" },
     { name: "Tether USD", symbol: "USDT", icon: "https://assets.coingecko.com/coins/images/325/small/Tether.png" },
     { name: "USD Coin", symbol: "USDC", icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png" },
     { name: "BNB Smart Chain", symbol: "BNB", icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
@@ -27,7 +30,7 @@ const TOKEN_LIST = [
     { name: "Avalanche", symbol: "AVAX", icon: "https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png" }
 ];
 
-let currentNetwork = "BSC";
+let currentNetwork = "TON";
 let activeTab = "WALLET";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -113,7 +116,7 @@ function renderMainLayout(wallet) {
                 <div style="display:flex; align-items:center; gap:8px; background:#17212b; padding:6px 12px; border-radius:20px; border:1px solid #242f3d;">
                     <img id="netIcon" src="${NETWORKS[currentNetwork].icon}" style="width:18px; height:18px;" />
                     <select id="networkSelect" style="background:transparent; color:white; border:none; font-weight:bold; outline:none; font-size:13px;">
-                        ${Object.keys(NETWORKS).map(key => `<option value="${key}" style="background:#17212b;">${NETWORKS[key].name}</option>`).join("")}
+                        ${Object.keys(NETWORKS).map(key => `<option value="${key}" ${key === currentNetwork ? 'selected' : ''} style="background:#17212b;">${NETWORKS[key].name}</option>`).join("")}
                     </select>
                 </div>
                 <div id="scanBtn" style="font-size:18px; cursor:pointer; background:#17212b; padding:8px; border-radius:50%;">📷</div>
@@ -188,7 +191,7 @@ function loadTab(tab, wallet) {
             <div style="display:flex; justify-content:center; gap:28px; margin:28px 0 32px 0;">
                 <!-- Send Button -->
                 <div id="sendAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #0088cc 0%, #005588 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(0, 136, 204, 0.3); transition: transform 0.15s ease;">
+                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #0088cc 0%, #005588 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(0, 136, 204, 0.3);">
                         ↗
                     </div>
                     <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Send</span>
@@ -196,13 +199,13 @@ function loadTab(tab, wallet) {
 
                 <!-- Receive Button -->
                 <div id="receiveAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #10b981 0%, #047857 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); transition: transform 0.15s ease;">
+                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #10b981 0%, #047857 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);">
                         ↙
                     </div>
                     <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Receive</span>
                 </div><!-- Swap Button -->
                 <div id="swapAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #6366f1 0%, #4338ca 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3); transition: transform 0.15s ease;">
+                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #6366f1 0%, #4338ca 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);">
                         🔄
                     </div>
                     <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Swap</span>
@@ -382,7 +385,7 @@ function renderSendUI(token, wallet) {
             <div style="font-size:12px; color:#708499; margin-bottom:15px;">Network: ${NETWORKS[currentNetwork].name}</div>
             
             <label style="font-size:12px; color:#708499;">Recipient Address:</label>
-            <input id="sendToAddr" type="text" placeholder="0x..." style="width:100%; margin:6px 0 15px 0; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:12px; box-sizing:border-box; font-size:13px;" />
+            <input id="sendToAddr" type="text" placeholder="UQ... / 0x..." style="width:100%; margin:6px 0 15px 0; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:12px; box-sizing:border-box; font-size:13px;" />
 
             <label style="font-size:12px; color:#708499;">Amount (${token.symbol}):</label>
             <input id="sendAmount" type="number" placeholder="0.0" style="width:100%; margin:6px 0 20px 0; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:12px; box-sizing:border-box; font-size:13px;" />
