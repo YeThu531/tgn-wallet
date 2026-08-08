@@ -9,41 +9,22 @@ const loadScript = (src) => {
 };
 
 const NETWORKS = {
-    BSC: { 
-        name: "BNB Smart Chain", 
-        symbol: "BNB", 
-        rpc: "https://bsc-dataseed.binance.org/",
-        cgId: "binancecoin",
-        icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png"
-    },
-    ETH: { 
-        name: "Ethereum Mainnet", 
-        symbol: "ETH", 
-        rpc: "https://cloudflare-eth.com",
-        cgId: "ethereum",
-        icon: "https://assets.coingecko.com/coins/images/279/small/ethereum.png"
-    },
-    POLYGON: { 
-        name: "Polygon Network", 
-        symbol: "MATIC", 
-        rpc: "https://polygon-rpc.com",
-        cgId: "matic-network",
-        icon: "https://assets.coingecko.com/coins/images/4713/small/polygon.png"
-    }
+    BSC: { name: "BNB Smart Chain", symbol: "BNB", rpc: "https://bsc-dataseed.binance.org/", icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
+    ETH: { name: "Ethereum", symbol: "ETH", rpc: "https://cloudflare-eth.com", icon: "https://assets.coingecko.com/coins/images/279/small/ethereum.png" },
+    POLYGON: { name: "Polygon", symbol: "MATIC", rpc: "https://polygon-rpc.com", icon: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" },
+    ARBITRUM: { name: "Arbitrum One", symbol: "ETH", rpc: "https://arb1.arbitrum.io/rpc", icon: "https://assets.coingecko.com/coins/images/16547/small/arbitrum_logo.png" },
+    OPTIMISM: { name: "Optimism", symbol: "ETH", rpc: "https://mainnet.optimism.io", icon: "https://assets.coingecko.com/coins/images/25244/small/Optimism.png" },
+    AVAX: { name: "Avalanche C-Chain", symbol: "AVAX", rpc: "https://api.avax.network/ext/bc/C/rpc", icon: "https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png" },
+    BASE: { name: "Base Network", symbol: "ETH", rpc: "https://mainnet.base.org", icon: "https://assets.coingecko.com/coins/images/31323/small/base.png" }
 };
 
 const TOKEN_LIST = [
-    { name: "Tether USD", symbol: "USDT", icon: "https://assets.coingecko.com/coins/images/325/small/Tether.png", bscAddr: "0x55d398326f99059fF775485246999027B3197955", ethAddr: "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
-    { name: "USD Coin", symbol: "USDC", icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png", bscAddr: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", ethAddr: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
-    { name: "BNB Token", symbol: "BNB", icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
+    { name: "Tether USD", symbol: "USDT", icon: "https://assets.coingecko.com/coins/images/325/small/Tether.png" },
+    { name: "USD Coin", symbol: "USDC", icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png" },
+    { name: "BNB Smart Chain", symbol: "BNB", icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
     { name: "Ethereum", symbol: "ETH", icon: "https://assets.coingecko.com/coins/images/279/small/ethereum.png" },
-    { name: "Polygon", symbol: "MATIC", icon: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" }
-];
-
-const ERC20_ABI = [
-    "function balanceOf(address owner) view returns (uint256)",
-    "function decimals() view returns (uint8)",
-    "function transfer(address to, uint amount) returns (bool)"
+    { name: "Polygon", symbol: "MATIC", icon: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" },
+    { name: "Avalanche", symbol: "AVAX", icon: "https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png" }
 ];
 
 let currentNetwork = "BSC";
@@ -51,7 +32,7 @@ let activeTab = "WALLET";
 
 document.addEventListener("DOMContentLoaded", async () => {
     const app = document.getElementById("app");
-    app.innerHTML = `<div style="color:white; padding:40px; text-align:center;">Loading Professional Web3 Engine...</div>`;
+    app.innerHTML = `<div style="color:white; padding:50px; text-align:center;">Launching Tonkeeper Style Engine...</div>`;
 
     try {
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js");
@@ -65,28 +46,29 @@ document.addEventListener("DOMContentLoaded", async () => {
             renderMainLayout(JSON.parse(walletData));
         }
     } catch (err) {
-        app.innerHTML = `<div style="color:red; padding:20px; text-align:center;">Failed to load Web3 Engine!</div>`;
+        app.innerHTML = `<div style="color:red; padding:20px; text-align:center;">Failed to load Engine!</div>`;
     }
 });
 
 function renderInitWalletUI() {
     const app = document.getElementById("app");
     app.innerHTML = `
-        <div style="font-family: Arial, sans-serif; background-color: #0b0e14; color: #ffffff; min-height: 100vh; padding: 25px; box-sizing: border-box; text-align: center;">
-            <h2 style="margin-top: 50px; color: #38bdf8; font-size: 26px;">TGN Web3 Wallet</h2>
-            <p style="color: #64748b; font-size: 13px; margin-bottom: 40px;">Multi-Chain Decentralized Wallet</p>
+        <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif; background-color:#0e1621; color:#ffffff; min-height:100vh; padding:30px 20px; box-sizing:border-box; text-align:center;">
+            <div style="font-size:50px; margin-top:40px;">👛</div>
+            <h2 style="color:#ffffff; font-size:24px; margin-top:10px;">TGN Wallet</h2>
+            <p style="color:#708499; font-size:13px; margin-bottom:50px;">Secure & Non-Custodial Multi-Chain Wallet</p>
             
-            <button id="createBtn" style="width: 100%; padding: 15px; border-radius: 12px; border: none; background: #0284c7; color: white; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 15px;">
-                ➕ Create New Wallet
+            <button id="createBtn" style="width:100%; padding:16px; border-radius:14px; border:none; background:#248bca; color:white; font-weight:bold; font-size:15px; cursor:pointer; margin-bottom:12px;">
+                Create New Wallet
             </button>
-            <button id="importBtn" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #334155; background: #1e293b; color: #38bdf8; font-weight: bold; font-size: 15px; cursor: pointer;">
-                📥 Import Existing Wallet
+            <button id="importBtn" style="width:100%; padding:16px; border-radius:14px; border:1px solid #242f3d; background:#17212b; color:#248bca; font-weight:bold; font-size:15px; cursor:pointer;">
+                Import Existing Wallet
             </button>
             
-            <div id="importBox" style="display:none; margin-top: 20px; text-align: left; background: #1e293b; padding: 15px; border-radius: 12px;">
-                <label style="font-size: 12px; color: #94a3b8;">Enter 12-Word Recovery Phrase:</label>
-                <textarea id="mnemonicInput" rows="3" style="width: 100%; margin-top: 8px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 12px;"></textarea>
-                <button id="confirmImportBtn" style="width: 100%; margin-top: 10px; padding: 12px; background: #22c55e; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Confirm Import</button>
+            <div id="importBox" style="display:none; margin-top:20px; text-align:left; background:#17212b; padding:15px; border-radius:14px;">
+                <label style="font-size:12px; color:#708499;">Enter 12-Word Recovery Phrase:</label>
+                <textarea id="mnemonicInput" rows="3" style="width:100%; margin-top:8px; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:10px; box-sizing:border-box; font-size:12px;"></textarea>
+                <button id="confirmImportBtn" style="width:100%; margin-top:10px; padding:12px; background:#22c55e; border:none; border-radius:8px; color:white; font-weight:bold; cursor:pointer;">Confirm Import</button>
             </div>
         </div>
     `;
@@ -115,7 +97,7 @@ function saveAndLaunchWallet(walletObj) {
     const secureData = {
         address: walletObj.address,
         privateKey: walletObj.privateKey,
-        mnemonic: walletObj.mnemonic ? walletObj.mnemonic.phrase : "Imported Private Key"
+        mnemonic: walletObj.mnemonic ? walletObj.mnemonic.phrase : "Imported via Key"
     };
     localStorage.setItem("TGN_SECURE_WALLET", JSON.stringify(secureData));
     renderMainLayout(secureData);
@@ -124,61 +106,65 @@ function saveAndLaunchWallet(walletObj) {
 function renderMainLayout(wallet) {
     const app = document.getElementById("app");
     app.innerHTML = `
-        <div style="font-family: Arial, sans-serif; background-color: #0b0e14; color: #ffffff; min-height: 100vh; padding-bottom: 70px; box-sizing: border-box;">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif; background-color:#0e1621; color:#ffffff; min-height:100vh; padding-bottom:75px; box-sizing:border-box;">
+            
             <!-- Top Header -->
-            <div style="padding: 15px 20px; background: #161b26; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <img id="netIcon" src="${NETWORKS[currentNetwork].icon}" style="width: 20px; height: 20px;" />
-                    <select id="networkSelect" style="background: transparent; color: white; border: none; font-weight: bold; outline: none; font-size: 14px;">
-                        <option value="BSC" style="background: #161b26;">BNB Chain</option>
-                        <option value="ETH" style="background: #161b26;">Ethereum</option>
-                        <option value="POLYGON" style="background: #161b26;">Polygon</option>
+            <div style="padding:15px 20px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:8px; background:#17212b; padding:6px 12px; border-radius:20px; border:1px solid #242f3d;">
+                    <img id="netIcon" src="${NETWORKS[currentNetwork].icon}" style="width:18px; height:18px;" />
+                    <select id="networkSelect" style="background:transparent; color:white; border:none; font-weight:bold; outline:none; font-size:13px;">
+                        ${Object.keys(NETWORKS).map(key => `<option value="${key}" style="background:#17212b;">${NETWORKS[key].name}</option>`).join("")}
                     </select>
                 </div>
-                <button id="copyBtn" style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 5px 10px; border-radius: 6px; font-size: 11px;">Copy Address</button>
+                <div id="scanBtn" style="font-size:18px; cursor:pointer; background:#17212b; padding:8px; border-radius:50%;">📷</div>
             </div>
 
-            <!-- Content Area -->
-            <div id="tabContent" style="padding: 15px;"></div>
+            <!-- Main Content Container -->
+            <div id="tabContent"></div>
 
-            <!-- Bottom Navigation Bar (4 Buttons) -->
-            <div style="position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #161b26; display: flex; border-top: 1px solid #1e293b; justify-content: space-around; align-items: center; z-index: 100;">
-                <button class="nav-btn" data-tab="WALLET" style="background:none; border:none; color: #38bdf8; font-size: 11px; text-align:center;">
-                    <div style="font-size: 18px;">👛</div>WALLET
+            <!-- Bottom Navigation Bar -->
+            <div style="position:fixed; bottom:0; left:0; right:0; height:65px; background:#17212b; display:flex; border-top:1px solid #242f3d; justify-content:space-around; align-items:center; z-index:100;">
+                <button class="nav-btn" data-tab="WALLET" style="background:none; border:none; color:#248bca; font-size:11px; text-align:center; cursor:pointer;">
+                    <div style="font-size:20px;">👛</div>Wallet
                 </button>
-                <button class="nav-btn" data-tab="TRADE" style="background:none; border:none; color: #64748b; font-size: 11px; text-align:center;">
-                    <div style="font-size: 18px;">🔄</div>TRADE
+                <button class="nav-btn" data-tab="TRADE" style="background:none; border:none; color:#708499; font-size:11px; text-align:center; cursor:pointer;">
+                    <div style="font-size:20px;">📈</div>Trade
                 </button>
-                <button class="nav-btn" data-tab="HISTORY" style="background:none; border:none; color: #64748b; font-size: 11px; text-align:center;">
-                    <div style="font-size: 18px;">📜</div>HISTORY
+                <button class="nav-btn" data-tab="HISTORY" style="background:none; border:none; color:#708499; font-size:11px; text-align:center; cursor:pointer;">
+                    <div style="font-size:20px;">🕒</div>Activity
                 </button>
-                <button class="nav-btn" data-tab="SETTINGS" style="background:none; border:none; color: #64748b; font-size: 11px; text-align:center;">
-                    <div style="font-size: 18px;">⚙️</div>SETTINGS
+                <button class="nav-btn" data-tab="SETTINGS" style="background:none; border:none; color:#708499; font-size:11px; text-align:center; cursor:pointer;">
+                    <div style="font-size:20px;">⚙️</div>Settings
                 </button>
+            </div><!-- Binance Style Token Picker Modal -->
+            <div id="tokenModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:200; padding:20px; box-sizing:border-box;">
+                <div style="background:#17212b; border-radius:16px; padding:20px; max-height:80vh; overflow-y:auto; position:relative; margin-top:10vh;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h4 id="modalTitle" style="margin:0; color:white; font-size:16px;">Select Asset</h4>
+                        <span id="closeModal" style="color:#708499; font-size:20px; cursor:pointer;">✕</span>
+                    </div>
+                    <div id="modalList"></div>
+                </div>
             </div>
         </div>
-    `;// Copy Event
-    document.getElementById("copyBtn").addEventListener("click", () => {
-        navigator.clipboard.writeText(wallet.address);
-        const btn = document.getElementById("copyBtn");
-        btn.innerText = "Copied!";
-        setTimeout(() => btn.innerText = "Copy Address", 2000);
-    });
+    `;
 
-    // Network Select Event
     document.getElementById("networkSelect").addEventListener("change", (e) => {
         currentNetwork = e.target.value;
         document.getElementById("netIcon").src = NETWORKS[currentNetwork].icon;
         loadTab(activeTab, wallet);
     });
 
-    // Nav Buttons
+    document.getElementById("closeModal").addEventListener("click", () => {
+        document.getElementById("tokenModal").style.display = "none";
+    });
+
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
             const targetTab = e.currentTarget.getAttribute("data-tab");
             activeTab = targetTab;
-            document.querySelectorAll(".nav-btn").forEach(b => b.style.color = "#64748b");
-            e.currentTarget.style.color = "#38bdf8";
+            document.querySelectorAll(".nav-btn").forEach(b => b.style.color = "#708499");
+            e.currentTarget.style.color = "#248bca";
             loadTab(targetTab, wallet);
         });
     });
@@ -188,91 +174,160 @@ function renderMainLayout(wallet) {
 
 function loadTab(tab, wallet) {
     const container = document.getElementById("tabContent");
+    
     if (tab === "WALLET") {
         container.innerHTML = `
-            <!-- Search Bar -->
-            <input id="tokenSearch" type="text" placeholder="🔍 Search Token or Deposit..." style="width: 100%; padding: 12px; background: #161b26; border: 1px solid #1e293b; border-radius: 10px; color: white; margin-bottom: 15px; box-sizing: border-box;" />
-
-            <!-- Deposit / Send Quick Action -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <button id="depBtn" style="flex:1; padding:10px; background:#0284c7; border:none; border-radius:8px; color:white; font-weight:bold;">📥 Deposit</button>
-                <button id="sendBtn" style="flex:1; padding:10px; background:#1e293b; border:1px solid #334155; border-radius:8px; color:#38bdf8; font-weight:bold;">📤 Send</button>
+            <!-- Tonkeeper Balance Display -->
+            <div style="text-align:center; padding:20px 0 10px 0;">
+                <div style="font-size:36px; font-weight:bold; color:white;">$0.00</div>
+                <div id="copyAddrBtn" style="font-size:12px; color:#708499; margin-top:5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; background:#17212b; padding:4px 10px; border-radius:12px;">
+                    Your address ${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)} 📋
+                </div>
             </div>
 
-            <div id="quickArea" style="display:none; background:#161b26; padding:15px; border-radius:12px; margin-bottom:15px;"></div>
-
-            <!-- Token List -->
-            <div id="tokenListContainer"></div>
-        `;
-
-        document.getElementById("tokenSearch").addEventListener("input", (e) => {
-            renderTokenList(e.target.value.toLowerCase(), wallet);
-        });
-
-        document.getElementById("depBtn").addEventListener("click", () => {
-            const area = document.getElementById("quickArea");
-            area.style.display = "block";
-            area.innerHTML = `
-                <h4 style="margin:0 0 10px 0; text-align:center; color:#38bdf8;">Deposit Crypto (${NETWORKS[currentNetwork].symbol})</h4>
-                <div id="qrcode" style="display:flex; justify-content:center; background:white; padding:10px; border-radius:8px; width:fit-content; margin:0 auto 10px auto;"></div>
-                <p style="font-size:10px; color:#94a3b8; text-align:center; word-break:break-all;">${wallet.address}</p>
-            `;
-            new QRCode(document.getElementById("qrcode"), { text: wallet.address, width: 120, height: 120 });
-        });
-
-        renderTokenList("", wallet);} else if (tab === "TRADE") {
-        container.innerHTML = `
-            <div style="background:#161b26; padding:20px; border-radius:12px; text-align:center;">
-                <h3 style="color:#38bdf8; margin-top:0;">🔄 Instant Swap</h3>
-                <p style="color:#64748b; font-size:12px;">Decentralized DEX Swap Powered by Web3</p>
-                <input type="number" placeholder="0.00 BNB" style="width:100%; padding:12px; margin-bottom:10px; background:#0b0e14; border:1px solid #1e293b; border-radius:8px; color:white;" />
-                <div style="font-size:20px; margin:5px 0;">⬇️</div>
-                <input type="number" placeholder="0.00 USDT" readonly style="width:100%; padding:12px; margin-bottom:15px; background:#0b0e14; border:1px solid #1e293b; border-radius:8px; color:#64748b;" />
-                <button style="width:100%; padding:12px; background:#22c55e; border:none; border-radius:8px; color:white; font-weight:bold;">Swap Tokens</button>
+            <!-- Tonkeeper Style Round Action Buttons -->
+            <div style="display:flex; justify-content:center; gap:25px; margin:25px 0 30px 0;">
+                <div id="sendAction" style="text-align:center; cursor:pointer;">
+                    <div style="width:50px; height:50px; border-radius:50%; background:#17212b; border:1px solid #242f3d; display:flex; justify-content:center; align-items:center; font-size:20px; margin:0 auto 6px auto; color:#248bca;">⬆</div>
+                    <span style="font-size:12px; color:#708499;">Send</span>
+                </div>
+                <div id="receiveAction" style="text-align:center; cursor:pointer;">
+                    <div style="width:50px; height:50px; border-radius:50%; background:#17212b; border:1px solid #242f3d; display:flex; justify-content:center; align-items:center; font-size:20px; margin:0 auto 6px auto; color:#248bca;">⬇</div>
+                    <span style="font-size:12px; color:#708499;">Receive</span>
+                </div>
+                <div id="swapAction" style="text-align:center; cursor:pointer;">
+                    <div style="width:50px; height:50px; border-radius:50%; background:#17212b; border:1px solid #242f3d; display:flex; justify-content:center; align-items:center; font-size:20px; margin:0 auto 6px auto; color:#248bca;">🔄</div>
+                    <span style="font-size:12px; color:#708499;">Swap</span>
+                </div>
+            </div><!-- Token Assets List -->
+            <div style="padding:0 20px;">
+                <div style="font-size:14px; font-weight:bold; color:#708499; margin-bottom:12px;">Assets</div>
+                <div id="tokenAssetList"></div>
             </div>
         `;
-    } else if (tab === "HISTORY") {
-        container.innerHTML = `<div style="background:#161b26; padding:15px; border-radius:12px;"><h4 style="color:#38bdf8; margin:0 0 10px 0;">📜 Transaction History</h4><div id="txLogs" style="font-size:12px; color:#94a3b8;">No transactions found on this network.</div></div>`;
+
+        document.getElementById("copyAddrBtn").addEventListener("click", () => {
+            navigator.clipboard.writeText(wallet.address);
+            alert("Address Copied!");
+        });
+
+        document.getElementById("sendAction").addEventListener("click", () => openTokenPicker("Send", wallet));
+        document.getElementById("receiveAction").addEventListener("click", () => openTokenPicker("Receive", wallet));
+
+        renderTokenAssets();
+
     } else if (tab === "SETTINGS") {
         container.innerHTML = `
-            <div style="background:#161b26; padding:15px; border-radius:12px;">
-                <h4 style="color:#ef4444; margin:0 0 10px 0;">⚠️ Security & Secret Phrase</h4>
-                <p style="font-size:11px; color:#94a3b8; background:#0b0e14; padding:10px; border-radius:8px; word-spacing:4px;">${wallet.mnemonic}</p>
-                <button id="resetBtn" style="width:100%; margin-top:15px; padding:10px; background:#ef4444; border:none; border-radius:8px; color:white; font-weight:bold; cursor:pointer;">Logout / Reset Wallet</button>
+            <div style="padding:15px 20px;">
+                <div style="background:#17212b; border-radius:14px; padding:15px; margin-bottom:15px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="font-size:30px;">👛</div>
+                        <div>
+                            <div style="font-weight:bold; color:white;">Wallet Main</div>
+                            <div style="font-size:11px; color:#708499;">Customize & Backup</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tonkeeper Style Security & Backup Options -->
+                <div style="background:#17212b; border-radius:14px; overflow:hidden; margin-bottom:15px;">
+                    <div id="backupMenu" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #242f3d; cursor:pointer;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span>🔍</span> <span style="font-size:14px;">Backup</span>
+                        </div>
+                        <span style="color:#708499;">›</span>
+                    </div>
+                    <div id="securityMenu" style="padding:15px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span>🔒</span> <span style="font-size:14px;">Security</span>
+                        </div>
+                        <span style="color:#708499;">›</span>
+                    </div>
+                </div>
+
+                <div id="settingSubArea"></div>
             </div>
-        `;
-        document.getElementById("resetBtn").addEventListener("click", () => {
-            if (confirm("Are you sure? Make sure your secret phrase is backed up!")) {
-                localStorage.removeItem("TGN_SECURE_WALLET");
-                location.reload();
-            }
+        `;document.getElementById("backupMenu").addEventListener("click", () => {
+            const sub = document.getElementById("settingSubArea");
+            sub.innerHTML = `
+                <div style="background:#17212b; border-radius:14px; padding:15px; margin-top:10px;">
+                    <h4 style="margin:0 0 8px 0; color:white; font-size:14px;">Manual Backup</h4>
+                    <p style="font-size:11px; color:#708499; margin-bottom:15px;">Back up your wallet manually by writing down the recovery phrase.</p>
+                    <button id="showPhraseBtn" style="width:100%; padding:12px; background:#242f3d; border:1px solid #334155; border-radius:10px; color:#248bca; font-weight:bold; cursor:pointer;">
+                        🔑 Show recovery phrase
+                    </button>
+                    <div id="phraseDisplay" style="display:none; margin-top:15px; background:#0e1621; padding:12px; border-radius:8px; font-size:12px; color:#22c55e; word-spacing:4px;">
+                        ${wallet.mnemonic}
+                    </div>
+                </div>
+            `;
+            document.getElementById("showPhraseBtn").addEventListener("click", () => {
+                document.getElementById("phraseDisplay").style.display = "block";
+            });
+        });
+
+        document.getElementById("securityMenu").addEventListener("click", () => {
+            const sub = document.getElementById("settingSubArea");
+            sub.innerHTML = `
+                <div style="background:#17212b; border-radius:14px; padding:15px; margin-top:10px;">
+                    <h4 style="margin:0 0 10px 0; color:white; font-size:14px;">Security Settings</h4>
+                    <button id="logoutBtn" style="width:100%; padding:12px; background:#ef4444; border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer;">Reset Wallet Data</button>
+                </div>
+            `;
+            document.getElementById("logoutBtn").addEventListener("click", () => {
+                if (confirm("Reset wallet data? Make sure recovery phrase is saved!")) {
+                    localStorage.removeItem("TGN_SECURE_WALLET");
+                    location.reload();
+                }
+            });
         });
     }
 }
 
-async function renderTokenList(filterText, wallet) {
-    const listContainer = document.getElementById("tokenListContainer");
-    listContainer.innerHTML = `<div style="text-align:center; color:#64748b; font-size:12px; padding:20px;">Fetching Token Balances...</div>`;
-
-    const filtered = TOKEN_LIST.filter(t => t.name.toLowerCase().includes(filterText) || t.symbol.toLowerCase().includes(filterText));
-
-    let html = "";
-    for (let token of filtered) {
-        html += `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#161b26; padding:12px; border-radius:10px; margin-bottom:8px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <img src="${token.icon}" style="width:30px; height:30px; border-radius:50%;" />
-                    <div>
-                        <div style="font-weight:bold; font-size:14px;">${token.symbol}</div>
-                        <div style="font-size:10px; color:#64748b;">${token.name}</div>
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-weight:bold; font-size:14px; color:#38bdf8;">0.0000</div>
-                    <div style="font-size:10px; color:#22c55e;">$0.00 USD</div>
+function renderTokenAssets() {
+    const list = document.getElementById("tokenAssetList");
+    list.innerHTML = TOKEN_LIST.map(t => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#17212b; padding:12px 15px; border-radius:14px; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img src="${t.icon}" style="width:32px; height:32px; border-radius:50%;" />
+                <div>
+                    <div style="font-weight:bold; font-size:14px; color:white;">${t.symbol}</div>
+                    <div style="font-size:11px; color:#708499;">${t.name}</div>
                 </div>
             </div>
-        `;
-    }
-    listContainer.innerHTML = html || `<div style="text-align:center; color:#64748b; padding:20px;">No tokens found.</div>`;
+            <div style="text-align:right;">
+                <div style="font-weight:bold; font-size:14px; color:white;">0.0000</div>
+                <div style="font-size:11px; color:#22c55e;">$0.00</div>
+            </div>
+        </div>
+    `).join("");
+}
+
+function openTokenPicker(actionType, wallet) {
+    const modal = document.getElementById("tokenModal");
+    const title = document.getElementById("modalTitle");
+    const list = document.getElementById("modalList");
+    
+    title.innerText = `${actionType} - Select Token`;
+    modal.style.display = "block";
+
+    list.innerHTML = TOKEN_LIST.map(t => `
+        <div class="token-item" style="display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #242f3d; cursor:pointer;">
+            <img src="${t.icon}" style="width:28px; height:28px; border-radius:50%;" />
+            <div>
+                <div style="font-weight:bold; font-size:14px; color:white;">${t.symbol}</div>
+                <div style="font-size:11px; color:#708499;">${NETWORKS[currentNetwork].name} Network</div>
+            </div>
+        </div>
+    `).join("");document.querySelectorAll(".token-item").forEach((item, idx) => {
+        item.addEventListener("click", () => {
+            modal.style.display = "none";
+            const selectedToken = TOKEN_LIST[idx];
+            if (actionType === "Receive") {
+                alert(`Deposit ${selectedToken.symbol} (${NETWORKS[currentNetwork].name})\nAddress: ${wallet.address}`);
+            } else {
+                alert(`Send ${selectedToken.symbol} on ${NETWORKS[currentNetwork].name}`);
+            }
+        });
+    });
 }
