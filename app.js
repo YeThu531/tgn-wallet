@@ -1,167 +1,126 @@
 /*
- TGN WALLET
- Clean Frontend Version
+ TGN WALLET - FIXED APP.JS
+
+ Worker API:
+ https://tgn-wallet-api.yethu20052.workers.dev
 
  IMPORTANT:
- - Do NOT put a real TON Center API key here.
- - Public GitHub frontend should not contain secret API keys.
- - Use a secure backend/proxy for production API requests.
+ - No TON Center API key in frontend.
+ - Frontend talks to Cloudflare Worker.
 */
 
 const CONFIG = {
-
-  API_KEY: "",
-
-  API_BASE:
-    "https://toncenter.com/api/v2",
-
-  V3_BASE:
-    "https://toncenter.com/api/v3",
-
-  WALLET_STORAGE:
-    "TGN_TON_WALLET"
+  API_BASE: "https://tgn-wallet-api.yethu20052.workers.dev",
+  WALLET_STORAGE: "TGN_TON_WALLET"
 };
 
-
-const tg =
-  window.Telegram?.WebApp;
+const tg = window.Telegram?.WebApp;
 
 let activeTab = "home";
-
-let walletData =
-  safeWallet();
-
+let walletData = safeWallet();
 let tonBalance = 0;
-
 let transactions = [];
-
 let jettons = [];
 
 
-/* Telegram */
+/* =========================
+   TELEGRAM
+========================= */
 
 if (tg) {
-
   tg.ready();
-
   tg.expand();
 
   try {
-
     tg.setHeaderColor("#07101f");
-
     tg.setBackgroundColor("#050a16");
-
   } catch (_) {}
-
 }
 
 
-/* Wallet Storage */
+/* =========================
+   WALLET STORAGE
+========================= */
 
 function safeWallet() {
-
   try {
+    const raw = localStorage.getItem(CONFIG.WALLET_STORAGE);
 
-    const raw =
-      localStorage.getItem(
-        CONFIG.WALLET_STORAGE
-      );
+    const data = raw ? JSON.parse(raw) : null;
 
-    const data =
-      raw ? JSON.parse(raw) : null;
-
-    return
-      data && data.address
-        ? data
-        : null;
-
-  } catch (_) {
+    if (data && data.address) {
+      return data;
+    }
 
     return null;
 
+  } catch (_) {
+    return null;
   }
-
 }
 
 
-/* Escape HTML */
+/* =========================
+   HTML ESCAPE
+========================= */
 
 function esc(value) {
-
-  return String(value ?? "")
-    .replace(/[&<>"']/g, function (m) {
-
-      return {
-
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-
-      }[m];
-
-    });
-
+  return String(value ?? "").replace(/[&<>"']/g, function (m) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[m];
+  });
 }
 
 
-/* Telegram User */
+/* =========================
+   TELEGRAM USER
+========================= */
 
 function user() {
-
-  return (
-    tg?.initDataUnsafe?.user ||
-    {}
-  );
-
+  return tg?.initDataUnsafe?.user || {};
 }
 
 
 function userName() {
-
   const u = user();
 
   return [
-
     u.first_name,
     u.last_name
-
   ]
     .filter(Boolean)
-    .join(" ")
-    || "Telegram User";
-
+    .join(" ") || "Telegram User";
 }
 
 
 function username() {
-
   return user().username
     ? "@" + user().username
     : "No username";
-
 }
 
 
 function userId() {
-
   return user().id
     ? String(user().id)
     : "Unavailable";
-
 }
 
 
-/* Telegram Profile Photo */
+/* =========================
+   AVATAR
+========================= */
 
 function avatarHtml() {
 
   const u = user();
 
-  const photo =
-    u.photo_url || "";
+  const photo = u.photo_url || "";
 
   const initial =
     (u.first_name || "T")
@@ -177,11 +136,10 @@ function avatarHtml() {
         alt="Telegram profile"
         onerror="
           this.outerHTML =
-          '<div class=&quot;avatar-fallback&quot;>${initial}</div>'
+          '<div class=&quot;avatar-fallback&quot;>${esc(initial)}</div>'
         "
       >
     `;
-
   }
 
   return `
@@ -189,35 +147,93 @@ function avatarHtml() {
       ${esc(initial)}
     </div>
   `;
-
 }
 
 
-/* Address */
+/* =========================
+   ADDRESS
+========================= */
 
 function shortAddress(address) {
 
-  if (!address)
+  if (!address) {
     return "Wallet not connected";
+  }
 
   return address.length > 18
-    ? address.slice(0, 9)
-      + "..."
-      + address.slice(-7)
+    ? address.slice(0, 9) +
+      "..." +
+      address.slice(-7)
     : address;
-
 }
 
 
-/* Toast */
+/* =========================
+   API
+========================= */
+
+async function apiFetch(path, options = {}) {
+
+  const base =
+    CONFIG.API_BASE.replace(/\/$/, "");
+
+  const url =
+    base + path;
+
+  const response =
+    await fetch(url, {
+      ...options,
+
+      headers: {
+        "Accept": "application/json",
+        ...(options.headers || {})
+      }
+    });
+
+  let data;
+
+  try {
+
+    data =
+      await response.json();
+
+  } catch (_) {
+
+    throw new Error(
+      "Invalid API response"
+    );
+
+  }
+
+  if (
+    !response.ok ||
+    data?.ok === false
+  ) {
+
+    throw new Error(
+      data?.error ||
+      data?.description ||
+      `API error (${response.status})`
+    );
+
+  }
+
+  return data;
+}
+
+
+/* =========================
+   TOAST
+========================= */
 
 function showToast(message) {
 
   const el =
     document.getElementById("toast");
 
-  if (!el)
+  if (!el) {
     return;
+  }
 
   el.textContent =
     message;
@@ -230,43 +246,60 @@ function showToast(message) {
 
   window.__toastTimer =
     setTimeout(
-      () =>
-        el.classList.remove("show"),
+      function () {
+
+        el.classList.remove("show");
+
+      },
       1800
     );
-
 }
 
 
-/* Modal */
+/* =========================
+   MODAL
+========================= */
 
 function openModal(title, body) {
 
-  document.getElementById(
-    "mTitle"
-  ).textContent = title;
+  const titleEl =
+    document.getElementById("mTitle");
 
-  document.getElementById(
-    "mBody"
-  ).innerHTML = body;
+  const bodyEl =
+    document.getElementById("mBody");
 
-  document.getElementById(
-    "modal"
-  ).classList.add("show");
+  const modal =
+    document.getElementById("modal");
 
+  if (!titleEl ||
+      !bodyEl ||
+      !modal) {
+
+    return;
+  }
+
+  titleEl.textContent =
+    title;
+
+  bodyEl.innerHTML =
+    body;
+
+  modal.classList.add("show");
 }
 
 
 function closeModal() {
 
-  document.getElementById(
-    "modal"
-  ).classList.remove("show");
+  document
+    .getElementById("modal")
+    ?.classList.remove("show");
 
 }
 
 
-/* Icons */
+/* =========================
+   ICONS
+========================= */
 
 function icon(name) {
 
@@ -304,7 +337,6 @@ function icon(name) {
       <circle cx="12" cy="7" r="4"></circle>
       <path d="M4 21v-1a7 7 0 0 1 14 0v1"></path>
     `
-
   };
 
   return `
@@ -319,21 +351,25 @@ function icon(name) {
       ${paths[name] || ""}
     </svg>
   `;
-
 }
 
 
-document
-  .querySelectorAll(".nav-svg")
-  .forEach(function (el) {
+function initIcons() {
 
-    el.innerHTML =
-      icon(el.dataset.icon);
+  document
+    .querySelectorAll(".nav-svg")
+    .forEach(function (el) {
 
-  });
+      el.innerHTML =
+        icon(el.dataset.icon);
+
+    });
+}
 
 
-/* Navigation */
+/* =========================
+   NAVIGATION
+========================= */
 
 function switchNav(tab) {
 
@@ -357,34 +393,49 @@ function switchNav(tab) {
     ?.classList.add("active");
 
 
-  if (tab === "home")
+  if (tab === "home") {
+
     renderHome();
 
-  else if (tab === "activity")
+  } else if (tab === "activity") {
+
     renderActivity();
 
-  else if (tab === "send")
+  } else if (tab === "send") {
+
     renderSend();
 
-  else if (tab === "wallet")
+  } else if (tab === "wallet") {
+
     renderWallet();
 
-  else if (tab === "profile")
+  } else if (tab === "profile") {
+
     renderProfile();
 
+  }
 }
 
 
-/* HOME */
+/* =========================
+   HOME
+========================= */
 
 function renderHome() {
 
   const address =
     walletData?.address || "";
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+  const content =
+    document.getElementById(
+      "content"
+    );
+
+  if (!content) {
+    return;
+  }
+
+  content.innerHTML = `
 
     <section class="card hero">
 
@@ -431,9 +482,7 @@ function renderHome() {
     <section class="card section">
 
       <div class="section-head">
-        <span>
-          Wallet Address
-        </span>
+        Wallet Address
       </div>
 
       <div class="address-row">
@@ -441,7 +490,9 @@ function renderHome() {
         <span class="dot"></span>
 
         <div class="address-text">
-          ${esc(shortAddress(address))}
+          ${esc(
+            shortAddress(address)
+          )}
         </div>
 
         <button
@@ -488,14 +539,17 @@ function renderHome() {
 
   `;
 
+  if (address) {
 
-  if (address)
     refreshWallet(false);
 
+  }
 }
 
 
-/* TON */
+/* =========================
+   TON TOKEN
+========================= */
 
 function renderTonToken() {
 
@@ -523,7 +577,6 @@ function renderTonToken() {
 
       </div>
 
-
       <div class="token-amount">
 
         ${tonBalance.toFixed(4)} TON
@@ -537,11 +590,12 @@ function renderTonToken() {
     </div>
 
   `;
-
 }
 
 
-/* Jettons */
+/* =========================
+   JETTONS
+========================= */
 
 function renderJettons() {
 
@@ -558,14 +612,13 @@ function renderJettons() {
 
           TON-network Jetton balances
           will appear here when a secure
-          blockchain indexer/backend is connected.
+          Jetton backend is connected.
 
         </div>
 
       </div>
 
     `;
-
   }
 
 
@@ -585,11 +638,17 @@ function renderJettons() {
             <div>
 
               <div class="token-name">
-                ${esc(j.symbol || "JETTON")}
+                ${esc(
+                  j.symbol ||
+                  "JETTON"
+                )}
               </div>
 
               <div class="token-sub">
-                ${esc(j.name || "TON Jetton")}
+                ${esc(
+                  j.name ||
+                  "TON Jetton"
+                )}
               </div>
 
             </div>
@@ -598,7 +657,10 @@ function renderJettons() {
 
           <div class="token-amount">
 
-            ${esc(j.amount || "0")}
+            ${esc(
+              j.amount ||
+              "0"
+            )}
 
             <div class="token-usd">
               $0.00
@@ -612,74 +674,39 @@ function renderJettons() {
 
     })
     .join("");
-
 }
 
 
-/* TON Balance */
+/* =========================
+   BALANCE
+========================= */
 
-async function refreshWallet(show = true) {
+async function refreshWallet(
+  show = true
+) {
 
   if (!walletData?.address) {
 
-    if (show)
+    if (show) {
+
       showToast(
         "Wallet address not available"
       );
 
-    return;
+    }
 
+    return;
   }
 
 
   try {
 
-    const url =
-      new URL(
-        CONFIG.API_BASE +
-        "/getAddressBalance"
-      );
-
-    url.searchParams.set(
-      "address",
-      walletData.address
-    );
-
-
-    if (CONFIG.API_KEY) {
-
-      url.searchParams.set(
-        "api_key",
-        CONFIG.API_KEY
-      );
-
-    }
-
-
-    const response =
-      await fetch(
-        url.toString(),
-        {
-          headers:
-            CONFIG.API_KEY
-              ? {
-                  "X-API-Key":
-                    CONFIG.API_KEY
-                }
-              : {}
-        }
-      );
-
-
     const data =
-      await response.json();
-
-
-    if (!data.ok)
-      throw new Error(
-        data.error ||
-        data.description ||
-        "API error"
+      await apiFetch(
+        "/getAddressBalance?address=" +
+        encodeURIComponent(
+          walletData.address
+        )
       );
 
 
@@ -699,6 +726,7 @@ async function refreshWallet(show = true) {
         "heroBalance"
       );
 
+
     if (hero) {
 
       hero.textContent =
@@ -713,6 +741,7 @@ async function refreshWallet(show = true) {
         "tokenList"
       );
 
+
     if (list) {
 
       list.innerHTML =
@@ -722,28 +751,33 @@ async function refreshWallet(show = true) {
     }
 
 
-    if (show)
+    if (show) {
+
       showToast(
-        "Balance refreshed"
+        "Balance refreshed ✓"
       );
 
-  }
+    }
 
-  catch (error) {
+  } catch (error) {
 
     console.error(error);
 
-    if (show)
+    if (show) {
+
       showToast(
-        "API not connected"
+        error.message ||
+        "API connection failed"
       );
 
+    }
   }
-
 }
 
 
-/* Deposit */
+/* =========================
+   DEPOSIT
+========================= */
 
 function showDeposit() {
 
@@ -765,7 +799,6 @@ function showDeposit() {
     );
 
     return;
-
   }
 
 
@@ -784,7 +817,9 @@ function showDeposit() {
       >
 
         <div class="address-text">
-          ${esc(walletData.address)}
+          ${esc(
+            walletData.address
+          )}
         </div>
 
         <button
@@ -809,11 +844,12 @@ function showDeposit() {
 
     `
   );
-
 }
 
 
-/* Copy */
+/* =========================
+   COPY ADDRESS
+========================= */
 
 async function copyAddress() {
 
@@ -824,42 +860,76 @@ async function copyAddress() {
     );
 
     return;
-
   }
 
 
   try {
 
-    await navigator
-      .clipboard
-      .writeText(
+    if (
+      navigator.clipboard &&
+      navigator.clipboard.writeText
+    ) {
+
+      await navigator.clipboard.writeText(
         walletData.address
       );
+
+    } else {
+
+      const textarea =
+        document.createElement(
+          "textarea"
+        );
+
+      textarea.value =
+        walletData.address;
+
+      document.body.appendChild(
+        textarea
+      );
+
+      textarea.select();
+
+      document.execCommand(
+        "copy"
+      );
+
+      textarea.remove();
+
+    }
+
 
     showToast(
       "Wallet address copied ✓"
     );
 
-  }
-
-  catch (_) {
+  } catch (_) {
 
     showToast(
       "Copy failed"
     );
 
   }
-
 }
 
 
-/* ACTIVITY */
+/* =========================
+   ACTIVITY
+========================= */
 
 function renderActivity() {
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+  const content =
+    document.getElementById(
+      "content"
+    );
+
+  if (!content) {
+    return;
+  }
+
+
+  content.innerHTML = `
 
     <div class="page-head">
 
@@ -870,7 +940,7 @@ function renderActivity() {
         </h1>
 
         <div class="page-subtitle">
-          Real wallet transactions only
+          Real wallet transactions
         </div>
 
       </div>
@@ -910,12 +980,14 @@ function renderActivity() {
 
   `;
 
-  loadTransactions();
 
+  loadTransactions();
 }
 
 
-/* Transactions */
+/* =========================
+   TRANSACTIONS
+========================= */
 
 async function loadTransactions() {
 
@@ -924,79 +996,38 @@ async function loadTransactions() {
       "activityList"
     );
 
-  if (!box)
+  if (!box) {
     return;
+  }
 
 
   if (!walletData?.address) {
 
     box.innerHTML =
-      emptyActivity();
+      emptyActivity(
+        "Connect a wallet address to view transactions."
+      );
 
     return;
-
   }
 
 
   try {
 
-    const url =
-      new URL(
-        CONFIG.API_BASE +
-        "/getTransactions"
-      );
-
-
-    url.searchParams.set(
-      "address",
-      walletData.address
-    );
-
-    url.searchParams.set(
-      "limit",
-      "20"
-    );
-
-
-    if (CONFIG.API_KEY) {
-
-      url.searchParams.set(
-        "api_key",
-        CONFIG.API_KEY
-      );
-
-    }
-
-
-    const response =
-      await fetch(
-        url.toString(),
-        {
-          headers:
-            CONFIG.API_KEY
-              ? {
-                  "X-API-Key":
-                    CONFIG.API_KEY
-                }
-              : {}
-        }
-      );
-
-
     const data =
-      await response.json();
-
-
-    if (!data.ok)
-      throw new Error(
-        data.error ||
-        data.description ||
-        "API error"
+      await apiFetch(
+        "/getTransactions?address=" +
+        encodeURIComponent(
+          walletData.address
+        ) +
+        "&limit=20"
       );
 
 
     transactions =
-      Array.isArray(data.result)
+      Array.isArray(
+        data.result
+      )
         ? data.result
         : [];
 
@@ -1007,13 +1038,18 @@ async function loadTransactions() {
         emptyActivity();
 
       return;
-
     }
 
 
     box.innerHTML =
       transactions
         .map(function (tx, i) {
+
+          const hash =
+            tx.transaction_id?.hash ||
+            tx.hash ||
+            "";
+
 
           return `
 
@@ -1022,12 +1058,18 @@ async function loadTransactions() {
               <div
                 class="tx-icon"
                 style="
-                  background:rgba(22,140,255,.09);
+                  background:rgba(
+                    22,
+                    140,
+                    255,
+                    .09
+                  );
                   color:#3caaff
                 "
               >
                 ↗
               </div>
+
 
               <div class="tx-main">
 
@@ -1036,6 +1078,7 @@ async function loadTransactions() {
                 </div>
 
                 <div class="tx-sub">
+
                   ${
                     tx.utime
                       ? new Date(
@@ -1043,18 +1086,20 @@ async function loadTransactions() {
                         ).toLocaleString()
                       : "On-chain"
                   }
+
                 </div>
 
               </div>
 
+
               <div class="tx-amount">
 
                 ${
-                  tx.hash
+                  hash
                     ? esc(
                         String(
-                          tx.hash
-                        ).slice(0, 6) +
+                          hash
+                        ).slice(0, 8) +
                         "…"
                       )
                     : "View"
@@ -1069,25 +1114,21 @@ async function loadTransactions() {
         })
         .join("");
 
-  }
-
-  catch (error) {
+  } catch (error) {
 
     console.error(error);
 
     box.innerHTML =
       emptyActivity(
-        "Connect the secure API/backend to show real history."
+        "Unable to load transactions from Worker."
       );
 
   }
-
 }
 
 
 function emptyActivity(
-  message =
-    "No transactions yet. Fake history has been removed."
+  message = "No transactions yet."
 ) {
 
   return `
@@ -1109,17 +1150,26 @@ function emptyActivity(
     </div>
 
   `;
-
 }
 
 
-/* SEND */
+/* =========================
+   SEND
+========================= */
 
 function renderSend() {
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+  const content =
+    document.getElementById(
+      "content"
+    );
+
+  if (!content) {
+    return;
+  }
+
+
+  content.innerHTML = `
 
     <button
       class="btn secondary back-btn"
@@ -1195,16 +1245,14 @@ function renderSend() {
           margin:12px 0 0
         "
       >
-        This screen validates the transfer.
-        Broadcasting a real transfer should
-        be done through TON Connect or a
-        secure backend signer.
+        Real blockchain broadcasting is
+        intentionally disabled in this
+        public frontend.
       </p>
 
     </section>
 
   `;
-
 }
 
 
@@ -1231,7 +1279,6 @@ function prepareSend() {
     );
 
     return;
-
   }
 
 
@@ -1245,7 +1292,6 @@ function prepareSend() {
     );
 
     return;
-
   }
 
 
@@ -1258,9 +1304,7 @@ function prepareSend() {
       </p>
 
       <p
-        style="
-          word-break:break-all
-        "
+        style="word-break:break-all"
       >
         ${esc(to)}
       </p>
@@ -1276,18 +1320,19 @@ function prepareSend() {
       <div class="warning">
 
         Real blockchain broadcasting
-        is intentionally not performed
-        by this public frontend.
+        is not performed by this
+        frontend.
 
       </div>
 
     `
   );
-
 }
 
 
-/* WALLET */
+/* =========================
+   WALLET PAGE
+========================= */
 
 function renderWallet() {
 
@@ -1296,9 +1341,17 @@ function renderWallet() {
     "Wallet address unavailable";
 
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+  const content =
+    document.getElementById(
+      "content"
+    );
+
+  if (!content) {
+    return;
+  }
+
+
+  content.innerHTML = `
 
     <div class="page-head">
 
@@ -1367,11 +1420,12 @@ function renderWallet() {
     </section>
 
   `;
-
 }
 
 
-/* PROFILE */
+/* =========================
+   PROFILE
+========================= */
 
 function renderProfile() {
 
@@ -1379,9 +1433,17 @@ function renderProfile() {
     user();
 
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+  const content =
+    document.getElementById(
+      "content"
+    );
+
+  if (!content) {
+    return;
+  }
+
+
+  content.innerHTML = `
 
     <div class="page-head">
 
@@ -1660,11 +1722,12 @@ function renderProfile() {
     </section>
 
   `;
-
 }
 
 
-/* Personal */
+/* =========================
+   PROFILE MODALS
+========================= */
 
 function openPersonal() {
 
@@ -1712,28 +1775,12 @@ function openPersonal() {
 
         </div>
 
-
-        <div class="info-row">
-
-          <span class="info-label">
-            Account Year
-          </span>
-
-          <span class="info-value">
-            Not available from Telegram Mini App user data
-          </span>
-
-        </div>
-
       </div>
 
     `
   );
-
 }
 
-
-/* Security */
 
 function openSecurity() {
 
@@ -1753,18 +1800,17 @@ function openSecurity() {
 
 
       <p>
-        For real sending/signing, use
-        TON Connect or a properly secured
-        backend signer.
+
+        For real sending/signing,
+        use TON Connect or a properly
+        secured backend signer.
+
       </p>
 
     `
   );
-
 }
 
-
-/* Help */
 
 function openHelp() {
 
@@ -1795,11 +1841,12 @@ function openHelp() {
 
     `
   );
-
 }
 
 
-/* Logout */
+/* =========================
+   LOGOUT
+========================= */
 
 function logoutWallet() {
 
@@ -1815,40 +1862,65 @@ function logoutWallet() {
 
       <button
         class="btn primary"
-        onclick="
-          localStorage.removeItem(
-            CONFIG.WALLET_STORAGE
-          );
-
-          walletData = null;
-
-          closeModal();
-
-          switchNav('home');
-
-          showToast(
-            'Wallet session removed'
-          );
-        "
+        onclick="confirmLogout()"
       >
         Confirm Log Out
       </button>
 
     `
   );
-
 }
 
 
-/* START */
+function confirmLogout() {
+
+  localStorage.removeItem(
+    CONFIG.WALLET_STORAGE
+  );
+
+  walletData = null;
+
+  tonBalance = 0;
+
+  transactions = [];
+
+  jettons = [];
+
+  closeModal();
+
+  switchNav("home");
+
+  showToast(
+    "Wallet session removed"
+  );
+}
+
+
+/* =========================
+   START
+========================= */
 
 function boot() {
 
-  renderHome();
+  initIcons();
 
-  if (walletData)
-    refreshWallet(false);
+  renderHome();
 
 }
 
-boot();
+
+if (
+  document.readyState ===
+  "loading"
+) {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    boot
+  );
+
+} else {
+
+  boot();
+
+}
