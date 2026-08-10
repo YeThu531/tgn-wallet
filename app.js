@@ -137,17 +137,17 @@ function renderMain() {
       <div class="grid-btn" onclick="openSend()">
         <span class="grid-icon">✈️</span>
         <span class="grid-label">Send</span>
-        <span class="grid-sub">Transfer</span>
+        <span class="grid-sub">Transfer TON</span>
       </div>
       <div class="grid-btn" onclick="openReceive()">
         <span class="grid-icon">📥</span>
         <span class="grid-label">Receive</span>
-        <span class="grid-sub">Get TON</span>
+        <span class="grid-sub">Get payment</span>
       </div>
       <div class="grid-btn" onclick="showToast('History coming soon!')">
         <span class="grid-icon">⏱️</span>
         <span class="grid-label">History</span>
-        <span class="grid-sub">Activity</span>
+        <span class="grid-sub">Transactions</span>
       </div>
       <div class="grid-btn" onclick="openSettings()">
         <span class="grid-icon">⚙️</span>
@@ -173,15 +173,19 @@ function renderMain() {
       </div>
     </div>
 
-    <div class="section-box" style="display:flex; align-items:center; justify-content:between; cursor:pointer;" onclick="openSettings()">
+    <div class="section-box" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="openSettings()">
       <div style="display:flex; align-items:center; gap:12px;">
         <span style="font-size:24px;">🛡️</span>
         <div>
           <div style="font-weight:600; font-size:13px;">Secure. Fast. Web3 Ready.</div>
-          <div style="font-size:11px; color:var(--text-muted);">TGN Wallet is your gateway to TON ecosystem.</div>
+          <div style="font-size:11px; color:var(--text-muted);">TGN Wallet is your gateway to the TON ecosystem.</div>
         </div>
       </div>
       <span style="color:var(--text-muted);">›</span>
+    </div>
+    
+    <div style="text-align:center; font-size:11px; color:var(--text-muted); margin-top:20px; margin-bottom:10px;">
+      💎 Built on TON Blockchain
     </div>
   `;
 }
