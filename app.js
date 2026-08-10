@@ -32,7 +32,7 @@ function showToast(msg) {
 
 function renderWelcome() {
   document.getElementById("content").innerHTML = `
-    <div class="hero-card" style="text-align:center;">
+    <div class="hero-card" style="text-align:center; margin-top:40px;">
       <div class="hero-icon">💎</div>
       <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN TON Wallet</div>
       <div class="hero-subbalance" style="margin-top:10px;">Secure Decentralized Web3 Wallet</div>
@@ -120,10 +120,10 @@ function renderMain() {
       <div class="hero-subbalance">$0.00 USD</div>
       <div class="hero-icon">💎</div>
       <div class="action-row">
-        <button class="action-btn primary" onclick="openReceive()">
+        <button class="action-btn primary" onclick="renderReceivePage()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M19 12l-7 7-7-7"/></svg> Deposit
         </button>
-        <button class="action-btn" onclick="openSend()">
+        <button class="action-btn" onclick="renderSendPage()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Withdraw
         </button>
       </div>
@@ -138,21 +138,21 @@ function renderMain() {
     </div>
 
     <div class="grid-4">
-      <div class="grid-btn" onclick="openSend()">
+      <div class="grid-btn" onclick="renderSendPage()">
         <span class="grid-icon-wrap" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </span>
         <span class="grid-label">Send</span>
         <span class="grid-sub">Transfer TON</span>
       </div>
-      <div class="grid-btn" onclick="openReceive()">
+      <div class="grid-btn" onclick="renderReceivePage()">
         <span class="grid-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         </span>
         <span class="grid-label">Receive</span>
         <span class="grid-sub">Get payment</span>
       </div>
-      <div class="grid-btn" onclick="showToast('History coming soon!')">
+      <div class="grid-btn" onclick="renderHistoryPage()">
         <span class="grid-icon-wrap" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         </span>
@@ -161,7 +161,7 @@ function renderMain() {
       </div>
       <div class="grid-btn" onclick="openSettings()">
         <span class="grid-icon-wrap" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </span>
         <span class="grid-label">Settings</span>
         <span class="grid-sub">Preferences</span>
@@ -184,20 +184,52 @@ function renderMain() {
         </div>
       </div>
     </div>
+  `;
+}
 
-    <div class="section-box" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="openSettings()">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <span style="font-size:24px;">🛡️</span>
-        <div>
-          <div style="font-weight:600; font-size:13px;">Secure. Fast. Web3 Ready.</div>
-          <div style="font-size:11px; color:var(--text-muted);">TGN Wallet is your gateway to the TON ecosystem.</div>
-        </div>
-      </div>
-      <span style="color:var(--text-muted);">›</span>
+function renderSendPage() {
+  document.getElementById("content").innerHTML = `
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:5px;">← Back</button>
+      <h2 style="margin:0 auto; font-size:18px; color:#fff;">Send TON</h2>
     </div>
-    
-    <div style="text-align:center; font-size:11px; color:var(--text-muted); margin-top:20px; margin-bottom:10px;">
-      💎 Built on TON Blockchain
+    <div class="section-box">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px; color:var(--text-muted);">Recipient Address</label>
+        <input id="sendTo" placeholder="UQ... or EQ..." style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px; color:var(--text-muted);">Amount (TON)</label>
+        <input id="sendAmount" type="number" step="0.01" placeholder="0.00" style="margin-top:4px;">
+      </div>
+      <button class="btn primary" onclick="doSend()" style="width:100%; padding:14px; font-weight:600;">Confirm & Send</button>
+    </div>
+  `;
+}
+
+function renderReceivePage() {
+  const shortAddr = walletData.address;
+  document.getElementById("content").innerHTML = `
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
+      <h2 style="margin:0 auto; font-size:18px; color:#fff;">Receive TON</h2>
+    </div>
+    <div class="section-box" style="text-align:center;">
+      <p style="font-size:13px; color:var(--text-muted);">Send only TON to this address:</p>
+      <div class="address-row" style="margin:16px 0; font-size:12px; word-break:break-all; background:#070b19; padding:12px; border-radius:8px;">${shortAddr}</div>
+      <button class="btn primary" onclick="copyAddress()" style="width:100%;">Copy Address</button>
+    </div>
+  `;
+}
+
+function renderHistoryPage() {
+  document.getElementById("content").innerHTML = `
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
+      <h2 style="margin:0 auto; font-size:18px; color:#fff;">History</h2>
+    </div>
+    <div class="section-box" style="text-align:center; padding:30px; color:var(--text-muted);">
+      No recent transactions found.
     </div>
   `;
 }
@@ -219,32 +251,13 @@ function copyAddress() {
   showToast("Address copied to clipboard!");
 }
 
-function openReceive() {
-  document.getElementById("mTitle").innerText = "Receive TON";
-  document.getElementById("mBody").innerHTML = `
-    <p style="font-size:13px; color:var(--text-muted);">Send only TON to this address:</p>
-    <div class="address-row" style="margin:12px 0; font-size:11px; word-break:break-all;">${walletData.address}</div>
-    <button class="btn" onclick="copyAddress()">Copy Address</button>
-  `;
-  document.getElementById("modal").style.display = "flex";
-}
-
-function openSend() {
-  document.getElementById("mTitle").innerText = "Send TON";
-  document.getElementById("mBody").innerHTML = `
-    <input id="sendTo" placeholder="Recipient TON Address">
-    <input id="sendAmount" type="number" step="0.01" placeholder="Amount (TON)">
-    <button class="btn" onclick="doSend()">Confirm & Send</button>
-  `;
-  document.getElementById("modal").style.display = "flex";
-}
-
 async function doSend() {
   const to = document.getElementById("sendTo").value.trim();
   const amount = document.getElementById("sendAmount").value.trim();
   if (!to || !amount) return alert("Please fill all fields");
 
   try {
+    showToast("Preparing transaction...");
     const keyPair = {
       publicKey: TonWeb.utils.hexToBytes(walletData.publicKey),
       secretKey: TonWeb.utils.hexToBytes(walletData.secretKey)
@@ -262,8 +275,8 @@ async function doSend() {
       sendMode: 3
     }).send();
 
-    closeModal();
     showToast("Transaction sent successfully!");
+    renderMain();
     setTimeout(refreshBalance, 3000);
   } catch (e) {
     alert("Transfer failed: " + e.message);
@@ -273,9 +286,9 @@ async function doSend() {
 function openSettings() {
   document.getElementById("mTitle").innerText = "Wallet Settings";
   document.getElementById("mBody").innerHTML = `
-    <button class="btn btn-secondary" onclick="showPhrase()">🔑 View Recovery Phrase</button>
+    <button class="btn btn-secondary" onclick="showPhrase()" style="width:100%;">🔑 View Recovery Phrase</button>
     <div id="phraseBox" class="address-row" style="display:none; margin-top:10px; font-size:11px; max-height:100px; overflow-y:auto; word-break:break-all;"></div>
-    <button class="btn btn-danger" onclick="resetWallet()" style="margin-top:12px;">⚠️ Reset Wallet</button>
+    <button class="btn btn-danger" onclick="resetWallet()" style="margin-top:12px; width:100%;">⚠️ Reset Wallet</button>
   `;
   document.getElementById("modal").style.display = "flex";
 }
@@ -297,16 +310,9 @@ function closeModal() {
   document.getElementById("modal").style.display = "none";
 }
 
-function switchTab(tab) {
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  if(tab === 'activity') showToast("Activity logs coming soon!");
-  if(tab === 'wallet') openSettings();
-  if(tab === 'profile') showToast("TGN Wallet v2.0 (Testnet)");
-}
-
 window.onload = function() {
-  tonweb = new TonWeb(new TonWeb.HttpProvider("https://testnet.toncenter.com/api/v2/jsonRPC", { apiKey: API_KEY }));
+  // Mainnet Endpoint သို့ ပြောင်းလဲခြင်းနှင့် သင့်ရဲ့ API Key ကို အသုံးပြုခြင်း
+  tonweb = new TonWeb(new TonWeb.HttpProvider("https://toncenter.com/api/v2/jsonRPC", { apiKey: API_KEY }));
   if (walletData) {
     renderMain();
     refreshBalance();
