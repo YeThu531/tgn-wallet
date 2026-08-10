@@ -11,17 +11,34 @@
 <body>
 
 <div class="container">
-  <div class="wallet-card">
-    <div class="logo">💎</div>
-    <div class="title">TGN TON Wallet</div>
-    <div class="subtitle">Modular Web3 Wallet</div>
-    <div id="content">Loading...</div>
+  <div id="content">Loading...</div>
+
+  <div class="nav-bar">
+    <div class="nav-item active" onclick="switchTab('home')">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('activity')">
+      <span class="nav-icon">📜</span>
+      <span>Activity</span>
+    </div>
+    <div class="nav-item center-send" onclick="openSend()">
+      <span class="nav-icon">✈️</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('wallet')">
+      <span class="nav-icon">👛</span>
+      <span>Wallet</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('profile')">
+      <span class="nav-icon">👤</span>
+      <span>Profile</span>
+    </div>
   </div>
 </div>
 
 <div id="modal" class="modal">
   <div class="modal-content">
-    <h3 id="mTitle" style="margin-top:0; color:var(--accent);">Settings</h3>
+    <h3 id="mTitle" style="margin-top:0; color:#38bdf8;">Settings</h3>
     <div id="mBody"></div>
     <button class="btn btn-secondary" onclick="closeModal()" style="margin-top:16px;">Close</button>
   </div>
