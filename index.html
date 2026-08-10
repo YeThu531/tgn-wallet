@@ -6,7 +6,7 @@
   <title>TGN TON Wallet</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/tonweb@0.0.60/dist/tonweb.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tonweb-mnemonic@1.0.1/dist/tonweb-mnemonic.min.js"></script>
+  <script src="https://unpkg.com/tonweb-mnemonic@1.0.1/dist/web/tonweb-mnemonic.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background: #0b0e14; color: #ffffff; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -29,7 +29,7 @@
 
 <div id="app">
   <div class="title">💎 TGN TON Wallet</div>
-  <div id="mainContent" class="card">Loading TON Web Library...</div>
+  <div id="mainContent" class="card">Initializing TON Library...</div>
 </div>
 
 <div id="modal" class="modal">
@@ -64,7 +64,7 @@
   async function createWallet() {
     try {
       const mLib = getMnemonicLib();
-      if (!mLib) throw new Error("Mnemonic library not loaded yet.");
+      if (!mLib) throw new Error("Mnemonic library loading failed. Please refresh and try again.");
       
       const seed = await mLib.generateMnemonic();
       const keyPair = await mLib.mnemonicToKeyPair(seed);
