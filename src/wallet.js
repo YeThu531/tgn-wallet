@@ -309,3 +309,32 @@ window.openSettings = openSettings;
 window.showPhrase = showPhrase;
 window.resetWallet = resetWallet;
 window.closeModal = closeModal;
+
+async function createWallet() {
+  try {
+    const mnemonicLib = tonMnemonic || (typeof TonWeb !== "undefined" ? TonWeb.mnemonic : null);
+    if (!mnemonicLib) {
+      return alert("Library is still loading... Please wait 3 seconds and try again.");
+    }
+    const words = await mnemonicLib.generateMnemonic();
+    const keyPair = await mnemonicLib.mnemonicToKeyPair(words);
+    const WalletClass = tonweb.wallet.all.v4R2;
+    const wallet = new WalletClass(tonweb.provider, { publicKey: keyPair.publicKey });
+    const address = await wallet.getAddress();
+    const addrStr = address.toString(true, true, false);
+
+    walletData = {
+      mnemonic: words.join(" "),
+      address: addrStr,
+      publicKey: TonWeb.utils.bytesToHex(keyPair.publicKey),
+      secretKey: TonWeb.utils.bytesToHex(keyPair.secretKey)
+    };
+
+    localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
+    renderMain();
+    refreshBalance();
+    showToast("Wallet created!");
+  } catch (e) {
+    alert("Create failed: " + e.message);
+  }
+}
