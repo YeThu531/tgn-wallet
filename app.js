@@ -32,9 +32,15 @@ function showToast(msg) {
 
 function renderWelcome() {
   document.getElementById("content").innerHTML = `
-    <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Get started by creating a new secure wallet or importing an existing one.</p>
-    <button class="btn" onclick="createWallet()">✨ Create New Wallet</button>
-    <button class="btn btn-secondary" onclick="showImport()">📥 Import Seed Phrase</button>
+    <div class="hero-card" style="text-align:center;">
+      <div class="hero-icon">💎</div>
+      <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN TON Wallet</div>
+      <div class="hero-subbalance" style="margin-top:10px;">Secure Decentralized Web3 Wallet</div>
+      <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+        <button class="action-btn primary" onclick="createWallet()" style="width:100%; justify-content:center;">✨ Create New Wallet</button>
+        <button class="action-btn" onclick="showImport()" style="width:100%; justify-content:center;">📥 Import Seed Phrase</button>
+      </div>
+    </div>
   `;
 }
 
@@ -106,35 +112,89 @@ async function importWallet() {
 
 function renderMain() {
   const shortAddr = walletData.address.substring(0, 6) + "..." + walletData.address.substring(walletData.address.length - 4);
+  
   document.getElementById("content").innerHTML = `
-    <div class="address-box" onclick="copyAddress()">
-      <span>📍 ${shortAddr}</span>
-      <span style="color:var(--text-muted); font-size:10px;">COPY</span>
+    <div class="hero-card">
+      <div class="hero-header">My Wallet</div>
+      <div class="hero-balance" id="balance">0.00 TON</div>
+      <div class="hero-subbalance">$0.00 USD</div>
+      <div class="hero-icon">💎</div>
+      <div class="action-row">
+        <button class="action-btn primary" onclick="openReceive()">⬇️ Deposit</button>
+        <button class="action-btn" onclick="openSend()">⬆️ Withdraw</button>
+      </div>
     </div>
 
-    <div class="balance-box">
-      <div class="balance-title">Total Balance</div>
-      <div class="balance-amount" id="balance">0.00 TON</div>
-      <button class="btn btn-secondary" onclick="refreshBalance()" style="padding:6px; font-size:11px; margin-top:6px; width:auto;">🔄 Refresh Balance</button>
+    <div class="section-box">
+      <div class="section-title">Wallet Address</div>
+      <div class="address-row">
+        <span style="color:#38bdf8;">● ${shortAddr}</span>
+        <button class="copy-pill" onclick="copyAddress()">Copy</button>
+      </div>
     </div>
 
-    <div class="grid">
-      <button class="btn" onclick="openSend()">📤 Send</button>
-      <button class="btn btn-success" onclick="openReceive()">📥 Receive</button>
+    <div class="grid-4">
+      <div class="grid-btn" onclick="openSend()">
+        <span class="grid-icon">✈️</span>
+        <span class="grid-label">Send</span>
+        <span class="grid-sub">Transfer</span>
+      </div>
+      <div class="grid-btn" onclick="openReceive()">
+        <span class="grid-icon">📥</span>
+        <span class="grid-label">Receive</span>
+        <span class="grid-sub">Get TON</span>
+      </div>
+      <div class="grid-btn" onclick="showToast('History coming soon!')">
+        <span class="grid-icon">⏱️</span>
+        <span class="grid-label">History</span>
+        <span class="grid-sub">Activity</span>
+      </div>
+      <div class="grid-btn" onclick="openSettings()">
+        <span class="grid-icon">⚙️</span>
+        <span class="grid-label">Settings</span>
+        <span class="grid-sub">Preferences</span>
+      </div>
     </div>
-    
-    <button class="btn btn-secondary" onclick="openSettings()">⚙️ Wallet Settings</button>
+
+    <div class="section-box">
+      <div class="section-title"><span>Tokens</span> <span style="color:#38bdf8; cursor:pointer;" onclick="refreshBalance()">Refresh 🔄</span></div>
+      <div class="token-item">
+        <div class="token-left">
+          <div class="token-logo">💎</div>
+          <div>
+            <div style="font-weight:600; font-size:14px;">TON</div>
+            <div style="font-size:11px; color:var(--text-muted);">Toncoin</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:600; font-size:14px;" id="tokenBalance">0.00 TON</div>
+          <div style="font-size:11px; color:var(--text-muted);">$0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-box" style="display:flex; align-items:center; justify-content:between; cursor:pointer;" onclick="openSettings()">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px;">🛡️</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">Secure. Fast. Web3 Ready.</div>
+          <div style="font-size:11px; color:var(--text-muted);">TGN Wallet is your gateway to TON ecosystem.</div>
+        </div>
+      </div>
+      <span style="color:var(--text-muted);">›</span>
+    </div>
   `;
 }
 
 async function refreshBalance() {
   if (!walletData) return;
-  document.getElementById("balance").innerText = "...";
   try {
     const balance = await tonweb.getBalance(walletData.address);
-    document.getElementById("balance").innerText = (balance / 1e9).toFixed(2) + " TON";
+    const tonVal = (balance / 1e9).toFixed(2);
+    if(document.getElementById("balance")) document.getElementById("balance").innerText = tonVal + " TON";
+    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = tonVal + " TON";
   } catch (e) {
-    document.getElementById("balance").innerText = "0.00 TON";
+    if(document.getElementById("balance")) document.getElementById("balance").innerText = "0.00 TON";
   }
 }
 
@@ -147,7 +207,7 @@ function openReceive() {
   document.getElementById("mTitle").innerText = "Receive TON";
   document.getElementById("mBody").innerHTML = `
     <p style="font-size:13px; color:var(--text-muted);">Send only TON to this address:</p>
-    <div class="address-box" style="margin:12px 0; font-size:11px; text-align:left;">${walletData.address}</div>
+    <div class="address-row" style="margin:12px 0; font-size:11px; word-break:break-all;">${walletData.address}</div>
     <button class="btn" onclick="copyAddress()">Copy Address</button>
   `;
   document.getElementById("modal").style.display = "flex";
@@ -198,7 +258,7 @@ function openSettings() {
   document.getElementById("mTitle").innerText = "Wallet Settings";
   document.getElementById("mBody").innerHTML = `
     <button class="btn btn-secondary" onclick="showPhrase()">🔑 View Recovery Phrase</button>
-    <div id="phraseBox" class="address-box" style="display:none; margin-top:10px; font-size:11px; max-height:100px; overflow-y:auto;"></div>
+    <div id="phraseBox" class="address-row" style="display:none; margin-top:10px; font-size:11px; max-height:100px; overflow-y:auto; word-break:break-all;"></div>
     <button class="btn btn-danger" onclick="resetWallet()" style="margin-top:12px;">⚠️ Reset Wallet</button>
   `;
   document.getElementById("modal").style.display = "flex";
@@ -219,6 +279,14 @@ function resetWallet() {
 
 function closeModal() {
   document.getElementById("modal").style.display = "none";
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if(tab === 'activity') showToast("Activity logs coming soon!");
+  if(tab === 'wallet') openSettings();
+  if(tab === 'profile') showToast("TGN Wallet v2.0 (Testnet)");
 }
 
 window.onload = function() {
