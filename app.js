@@ -1,5 +1,5 @@
 const API_KEY = "c09170dd62724a03f3803b0f1023219c672c0fcc02a2deed31bd75faea36e9e1";
-let tonweb, walletData = JSON.parse(localStorage.getItem("TGN_GRAM_WALLET"));
+let tonweb, walletData = JSON.parse(localStorage.getItem("TGN_TON_WALLET"));
 
 const WORDLIST = [
   "abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident",
@@ -34,7 +34,7 @@ function renderWelcome() {
   document.getElementById("content").innerHTML = `
     <div class="hero-card" style="text-align:center; margin-top:40px;">
       <div class="hero-icon">💎</div>
-      <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN GRAM Wallet</div>
+      <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN Wallet</div>
       <div class="hero-subbalance" style="margin-top:10px;">Secure Decentralized Web3 Wallet</div>
       <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
         <button class="action-btn primary" onclick="createWallet()" style="width:100%; justify-content:center;">✨ Create New Wallet</button>
@@ -63,7 +63,7 @@ async function createWallet() {
       address: address
     };
 
-    localStorage.setItem("TGN_GRAM_WALLET", JSON.stringify(walletData));
+    localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
     renderMain();
     refreshBalance();
   } catch (e) {
@@ -101,7 +101,7 @@ async function importWallet() {
       address: address
     };
 
-    localStorage.setItem("TGN_GRAM_WALLET", JSON.stringify(walletData));
+    localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
     closeModal();
     renderMain();
     refreshBalance();
@@ -143,14 +143,14 @@ function renderMain() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </span>
         <span class="grid-label">Send</span>
-        <span class="grid-sub">Transfer GRAM</span>
+        <span class="grid-sub">GRAM</span>
       </div>
       <div class="grid-btn" onclick="renderReceivePage()">
         <span class="grid-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         </span>
         <span class="grid-label">Receive</span>
-        <span class="grid-sub">Get payment</span>
+        <span class="grid-sub">payment</span>
       </div>
       <div class="grid-btn" onclick="renderHistoryPage()">
         <span class="grid-icon-wrap" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
@@ -175,7 +175,7 @@ function renderMain() {
           <div class="token-logo">💎</div>
           <div>
             <div style="font-weight:600; font-size:14px;">GRAM</div>
-            <div style="font-size:11px; color:var(--text-muted);">Toncoin</div>
+            <div style="font-size:11px; color:var(--text-muted);">Gram Token</div>
           </div>
         </div>
         <div style="text-align:right;">
@@ -238,11 +238,12 @@ async function refreshBalance() {
   if (!walletData) return;
   try {
     const balance = await tonweb.getBalance(walletData.address);
-    const tonVal = (balance / 1e9).toFixed(2);
-    if(document.getElementById("balance")) document.getElementById("balance").innerText = tonVal + " GRAM";
-    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = tonVal + " GRAM";
+    const gramVal = (Number(balance) / 1e9).toFixed(2);
+    if(document.getElementById("balance")) document.getElementById("balance").innerText = gramVal + " GRAM";
+    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = gramVal + " GRAM";
   } catch (e) {
     if(document.getElementById("balance")) document.getElementById("balance").innerText = "0.00 GRAM";
+    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = "0.00 GRAM";
   }
 }
 
@@ -301,7 +302,7 @@ function showPhrase() {
 
 function resetWallet() {
   if (confirm("Are you sure? Make sure you backed up your seed phrase!")) {
-    localStorage.removeItem("TGN_GRAM_WALLET");
+    localStorage.removeItem("TGN_TON_WALLET");
     location.reload();
   }
 }
@@ -311,7 +312,6 @@ function closeModal() {
 }
 
 window.onload = function() {
-  // Mainnet Endpoint သို့ ပြောင်းလဲခြင်းနှင့် သင့်ရဲ့ API Key ကို အသုံးပြုခြင်း
   tonweb = new TonWeb(new TonWeb.HttpProvider("https://toncenter.com/api/v2/jsonRPC", { apiKey: API_KEY }));
   if (walletData) {
     renderMain();
