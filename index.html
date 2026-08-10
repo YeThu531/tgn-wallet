@@ -6,35 +6,47 @@
   <title>TGN TON Wallet</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/tonweb@0.0.60/dist/tonweb.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tonweb-mnemonic@1.0.1/dist/tonweb-mnemonic.min.js"></script>
   <style>
-    body { font-family: sans-serif; background: #0f172a; color: white; margin: 0; padding: 15px; text-align: center; }
-    .card { background: #1e293b; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-    button { background: #0088cc; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 8px; cursor: pointer; }
-    button:active { opacity: 0.8; }
-    input { width: 90%; padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); padding-top: 50px; }
-    .modal-content { background: #1e293b; margin: auto; padding: 20px; width: 85%; border-radius: 12px; }
-    .phrase-box { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px dashed #0088cc; margin: 10px 0; word-break: break-all; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background: #0b0e14; color: #ffffff; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    #app { width: 100%; max-width: 420px; }
+    .card { background: #161b22; border: 1px solid #21262d; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center; }
+    .title { font-size: 22px; font-weight: 700; color: #38bdf8; margin-bottom: 20px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn { background: #0284c7; color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+    .btn:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-secondary { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
+    .btn-danger { background: #dc2626; }
+    .btn-success { background: #16a34a; }
+    input, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; font-size: 14px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); padding: 20px; z-index: 100; align-items: center; justify-content: center; }
+    .modal-content { background: #161b22; border: 1px solid #30363d; padding: 20px; width: 100%; max-width: 380px; border-radius: 16px; text-align: center; }
+    .phrase-box { background: #0d1117; padding: 12px; border-radius: 8px; border: 1px dashed #38bdf8; margin: 12px 0; word-break: break-all; font-family: monospace; color: #38bdf8; font-size: 13px; }
+    .flex-gap { display: flex; gap: 10px; }
   </style>
 </head>
 <body>
 
 <div id="app">
-  <h2>💎 TGN TON Wallet</h2>
-  <div class="card">Loading TON Web Library... Please refresh in a moment.</div>
+  <div class="title">💎 TGN TON Wallet</div>
+  <div id="mainContent" class="card">Loading TON Web Library...</div>
 </div>
 
 <div id="modal" class="modal">
   <div class="modal-content">
-    <h3 id="modalTitle">Settings</h3>
+    <h3 id="modalTitle" style="margin-top:0;">Settings</h3>
     <div id="modalBody"></div>
-    <button onclick="closeModal()" style="background:#475569; margin-top:10px;">Close</button>
+    <button class="btn btn-secondary" onclick="closeModal()" style="margin-top:12px;">Close</button>
   </div>
 </div>
 
 <script>
-  const API_KEY = ""; 
+  const API_KEY = "c09170dd62724a03f3803b0f1023219c672c0fcc02a2deed31bd75faea36e9e1";
   let tonweb, walletData = JSON.parse(localStorage.getItem("TGN_TON_WALLET"));
+
+  function getMnemonicLib() {
+    return window.tonwebMnemonic || (window.TonWeb && window.TonWeb.mnemonic);
+  }
 
   function showToast(msg) {
     if (window.Telegram?.WebApp) window.Telegram.WebApp.showAlert(msg);
@@ -42,20 +54,20 @@
   }
 
   function renderWelcome() {
-    document.getElementById("app").innerHTML = `
-      <h2>💎 TGN TON Wallet</h2>
-      <div class="card">
-        <p>No wallet found on this device.</p>
-        <button onclick="createWallet()">✨ Create New Wallet</button>
-        <button onclick="showImport()" style="background:#334155; margin-top:10px;">📥 Import Seed Phrase</button>
-      </div>
+    document.getElementById("mainContent").innerHTML = `
+      <p style="color:#8b949e; margin-bottom:20px;">No wallet found on this device.</p>
+      <button class="btn" onclick="createWallet()">✨ Create New Wallet</button>
+      <button class="btn btn-secondary" onclick="showImport()">📥 Import Seed Phrase</button>
     `;
   }
 
   async function createWallet() {
     try {
-      const seed = TonWeb.mnemonic.generateMnemonic();
-      const keyPair = await TonWeb.mnemonic.mnemonicToKeyPair(seed);
+      const mLib = getMnemonicLib();
+      if (!mLib) throw new Error("Mnemonic library not loaded yet.");
+      
+      const seed = await mLib.generateMnemonic();
+      const keyPair = await mLib.mnemonicToKeyPair(seed);
       const WalletClass = tonweb.wallet.all.v4R2;
       const wallet = new WalletClass(tonweb.provider, { publicKey: keyPair.publicKey });
       const address = (await wallet.getAddress()).toString(true, true, true);
@@ -78,11 +90,11 @@
   function showImport() {
     document.getElementById("modalTitle").innerText = "Import Seed Phrase";
     document.getElementById("modalBody").innerHTML = `
-      <p>Enter 24 secret words separated by spaces:</p>
-      <input id="importSeed" placeholder="word1 word2 ...">
-      <button onclick="importWallet()">Import</button>
+      <p style="font-size:13px; color:#8b949e;">Enter 24 secret words separated by spaces:</p>
+      <textarea id="importSeed" rows="4" placeholder="word1 word2 ..."></textarea>
+      <button class="btn" onclick="importWallet()">Import Wallet</button>
     `;
-    document.getElementById("modal").style.display = "block";
+    document.getElementById("modal").style.display = "flex";
   }
 
   async function importWallet() {
@@ -91,7 +103,10 @@
     const words = text.split(/\s+/);
 
     try {
-      const keyPair = await TonWeb.mnemonic.mnemonicToKeyPair(words);
+      const mLib = getMnemonicLib();
+      if (!mLib) throw new Error("Mnemonic library not loaded yet.");
+
+      const keyPair = await mLib.mnemonicToKeyPair(words);
       const WalletClass = tonweb.wallet.all.v4R2;
       const wallet = new WalletClass(tonweb.provider, { publicKey: keyPair.publicKey });
       const address = (await wallet.getAddress()).toString(true, true, true);
@@ -113,26 +128,23 @@
   }
 
   function renderMain() {
-    document.getElementById("app").innerHTML = `
-      <h2>💎 TGN TON Wallet</h2>
-      <div class="card">
-        <p style="font-size:12px; color:#94a3b8;">Wallet Address</p>
-        <p style="font-size:13px; font-weight:bold; word-break:break-all;">${walletData.address}</p>
-        <button onclick="copyAddress()" style="background:#334155;">📋 Copy Address</button>
-      </div>
+    document.getElementById("mainContent").innerHTML = `
+      <div style="font-size:12px; color:#8b949e;">Wallet Address</div>
+      <div style="font-size:13px; font-weight:bold; word-break:break-all; margin:8px 0; color:#38bdf8;">${walletData.address}</div>
+      <button class="btn btn-secondary" onclick="copyAddress()" style="padding:8px; font-size:13px;">📋 Copy Address</button>
+      
+      <hr style="border:0; border-top:1px solid #21262d; margin:20px 0;">
 
-      <div class="card">
-        <p style="font-size:12px; color:#94a3b8;">Balance</p>
-        <h1 id="balance">0.00 TON</h1>
-        <button onclick="refreshBalance()" style="background:#0284c7;">🔄 Refresh Balance</button>
-      </div>
+      <div style="font-size:12px; color:#8b949e;">Balance</div>
+      <h1 id="balance" style="font-size:32px; margin:10px 0; color:#ffffff;">0.00 TON</h1>
+      <button class="btn btn-secondary" onclick="refreshBalance()" style="padding:8px; font-size:13px;">🔄 Refresh Balance</button>
 
-      <div style="display:flex; gap:10px;">
-        <button onclick="openSend()">📤 Send</button>
-        <button onclick="openReceive()" style="background:#059669;">📥 Receive</button>
+      <div class="flex-gap" style="margin-top:20px;">
+        <button class="btn" onclick="openSend()">📤 Send</button>
+        <button class="btn btn-success" onclick="openReceive()">📥 Receive</button>
       </div>
       
-      <button onclick="openSettings()" style="background:#475569; margin-top:15px;">⚙️ Settings / Backup</button>
+      <button class="btn btn-secondary" onclick="openSettings()" style="margin-top:15px;">⚙️ Settings / Backup</button>
     `;
   }
 
@@ -155,11 +167,11 @@
   function openReceive() {
     document.getElementById("modalTitle").innerText = "Receive TON";
     document.getElementById("modalBody").innerHTML = `
-      <p style="font-size:12px;">Send TON to this address:</p>
+      <p style="font-size:12px; color:#8b949e;">Send TON to this address:</p>
       <div class="phrase-box">${walletData.address}</div>
-      <button onclick="copyAddress()">Copy Address</button>
+      <button class="btn" onclick="copyAddress()">Copy Address</button>
     `;
-    document.getElementById("modal").style.display = "block";
+    document.getElementById("modal").style.display = "flex";
   }
 
   function openSend() {
@@ -167,9 +179,9 @@
     document.getElementById("modalBody").innerHTML = `
       <input id="sendTo" placeholder="Recipient TON Address">
       <input id="sendAmount" type="number" step="0.01" placeholder="Amount TON">
-      <button onclick="doSend()">Send Now</button>
+      <button class="btn" onclick="doSend()">Send Now</button>
     `;
-    document.getElementById("modal").style.display = "block";
+    document.getElementById("modal").style.display = "flex";
   }
 
   async function doSend() {
@@ -206,11 +218,11 @@
   function openSettings() {
     document.getElementById("modalTitle").innerText = "Settings";
     document.getElementById("modalBody").innerHTML = `
-      <button onclick="showPhrase()" style="background:#0e7490;">🔑 Show Recovery Phrase</button>
+      <button class="btn btn-secondary" onclick="showPhrase()">🔑 Show Recovery Phrase</button>
       <div id="phraseBox" class="phrase-box" style="display:none;"></div>
-      <button onclick="resetWallet()" style="background:#b91c1c; margin-top:10px;">⚠️ Delete / Reset Wallet</button>
+      <button class="btn btn-danger" onclick="resetWallet()" style="margin-top:10px;">⚠️ Reset / Delete Wallet</button>
     `;
-    document.getElementById("modal").style.display = "block";
+    document.getElementById("modal").style.display = "flex";
   }
 
   function showPhrase() {
@@ -231,7 +243,7 @@
 
   window.onload = function() {
     if (typeof TonWeb === "undefined") {
-      document.getElementById("app").innerHTML = "<div class='card'>Loading TON Web Library failed. Please check internet or refresh.</div>";
+      document.getElementById("mainContent").innerHTML = "Failed to load TON Web Library. Check internet connection.";
       return;
     }
     tonweb = new TonWeb(new TonWeb.HttpProvider("https://testnet.toncenter.com/api/v2/jsonRPC", { apiKey: API_KEY }));
