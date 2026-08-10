@@ -1,535 +1,2898 @@
-const API_KEY = "c09170dd62724a03f3803b0f1023219c672c0fcc02a2deed31bd75faea36e9e1";
-let tonweb, walletData = JSON.parse(localStorage.getItem("TGN_TON_WALLET"));
+/* =========================================================
+   TGN TON WALLET
+   Clean / Professional App Logic
+
+   - No fake transaction history
+   - No demo transactions
+   - Clean Activity page
+   - 5-tab navigation
+   - Send / Wallet / Profile pages
+   - Responsive UI
+   ========================================================= */
+
+
+/* =========================================================
+   CONFIG
+   ========================================================= */
+
+const API_KEY = "YOUR_TONCENTER_API_KEY";
+
+let tonweb = null;
+let walletData = JSON.parse(
+  localStorage.getItem("TGN_TON_WALLET")
+);
+
+let activeTab = "home";
+
+
+/* =========================================================
+   UI STYLE
+   ========================================================= */
+
+(function injectStyles() {
+
+  if (document.getElementById("tgn-app-style")) return;
+
+  const style = document.createElement("style");
+
+  style.id = "tgn-app-style";
+
+  style.textContent = `
+
+    /* ================================
+       GENERAL
+       ================================ */
+
+    #content {
+      width:100%;
+      max-width:720px;
+      margin:0 auto;
+      padding:10px 0 120px;
+    }
+
+    button,
+    input,
+    textarea {
+      font-family:inherit;
+    }
+
+
+    /* ================================
+       PAGE HEADER
+       ================================ */
+
+    .tgn-page-title {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin:5px 3px 15px;
+    }
+
+    .tgn-page-title h2 {
+      margin:0;
+      color:#f5f9ff;
+      font-size:23px;
+      font-weight:800;
+      letter-spacing:-.4px;
+    }
+
+    .tgn-refresh {
+      border:0;
+      background:transparent;
+      color:#39a7ff;
+      font-size:14px;
+      font-weight:700;
+      padding:8px;
+      cursor:pointer;
+    }
+
+
+    /* ================================
+       CARD
+       ================================ */
+
+    .tgn-card {
+      background:
+        linear-gradient(
+          145deg,
+          rgba(19,34,58,.97),
+          rgba(8,18,35,.97)
+        );
+
+      border:
+        1px solid rgba(110,160,220,.13);
+
+      border-radius:20px;
+
+      box-shadow:
+        0 12px 35px rgba(0,0,0,.18);
+    }
+
+
+    /* ================================
+       ACTIVITY EMPTY
+       ================================ */
+
+    .tgn-empty {
+      padding:48px 22px;
+      text-align:center;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(18,33,56,.88),
+          rgba(8,18,34,.96)
+        );
+
+      border:
+        1px solid rgba(110,160,220,.12);
+
+      border-radius:20px;
+    }
+
+    .tgn-empty-icon {
+      width:68px;
+      height:68px;
+
+      margin:0 auto 17px;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      border-radius:20px;
+
+      background:
+        rgba(38,147,255,.09);
+
+      border:
+        1px solid rgba(58,167,255,.15);
+
+      color:#39a7ff;
+
+      font-size:31px;
+    }
+
+    .tgn-empty h3 {
+      margin:0 0 8px;
+
+      color:#f1f7ff;
+
+      font-size:19px;
+      font-weight:800;
+    }
+
+    .tgn-empty p {
+      margin:0 auto;
+
+      max-width:300px;
+
+      color:#8196b5;
+
+      font-size:13px;
+
+      line-height:1.65;
+    }
+
+
+    /* ================================
+       FILTER
+       ================================ */
+
+    .tgn-filter-row {
+      display:flex;
+      gap:8px;
+
+      overflow-x:auto;
+
+      padding:2px 1px 11px;
+
+      scrollbar-width:none;
+    }
+
+    .tgn-filter-row::-webkit-scrollbar {
+      display:none;
+    }
+
+    .tgn-filter {
+      border:
+        1px solid rgba(130,160,200,.15);
+
+      background:
+        rgba(255,255,255,.035);
+
+      color:#91a7c4;
+
+      padding:9px 14px;
+
+      border-radius:12px;
+
+      white-space:nowrap;
+
+      font-size:12px;
+      font-weight:700;
+
+      cursor:pointer;
+    }
+
+    .tgn-filter.active {
+      color:#39a7ff;
+
+      background:
+        rgba(38,147,255,.14);
+
+      border-color:
+        rgba(38,147,255,.35);
+    }
+
+
+    /* ================================
+       TRANSACTION
+       ================================ */
+
+    .tgn-tx {
+      display:flex;
+      align-items:center;
+
+      gap:12px;
+
+      padding:14px;
+
+      margin-bottom:9px;
+
+      border-radius:17px;
+
+      background:
+        rgba(17,31,52,.75);
+
+      border:
+        1px solid rgba(110,160,220,.09);
+    }
+
+    .tgn-tx-icon {
+      width:43px;
+      height:43px;
+
+      flex:0 0 auto;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      border-radius:14px;
+
+      font-size:20px;
+      font-weight:800;
+    }
+
+    .tgn-tx-icon.receive {
+      color:#22c58b;
+      background:rgba(16,185,129,.12);
+    }
+
+    .tgn-tx-icon.deposit {
+      color:#39a7ff;
+      background:rgba(38,147,255,.12);
+    }
+
+    .tgn-tx-icon.send,
+    .tgn-tx-icon.withdraw {
+      color:#ff6570;
+      background:rgba(239,68,68,.11);
+    }
+
+    .tgn-tx-main {
+      min-width:0;
+      flex:1;
+    }
+
+    .tgn-tx-title {
+      color:#f5f9ff;
+      font-size:14px;
+      font-weight:800;
+    }
+
+    .tgn-tx-sub {
+      margin-top:4px;
+
+      color:#8196b5;
+
+      font-size:11px;
+
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .tgn-tx-right {
+      text-align:right;
+      flex:0 0 auto;
+    }
+
+    .tgn-tx-amount {
+      font-size:14px;
+      font-weight:800;
+    }
+
+    .tgn-tx-date {
+      margin-top:4px;
+
+      color:#7187a5;
+
+      font-size:10px;
+    }
+
+
+    /* ================================
+       PROFILE
+       ================================ */
+
+    .tgn-profile-head {
+      padding:18px;
+
+      display:flex;
+      align-items:center;
+
+      gap:14px;
+
+      margin-bottom:12px;
+    }
+
+    .tgn-avatar {
+      width:58px;
+      height:58px;
+
+      flex:0 0 auto;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      border-radius:18px;
+
+      background:
+        linear-gradient(
+          145deg,
+          #2497ff,
+          #155fe0
+        );
+
+      color:#fff;
+
+      font-size:22px;
+      font-weight:800;
+
+      box-shadow:
+        0 8px 22px
+        rgba(36,151,255,.22);
+    }
+
+    .tgn-name {
+      color:#f5f9ff;
+
+      font-size:17px;
+      font-weight:800;
+    }
+
+    .tgn-handle {
+      margin-top:4px;
+
+      color:#39a7ff;
+
+      font-size:12px;
+    }
+
+
+    /* ================================
+       MENU
+       ================================ */
+
+    .tgn-menu {
+      overflow:hidden;
+    }
+
+    .tgn-menu-item {
+      width:100%;
+
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+
+      padding:15px 17px;
+
+      border:0;
+      border-bottom:
+        1px solid rgba(110,160,220,.08);
+
+      background:transparent;
+
+      color:#edf5ff;
+
+      text-align:left;
+
+      cursor:pointer;
+    }
+
+    .tgn-menu-item:last-child {
+      border-bottom:0;
+    }
+
+    .tgn-menu-left {
+      display:flex;
+      align-items:center;
+
+      gap:12px;
+
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .tgn-menu-icon {
+      width:36px;
+      height:36px;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      border-radius:11px;
+
+      background:
+        rgba(38,147,255,.10);
+
+      color:#39a7ff;
+    }
+
+    .tgn-menu-arrow {
+      color:#617894;
+      font-size:20px;
+    }
+
+
+    /* ================================
+       FORMS
+       ================================ */
+
+    .tgn-form-card {
+      padding:18px;
+    }
+
+    .tgn-form-title {
+      margin-bottom:17px;
+
+      color:#f5f9ff;
+
+      font-size:18px;
+      font-weight:800;
+    }
+
+    .tgn-label {
+      display:block;
+
+      margin-bottom:7px;
+
+      color:#8fa5c1;
+
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .tgn-input {
+      width:100%;
+
+      padding:13px 14px;
+
+      margin-bottom:13px;
+
+      border:
+        1px solid rgba(110,160,220,.14);
+
+      border-radius:14px;
+
+      background:#091326;
+
+      color:#f5f9ff;
+
+      outline:none;
+
+      font-size:13px;
+    }
+
+    .tgn-input:focus {
+      border-color:
+        rgba(58,167,255,.5);
+
+      box-shadow:
+        0 0 0 3px
+        rgba(58,167,255,.08);
+    }
+
+
+    /* ================================
+       BUTTONS
+       ================================ */
+
+    .tgn-primary {
+      width:100%;
+
+      border:0;
+
+      border-radius:14px;
+
+      padding:13px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #299cff,
+          #176de7
+        );
+
+      color:#fff;
+
+      font-size:14px;
+      font-weight:800;
+
+      cursor:pointer;
+
+      box-shadow:
+        0 8px 20px
+        rgba(23,109,231,.20);
+    }
+
+    .tgn-secondary {
+      width:100%;
+
+      margin-top:9px;
+
+      padding:12px;
+
+      border:
+        1px solid rgba(110,160,220,.14);
+
+      border-radius:14px;
+
+      background:
+        rgba(255,255,255,.035);
+
+      color:#b9c9de;
+
+      font-size:13px;
+      font-weight:700;
+
+      cursor:pointer;
+    }
+
+    .tgn-back {
+      border:0;
+      background:transparent;
+
+      color:#39a7ff;
+
+      font-weight:700;
+
+      padding:5px 0;
+
+      cursor:pointer;
+    }
+
+
+    /* ================================
+       MODAL
+       ================================ */
+
+    .tgn-modal-note {
+      margin-bottom:13px;
+
+      color:#879bb7;
+
+      font-size:12px;
+
+      line-height:1.6;
+    }
+
+    .tgn-secret {
+      margin-top:10px;
+
+      padding:12px;
+
+      border:
+        1px solid rgba(110,160,220,.10);
+
+      border-radius:12px;
+
+      background:#071021;
+
+      color:#39a7ff;
+
+      font-size:11px;
+
+      line-height:1.55;
+
+      word-break:break-word;
+
+      max-height:120px;
+
+      overflow:auto;
+    }
+
+
+    /* ================================
+       MOBILE
+       ================================ */
+
+    @media(max-width:420px) {
+
+      #content {
+        padding-top:5px;
+      }
+
+      .tgn-page-title h2 {
+        font-size:20px;
+      }
+
+      .tgn-card {
+        border-radius:18px;
+      }
+
+      .tgn-empty {
+        padding:42px 18px;
+      }
+
+    }
+
+  `;
+
+  document.head.appendChild(style);
+
+})();
+
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
 
 const WORDLIST = [
-  "abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident",
-  "account","accuse","achieve","acid","acoustic","acquire","across","act","action","actor","actress","actual",
-  "adapt","add","addict","address","adjust","admit","adult","advance","advice","aerobic","affair","afford",
-  "afraid","again","age","agent","agree","ahead","aim","air","airport","aisle","alarm","album","alcohol",
-  "alert","alien","all","alley","allow","almost","alone","alpha","already","also","alter","always","amateur",
-  "amazing","among","amount","amused","analyst","anchor","ancient","anger","angle","angry","animal","ankle",
-  "announce","annual","answer","antenna","antique","anxiety","any","apart","apology","appear","apple","approve",
-  "april","arch","arctic","area","arena","argue","arm","armed","armor","army","around","arrange","arrest",
-  "arrive","arrow","art","artefact","artist","artwork","ask","aspect","assault","asset","assist","assume",
-  "asthma","athlete","atom","attack","attend","attitude","attract","auction","audit","august","aunt","author",
-  "auto","autumn","average","avocado","avoid","awake","aware","away","awesome","awful","awkward","axis"
+  "abandon","ability","able","about","above","absent",
+  "absorb","abstract","absurd","abuse","access","accident",
+  "account","accuse","achieve","acid","acoustic","acquire",
+  "across","act","action","actor","actual","adapt",
+  "addict","address","adjust","admit","adult","advance",
+  "advice","aerobic","affair","afford","afraid","again",
+  "age","agent","agree","ahead","aim","air","airport",
+  "aisle","alarm","album","alert","alien","all","alley",
+  "allow","almost","alone","alpha","already","also",
+  "alter","always","amazing","among","amount","amused",
+  "analyst","anchor","ancient","anger","angle","angry",
+  "animal","ankle","announce","annual","answer","antenna",
+  "antique","anxiety","apart","apology","appear","apple",
+  "approve","april","arch","arctic","area","arena",
+  "argue","arm","army","around","arrange","arrive",
+  "arrow","art","artist","artwork","ask","aspect",
+  "asset","assist","assume","athlete","atom","attack",
+  "attend","attitude","attract","auction","audit",
+  "august","author","auto","autumn","average","avocado",
+  "avoid","awake","aware","away","awesome","awful","axis"
 ];
 
+
 function generateNativeMnemonic() {
-  let words = [];
-  const randomValues = new Uint8Array(24);
-  window.crypto.getRandomValues(randomValues);
+
+  const words = [];
+
+  const randomValues =
+    new Uint8Array(24);
+
+  window.crypto.getRandomValues(
+    randomValues
+  );
+
   for (let i = 0; i < 24; i++) {
-    words.push(WORDLIST[randomValues[i] % WORDLIST.length]);
+    words.push(
+      WORDLIST[
+        randomValues[i] %
+        WORDLIST.length
+      ]
+    );
   }
+
   return words;
 }
 
-function showToast(msg) {
+
+function showToast(message) {
+
   if (window.Telegram?.WebApp) {
-    window.Telegram.WebApp.showAlert(msg);
+    window.Telegram.WebApp.showAlert(
+      message
+    );
   } else {
-    alert(msg);
+    alert(message);
   }
+
 }
+
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replace(
+      /[&<>'"]/g,
+      char => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        "'":"&#39;",
+        '"':"&quot;"
+      }[char])
+    );
+
+}
+
+
+/* =========================================================
+   TRANSACTIONS
+   ========================================================= */
+
+/*
+   IMPORTANT:
+   No default/fake transaction.
+*/
 
 function getUserTransactions() {
-  let txs = JSON.parse(localStorage.getItem("TGN_USER_TXS")) || [
-    { id: 1, type: "received", title: "Received", subtitle: "From: EQD5...3p8K", amount: "+2.50 GRAM", usd: "$1.79 USD", date: "May 10, 2025", time: "5:07 PM", rawAddr: "EQD5123456789abcdefABCDEF0123456789abcdefAB" },
-    { id: 2, type: "sent", title: "Sent", subtitle: "To: EQC8...7x2M", amount: "-1.20 GRAM", usd: "$0.86 USD", date: "May 10, 2025", time: "4:51 PM", rawAddr: "EQC876543210fedcbaFEDCBA9876543210fedcbaCD" }
-  ];
-  return txs;
+
+  try {
+
+    const data =
+      JSON.parse(
+        localStorage.getItem(
+          "TGN_USER_TXS"
+        )
+      );
+
+    return Array.isArray(data)
+      ? data
+      : [];
+
+  } catch (error) {
+
+    return [];
+
+  }
+
 }
+
 
 function saveUserTransaction(tx) {
-  let txs = getUserTransactions();
-  txs.unshift(tx);
-  localStorage.setItem("TGN_USER_TXS", JSON.stringify(txs));
+
+  const transactions =
+    getUserTransactions();
+
+  transactions.unshift(tx);
+
+  localStorage.setItem(
+    "TGN_USER_TXS",
+    JSON.stringify(transactions)
+  );
+
 }
 
-let activeTab = 'home';
+
+/*
+   Remove old Gemini demo transactions
+*/
+
+(function cleanOldDemoData() {
+
+  const transactions =
+    getUserTransactions();
+
+  const cleaned =
+    transactions.filter(tx => {
+
+      if (!tx) return false;
+
+      const text =
+        JSON.stringify(tx)
+          .toLowerCase();
+
+      /*
+        Remove known demo/test records.
+      */
+
+      if (
+        text.includes("2.50 gram") ||
+        text.includes("1.20 gram") ||
+        text.includes("may 10, 2025") ||
+        text.includes("simulate test") ||
+        text.includes("eqd5") ||
+        text.includes("eqc8")
+      ) {
+        return false;
+      }
+
+      return true;
+
+    });
+
+  if (
+    cleaned.length !==
+    transactions.length
+  ) {
+
+    localStorage.setItem(
+      "TGN_USER_TXS",
+      JSON.stringify(cleaned)
+    );
+
+  }
+
+})();
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
 
 function switchNav(tab) {
+
   activeTab = tab;
-  document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
-  const target = document.getElementById('nav-' + tab);
-  if (target) target.classList.add('active');
 
-  const contentEl = document.getElementById('content');
-  contentEl.innerHTML = '';
+  document
+    .querySelectorAll(
+      ".bottom-nav-item"
+    )
+    .forEach(button => {
 
-  if (tab === 'home') renderMain();
-  else if (tab === 'activity') renderActivityPage();
-  else if (tab === 'wallet') renderWalletPage();
-  else if (tab === 'profile') renderProfilePage();
+      button.classList.remove(
+        "active"
+      );
+
+    });
+
+
+  const nav =
+    document.getElementById(
+      "nav-" + tab
+    );
+
+  if (nav) {
+    nav.classList.add("active");
+  }
+
+
+  const content =
+    document.getElementById(
+      "content"
+    );
+
+  if (!content) return;
+
+  content.innerHTML = "";
+
+
+  if (tab === "home") {
+    renderMain();
+  }
+
+  else if (tab === "activity") {
+    renderActivityPage();
+  }
+
+  else if (tab === "send") {
+    renderSendPage();
+  }
+
+  else if (tab === "wallet") {
+    renderWalletPage();
+  }
+
+  else if (tab === "profile") {
+    renderProfilePage();
+  }
+
 }
+
+
+/* =========================================================
+   WELCOME
+   ========================================================= */
 
 function renderWelcome() {
-  document.getElementById("content").innerHTML = `
-    <div class="hero-card" style="text-align:center; margin-top:10px;">
-      <div class="hero-icon">💎</div>
-      <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN Wallet</div>
-      <div class="hero-subbalance" style="margin-top:10px;">Secure Decentralized Web3 Wallet</div>
-      <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
-        <button class="action-btn primary" onclick="createWallet()" style="width:100%; justify-content:center;">Create New Wallet</button>
-        <button class="action-btn" onclick="showImport()" style="width:100%; justify-content:center;">Import Seed Phrase</button>
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div
+      class="tgn-card"
+      style="
+        padding:30px 20px;
+        text-align:center;
+        margin-top:10px;
+      "
+    >
+
+      <div
+        style="
+          font-size:48px;
+          margin-bottom:10px;
+        "
+      >
+        💎
       </div>
+
+      <h2
+        style="
+          margin:0;
+          color:#fff;
+          font-size:23px;
+        "
+      >
+        TGN Wallet
+      </h2>
+
+      <p
+        style="
+          color:#8fa5c1;
+          font-size:13px;
+          line-height:1.6;
+          margin:9px 0 22px;
+        "
+      >
+        Your TON wallet for simple
+        and secure Web3 transfers.
+      </p>
+
+      <button
+        class="tgn-primary"
+        onclick="createWallet()"
+      >
+        Create New Wallet
+      </button>
+
+      <button
+        class="tgn-secondary"
+        onclick="showImport()"
+      >
+        Import Existing Wallet
+      </button>
+
     </div>
+
   `;
+
 }
+
+
+/* =========================================================
+   CREATE WALLET
+   ========================================================= */
 
 async function createWallet() {
-  try {
-    const seed = generateNativeMnemonic();
-    const seedBytes = new TextEncoder().encode(seed.join(" "));
-    const hash = await window.crypto.subtle.digest("SHA-256", seedBytes);
-    const secretKey = new Uint8Array(hash);
-    const keyPair = TonWeb.utils.nacl.sign.keyPair.fromSeed(secretKey);
 
-    const WalletClass = tonweb.wallet.all.v4R2;
-    const wallet = new WalletClass(tonweb.provider, { publicKey: keyPair.publicKey });
-    const address = (await wallet.getAddress()).toString(true, true, true);
+  try {
+
+    const seed =
+      generateNativeMnemonic();
+
+    const seedBytes =
+      new TextEncoder()
+        .encode(
+          seed.join(" ")
+        );
+
+    const hash =
+      await crypto.subtle.digest(
+        "SHA-256",
+        seedBytes
+      );
+
+    const secretKey =
+      new Uint8Array(hash);
+
+    const keyPair =
+      TonWeb.utils.nacl.sign
+        .keyPair.fromSeed(
+          secretKey
+        );
+
+    const WalletClass =
+      tonweb.wallet.all.v4R2;
+
+    const wallet =
+      new WalletClass(
+        tonweb.provider,
+        {
+          publicKey:
+            keyPair.publicKey
+        }
+      );
+
+    const address =
+      (
+        await wallet.getAddress()
+      ).toString(
+        true,
+        true,
+        true
+      );
+
 
     walletData = {
-      mnemonic: seed.join(" "),
-      publicKey: TonWeb.utils.bytesToHex(keyPair.publicKey),
-      secretKey: TonWeb.utils.bytesToHex(keyPair.secretKey),
-      address: address
+
+      mnemonic:
+        seed.join(" "),
+
+      publicKey:
+        TonWeb.utils.bytesToHex(
+          keyPair.publicKey
+        ),
+
+      secretKey:
+        TonWeb.utils.bytesToHex(
+          keyPair.secretKey
+        ),
+
+      address
+
     };
 
-    localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
-    switchNav('home');
+
+    localStorage.setItem(
+      "TGN_TON_WALLET",
+      JSON.stringify(
+        walletData
+      )
+    );
+
+
+    switchNav("home");
+
     refreshBalance();
-  } catch (e) {
-    alert("Error: " + e.message);
+
   }
+
+  catch (error) {
+
+    alert(
+      "Wallet creation failed: " +
+      error.message
+    );
+
+  }
+
 }
+
+
+/* =========================================================
+   IMPORT WALLET
+   ========================================================= */
 
 function showImport() {
-  document.getElementById("mTitle").innerText = "Import Wallet";
-  document.getElementById("mBody").innerHTML = `
-    <textarea id="importSeed" rows="4" placeholder="Enter your 24 seed words..."></textarea>
-    <button class="btn primary" onclick="importWallet()" style="margin-top:10px; width:100%;">Import Wallet</button>
+
+  document.getElementById(
+    "mTitle"
+  ).innerText =
+    "Import Wallet";
+
+
+  document.getElementById(
+    "mBody"
+  ).innerHTML = `
+
+    <p class="tgn-modal-note">
+      Enter your recovery phrase
+      to restore your wallet.
+    </p>
+
+    <textarea
+      id="importSeed"
+      class="tgn-input"
+      rows="4"
+      placeholder="Enter your recovery phrase..."
+    ></textarea>
+
+    <button
+      class="tgn-primary"
+      onclick="importWallet()"
+    >
+      Import Wallet
+    </button>
+
   `;
-  document.getElementById("modal").style.display = "flex";
+
+
+  document.getElementById(
+    "modal"
+  ).style.display =
+    "flex";
+
 }
+
 
 async function importWallet() {
-  const text = document.getElementById("importSeed").value.trim();
-  if (!text) return alert("Please enter seed phrase");
-  
-  try {
-    const seedBytes = new TextEncoder().encode(text);
-    const hash = await window.crypto.subtle.digest("SHA-256", seedBytes);
-    const secretKey = new Uint8Array(hash);
-    const keyPair = TonWeb.utils.nacl.sign.keyPair.fromSeed(secretKey);
 
-    const WalletClass = tonweb.wallet.all.v4R2;
-    const wallet = new WalletClass(tonweb.provider, { publicKey: keyPair.publicKey });
-    const address = (await wallet.getAddress()).toString(true, true, true);
+  const input =
+    document.getElementById(
+      "importSeed"
+    );
+
+  const text =
+    input?.value.trim();
+
+
+  if (!text) {
+
+    alert(
+      "Please enter your recovery phrase."
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const seedBytes =
+      new TextEncoder()
+        .encode(text);
+
+    const hash =
+      await crypto.subtle.digest(
+        "SHA-256",
+        seedBytes
+      );
+
+    const secretKey =
+      new Uint8Array(hash);
+
+    const keyPair =
+      TonWeb.utils.nacl.sign
+        .keyPair.fromSeed(
+          secretKey
+        );
+
+    const WalletClass =
+      tonweb.wallet.all.v4R2;
+
+    const wallet =
+      new WalletClass(
+        tonweb.provider,
+        {
+          publicKey:
+            keyPair.publicKey
+        }
+      );
+
+    const address =
+      (
+        await wallet.getAddress()
+      ).toString(
+        true,
+        true,
+        true
+      );
+
 
     walletData = {
-      mnemonic: text,
-      publicKey: TonWeb.utils.bytesToHex(keyPair.publicKey),
-      secretKey: TonWeb.utils.bytesToHex(keyPair.secretKey),
-      address: address
+
+      mnemonic:text,
+
+      publicKey:
+        TonWeb.utils.bytesToHex(
+          keyPair.publicKey
+        ),
+
+      secretKey:
+        TonWeb.utils.bytesToHex(
+          keyPair.secretKey
+        ),
+
+      address
+
     };
 
-    localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
+
+    localStorage.setItem(
+      "TGN_TON_WALLET",
+      JSON.stringify(
+        walletData
+      )
+    );
+
+
     closeModal();
-    switchNav('home');
+
+    switchNav("home");
+
     refreshBalance();
-  } catch (e) {
-    alert("Invalid seed phrase: " + e.message);
+
   }
+
+  catch (error) {
+
+    alert(
+      "Invalid recovery phrase."
+    );
+
+  }
+
 }
+
+
+/* =========================================================
+   HOME
+   ========================================================= */
 
 function renderMain() {
-  if (!walletData) { renderWelcome(); return; }
-  const shortAddr = walletData.address.substring(0, 6) + "..." + walletData.address.substring(walletData.address.length - 4);
-  
-  document.getElementById("content").innerHTML = `
-    <div class="hero-card" style="margin-top:0;">
-      <div class="hero-header">My Wallet</div>
-      <div class="hero-balance" id="balance">0.00 GRAM</div>
-      <div class="hero-subbalance" id="usdBalance">$0.00 USD</div>
-      <div class="hero-icon">💎</div>
+
+  if (!walletData) {
+
+    renderWelcome();
+
+    return;
+
+  }
+
+
+  const address =
+    walletData.address || "";
+
+  const shortAddr =
+    address.length > 12
+      ? address.slice(0,6) +
+        "..." +
+        address.slice(-4)
+      : address;
+
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <!-- WALLET HERO -->
+
+    <div
+      class="hero-card"
+      style="margin-top:0"
+    >
+
+      <div class="hero-header">
+        My Wallet
+      </div>
+
+      <div
+        class="hero-balance"
+        id="balance"
+      >
+        0.00 TON
+      </div>
+
+      <div
+        class="hero-subbalance"
+        id="usdBalance"
+      >
+        $0.00 USD
+      </div>
+
+      <div class="hero-icon">
+        💎
+      </div>
+
       <div class="action-row">
-        <button class="action-btn primary" onclick="renderReceivePage()">Deposit</button>
-        <button class="action-btn" onclick="renderSendPage()">Withdraw</button>
+
+        <button
+          class="action-btn primary"
+          onclick="renderReceivePage()"
+        >
+          Deposit
+        </button>
+
+        <button
+          class="action-btn"
+          onclick="renderSendPage()"
+        >
+          Withdraw
+        </button>
+
       </div>
+
     </div>
 
+
+    <!-- ADDRESS -->
+
     <div class="section-box">
-      <div class="section-title">Wallet Address</div>
+
+      <div class="section-title">
+        Wallet Address
+      </div>
+
       <div class="address-row">
-        <span style="color:#38bdf8;">● ${shortAddr}</span>
-        <button class="copy-pill" onclick="copyAddress()">Copy</button>
+
+        <span
+          style="
+            color:#38bdf8;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+          "
+        >
+          ● ${escapeHtml(shortAddr)}
+        </span>
+
+        <button
+          class="copy-pill"
+          onclick="copyAddress()"
+        >
+          Copy
+        </button>
+
       </div>
+
     </div>
 
-    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:14px;">
-      <div class="grid-btn" onclick="renderSendPage()" style="padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; text-align:center; cursor:pointer;"><span class="grid-label" style="font-weight:600; color:#fff;">📤 Send</span></div>
-      <div class="grid-btn" onclick="renderReceivePage()" style="padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; text-align:center; cursor:pointer;"><span class="grid-label" style="font-weight:600; color:#fff;">📥 Receive</span></div>
+
+    <!-- QUICK ACTION -->
+
+    <div
+      style="
+        display:grid;
+        grid-template-columns:
+          repeat(2,1fr);
+        gap:10px;
+        margin-bottom:14px;
+      "
+    >
+
+      <button
+        class="grid-btn"
+        onclick="renderSendPage()"
+        style="
+          padding:14px;
+          background:rgba(255,255,255,.035);
+          border:1px solid
+            rgba(110,160,220,.10);
+          border-radius:14px;
+          color:#fff;
+          font-weight:700;
+          cursor:pointer;
+        "
+      >
+        📤 Send
+      </button>
+
+      <button
+        class="grid-btn"
+        onclick="renderReceivePage()"
+        style="
+          padding:14px;
+          background:rgba(255,255,255,.035);
+          border:1px solid
+            rgba(110,160,220,.10);
+          border-radius:14px;
+          color:#fff;
+          font-weight:700;
+          cursor:pointer;
+        "
+      >
+        📥 Receive
+      </button>
+
     </div>
+
+
+    <!-- TOKEN -->
 
     <div class="section-box">
-      <div class="section-title"><span>Tokens</span> <span style="color:#38bdf8; cursor:pointer;" onclick="refreshBalance()">Refresh 🔄</span></div>
+
+      <div class="section-title">
+
+        <span>
+          Tokens
+        </span>
+
+        <span
+          style="
+            color:#38bdf8;
+            cursor:pointer;
+          "
+          onclick="refreshBalance()"
+        >
+          Refresh ↻
+        </span>
+
+      </div>
+
+
       <div class="token-item">
+
         <div class="token-left">
-          <div class="token-logo">💎</div>
+
+          <div class="token-logo">
+            💎
+          </div>
+
           <div>
-            <div style="font-weight:600; font-size:14px;">GRAM</div>
-            <div style="font-size:11px; color:var(--text-muted);">Gram Token</div>
+
+            <div
+              style="
+                font-weight:700;
+                font-size:14px;
+              "
+            >
+              TON
+            </div>
+
+            <div
+              style="
+                font-size:11px;
+                color:var(--text-muted);
+              "
+            >
+              Toncoin
+            </div>
+
           </div>
+
         </div>
-        <div style="text-align:right;">
-          <div style="font-weight:600; font-size:14px;" id="tokenBalance">0.00 GRAM</div>
-          <div style="font-size:11px; color:var(--text-muted);" id="tokenUsd">$0.00</div>
+
+
+        <div style="text-align:right">
+
+          <div
+            id="tokenBalance"
+            style="
+              font-weight:700;
+              font-size:14px;
+            "
+          >
+            0.00 TON
+          </div>
+
+          <div
+            id="tokenUsd"
+            style="
+              font-size:11px;
+              color:var(--text-muted);
+            "
+          >
+            $0.00
+          </div>
+
         </div>
+
       </div>
+
     </div>
+
   `;
+
+
   refreshBalance();
+
 }
 
-// Activity / History Page
-function renderActivityPage(filter = 'all') {
-  const transactions = getUserTransactions();
-  const filteredTx = filter === 'all' ? transactions : transactions.filter(tx => tx.type === filter);
-  
-  document.getElementById("content").innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:0;">
-      <h2 style="font-size:18px; font-weight:700; color:#fff; margin:0;">Activity & History</h2>
-      <div style="font-size:12px; color:#38bdf8; cursor:pointer;" onclick="refreshActivity()">Refresh 🔄</div>
-    </div>
-    
-    <div class="section-box" style="background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); padding:14px; margin-bottom:12px;">
-      <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">Overview</div>
-      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">
-        <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:8px;">
-          <div style="font-size:10px; color:var(--text-muted);">Total Transactions</div>
-          <div style="font-size:16px; font-weight:700; color:#fff;">${transactions.length}</div>
+
+/* =========================================================
+   ACTIVITY
+   ========================================================= */
+
+function renderActivityPage(
+  filter = "all"
+) {
+
+  const transactions =
+    getUserTransactions();
+
+
+  const filtered =
+    filter === "all"
+      ? transactions
+      : transactions.filter(
+          tx => tx.type === filter
+        );
+
+
+  let content = "";
+
+
+  /*
+     EMPTY STATE
+
+     No fake transactions.
+  */
+
+  if (!transactions.length) {
+
+    content = `
+
+      <div class="tgn-empty">
+
+        <div class="tgn-empty-icon">
+          ◷
         </div>
-        <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:8px;">
-          <div style="font-size:10px; color:var(--text-muted);">Activity Status</div>
-          <div style="font-size:14px; font-weight:700; color:#10b981;">Synced ✅</div>
-        </div>
+
+        <h3>
+          No Transactions Yet
+        </h3>
+
+        <p>
+          Your wallet activity will
+          appear here after your
+          first transaction.
+        </p>
+
       </div>
-    </div>
 
-    <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px;">
-      <button class="filter-chip ${filter==='all'?'active':''}" onclick="renderActivityPage('all')">All</button>
-      <button class="filter-chip ${filter==='received'?'active':''}" onclick="renderActivityPage('received')">Received</button>
-      <button class="filter-chip ${filter==='sent'?'active':''}" onclick="renderActivityPage('sent')">Sent</button>
-      <button class="filter-chip ${filter==='deposit'?'active':''}" onclick="renderActivityPage('deposit')">Deposit</button>
-      <button class="filter-chip ${filter==='withdraw'?'active':''}" onclick="renderActivityPage('withdraw')">Withdraw</button>
-    </div>
+    `;
 
-    <div id="txList">
-      ${filteredTx.length === 0 ? `<div style="text-align:center; color:var(--text-muted); padding:20px;">No transaction history found.</div>` : 
-        filteredTx.map(tx => `
-          <div class="tx-card" onclick="showTxDetail(${tx.id})" style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-            <div>
-              <div style="font-weight:600; font-size:13px; color:#fff;">${tx.title}</div>
-              <div style="font-size:11px; color:#94a3b8;">${tx.subtitle}</div>
+  }
+
+  else {
+
+    content = `
+
+      <div class="tgn-filter-row">
+
+        ${[
+          "all",
+          "received",
+          "sent",
+          "deposit",
+          "withdraw"
+        ].map(type => `
+
+          <button
+            class="tgn-filter ${
+              filter === type
+                ? "active"
+                : ""
+            }"
+            onclick="
+              renderActivityPage('${type}')
+            "
+          >
+            ${
+              type.charAt(0)
+                .toUpperCase() +
+              type.slice(1)
+            }
+          </button>
+
+        `).join("")}
+
+      </div>
+
+
+      ${
+        filtered.length
+
+        ? filtered.map(tx => `
+
+          <div class="tgn-tx">
+
+            <div
+              class="
+                tgn-tx-icon
+                ${escapeHtml(tx.type)}
+              "
+            >
+              ${
+                tx.type === "received" ||
+                tx.type === "deposit"
+                  ? "↓"
+                  : "↑"
+              }
             </div>
-            <div style="text-align:right;">
-              <div style="font-weight:600; font-size:13px; color:${tx.amount.startsWith('+')?'#10b981':'#ef4444'};">${tx.amount}</div>
-              <div style="font-size:10px; color:#94a3b8;">${tx.date}</div>
+
+
+            <div class="tgn-tx-main">
+
+              <div class="tgn-tx-title">
+                ${escapeHtml(tx.title)}
+              </div>
+
+              <div class="tgn-tx-sub">
+                ${escapeHtml(tx.subtitle)}
+              </div>
+
             </div>
+
+
+            <div class="tgn-tx-right">
+
+              <div
+                class="tgn-tx-amount"
+                style="
+                  color:
+                    ${
+                      String(tx.amount)
+                        .startsWith("+")
+                        ? "#22c58b"
+                        : "#ff6570"
+                    };
+                "
+              >
+                ${escapeHtml(tx.amount)}
+              </div>
+
+              <div class="tgn-tx-date">
+                ${escapeHtml(tx.date || "")}
+              </div>
+
+            </div>
+
           </div>
-        `).join('')}
+
+        `).join("")
+
+        : `
+
+          <div class="tgn-empty">
+
+            <div class="tgn-empty-icon">
+              ◷
+            </div>
+
+            <h3>
+              No Activity
+            </h3>
+
+            <p>
+              No transactions found
+              in this category.
+            </p>
+
+          </div>
+
+        `
+      }
+
+    `;
+
+  }
+
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="tgn-page-title">
+
+      <h2>
+        Activity
+      </h2>
+
+      <button
+        class="tgn-refresh"
+        onclick="refreshActivity()"
+      >
+        Refresh ↻
+      </button>
+
     </div>
+
+    ${content}
+
   `;
+
 }
 
-// Profile Page
-function renderProfilePage() {
-  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const userName = tgUser ? (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '')) : "Telegram User";
-  const userHandle = tgUser?.username ? ('@' + tgUser.username) : "@telegram_user";
-  const userId = tgUser?.id ? tgUser.id : "784920193";
-  const userYear = tgUser?.id ? "2021" : "2023";
-
-  const iconUser = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-  const iconShield = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
-  const iconBell = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
-  const iconHelp = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
-  const iconLogout = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`;
-  const iconChevron = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
-
-  document.getElementById("content").innerHTML = `
-    <h2 style="font-size:18px; font-weight:700; color:#fff; margin-bottom:10px; margin-top:0;">Profile</h2>
-    <div class="section-box" style="display:flex; align-items:center; gap:14px; background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); margin-top:0; padding:12px;">
-      <div style="width:52px; height:52px; border-radius:50%; background:#3b82f6; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:#fff;">
-        ${userName.charAt(0)}
-      </div>
-      <div>
-        <div style="font-size:15px; font-weight:700; color:#fff;">${userName}</div>
-        <div style="font-size:11px; color:#38bdf8;">${userHandle}</div>
-        <span style="background:rgba(59,130,246,0.2); color:#38bdf8; font-size:9px; padding:2px 6px; border-radius:8px; font-weight:600;">ID: ${userId}</span>
-      </div>
-    </div>
-
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-bottom:12px;">
-      <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:8px; text-align:center;">
-        <div style="font-size:9px; color:var(--text-muted);">TG Joined</div>
-        <div style="font-size:11px; font-weight:600; color:#fff;">${userYear}</div>
-      </div>
-      <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:8px; text-align:center;">
-        <div style="font-size:9px; color:var(--text-muted);">Network</div>
-        <div style="font-size:11px; font-weight:600; color:#10b981;">TON Mainnet</div>
-      </div>
-      <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:8px; text-align:center;">
-        <div style="font-size:9px; color:var(--text-muted);">Status</div>
-        <div style="font-size:11px; font-weight:600; color:#10b981;">Active</div>
-      </div>
-    </div>
-
-    <div class="section-box" style="padding:0; overflow:hidden;">
-      <div class="profile-menu-item" onclick="profileAction('Personal Information')" style="padding:12px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
-        <div style="display:flex; gap:10px; align-items:center; color:#3b82f6;">${iconUser}<span style="color:#fff; font-size:13px;">Personal Information</span></div>
-        ${iconChevron}
-      </div>
-      <div class="profile-menu-item" onclick="profileAction('Security')" style="padding:12px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
-        <div style="display:flex; gap:10px; align-items:center; color:#10b981;">${iconShield}<span style="color:#fff; font-size:13px;">Security & Seed Phrase</span></div>
-        ${iconChevron}
-      </div>
-      <div class="profile-menu-item" onclick="profileAction('Notifications')" style="padding:12px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
-        <div style="display:flex; gap:10px; align-items:center; color:#8b5cf6;">${iconBell}<span style="color:#fff; font-size:13px;">Notifications <span style="background:#ef4444; color:#fff; font-size:8px; padding:1px 5px; border-radius:4px; margin-left:4px;">SOON</span></span></div>
-        ${iconChevron}
-      </div>
-      <div class="profile-menu-item" onclick="profileAction('Help & Support')" style="padding:12px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
-        <div style="display:flex; gap:10px; align-items:center; color:#ec4899;">${iconHelp}<span style="color:#fff; font-size:13px;">Help & Support</span></div>
-        ${iconChevron}
-      </div>
-      <div class="profile-menu-item" onclick="confirmLogout()" style="padding:12px; display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
-        <div style="display:flex; gap:10px; align-items:center; color:#ef4444;">${iconLogout}<span style="color:#ef4444; font-size:13px;">Log Out</span></div>
-        ${iconChevron}
-      </div>
-    </div>
-  `;
-}
 
 function refreshActivity() {
-  showToast("Activity refreshed successfully!");
-  renderActivityPage();
+
+  renderActivityPage(
+    "all"
+  );
+
 }
 
-function showTxDetail(id) {
-  const transactions = getUserTransactions();
-  const tx = transactions.find(t => t.id === id);
-  if(!tx) return;
-  document.getElementById("mTitle").innerText = "Transaction Details";
-  document.getElementById("mBody").innerHTML = `
-    <div style="text-align:center; margin-bottom:14px;">
-      <div style="font-size:20px; font-weight:700; color:${tx.amount.startsWith('+')?'#10b981':'#ef4444'};">${tx.amount}</div>
-      <div style="font-size:11px; color:#94a3b8;">${tx.usd}</div>
+
+/* =========================================================
+   PROFILE
+   ========================================================= */
+
+function renderProfilePage() {
+
+  const tgUser =
+    window.Telegram
+      ?.WebApp
+      ?.initDataUnsafe
+      ?.user;
+
+
+  const userName =
+    tgUser
+      ? [
+          tgUser.first_name,
+          tgUser.last_name
+        ]
+        .filter(Boolean)
+        .join(" ")
+      : "Telegram User";
+
+
+  const username =
+    tgUser?.username
+      ? "@" + tgUser.username
+      : "Telegram account";
+
+
+  const initial =
+    (
+      userName.trim()[0] ||
+      "T"
+    ).toUpperCase();
+
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="tgn-page-title">
+
+      <h2>
+        Profile
+      </h2>
+
     </div>
-    <div style="font-size:11px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; text-align:left;">
-      <div><strong>Status:</strong> Completed ✅</div>
-      <div><strong>Type:</strong> ${tx.title}</div>
-      <div><strong>Address:</strong> <span style="word-break:break-all; color:#38bdf8;">${tx.rawAddr}</span></div>
-      <div><strong>Date:</strong> ${tx.date} at ${tx.time}</div>
+
+
+    <div
+      class="
+        tgn-card
+        tgn-profile-head
+      "
+    >
+
+      <div class="tgn-avatar">
+        ${escapeHtml(initial)}
+      </div>
+
+      <div
+        style="
+          min-width:0;
+        "
+      >
+
+        <div class="tgn-name">
+          ${escapeHtml(userName)}
+        </div>
+
+        <div class="tgn-handle">
+          ${escapeHtml(username)}
+        </div>
+
+      </div>
+
     </div>
-    <button class="btn primary" onclick="closeModal()" style="margin-top:12px; width:100%;">Close</button>
+
+
+    <div
+      class="
+        tgn-card
+        tgn-menu
+      "
+    >
+
+      <button
+        class="tgn-menu-item"
+        onclick="
+          profileAction('Personal Information')
+        "
+      >
+
+        <span class="tgn-menu-left">
+
+          <span class="tgn-menu-icon">
+            ♙
+          </span>
+
+          Personal Information
+
+        </span>
+
+        <span class="tgn-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+
+      <button
+        class="tgn-menu-item"
+        onclick="
+          profileAction('Security')
+        "
+      >
+
+        <span class="tgn-menu-left">
+
+          <span class="tgn-menu-icon">
+            ⌾
+          </span>
+
+          Security & Seed Phrase
+
+        </span>
+
+        <span class="tgn-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+
+      <button
+        class="tgn-menu-item"
+        onclick="
+          profileAction('Help & Support')
+        "
+      >
+
+        <span class="tgn-menu-left">
+
+          <span class="tgn-menu-icon">
+            ?
+          </span>
+
+          Help & Support
+
+        </span>
+
+        <span class="tgn-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+
+      <button
+        class="tgn-menu-item"
+        onclick="confirmLogout()"
+      >
+
+        <span
+          class="tgn-menu-left"
+          style="color:#ff6570"
+        >
+
+          <span
+            class="tgn-menu-icon"
+            style="
+              color:#ff6570;
+              background:
+                rgba(239,68,68,.10);
+            "
+          >
+            ↪
+          </span>
+
+          Log Out
+
+        </span>
+
+        <span class="tgn-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+    </div>
+
   `;
-  document.getElementById("modal").style.display = "flex";
+
 }
+
+
+/* =========================================================
+   PROFILE ACTION
+   ========================================================= */
 
 function profileAction(title) {
-  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const userName = tgUser ? (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '')) : "Telegram User";
-  const userHandle = tgUser?.username ? ('@' + tgUser.username) : "@telegram_user";
-  const userId = tgUser?.id ? tgUser.id : "784920193";
 
-  if (title === 'Security') {
+  const tgUser =
+    window.Telegram
+      ?.WebApp
+      ?.initDataUnsafe
+      ?.user;
+
+
+  const userName =
+    tgUser
+      ? [
+          tgUser.first_name,
+          tgUser.last_name
+        ]
+        .filter(Boolean)
+        .join(" ")
+      : "Telegram User";
+
+
+  const username =
+    tgUser?.username
+      ? "@" + tgUser.username
+      : "Telegram account";
+
+
+  if (title === "Security") {
+
     openSettings();
-  } else if (title === 'Personal Information') {
-    document.getElementById("mTitle").innerText = "Personal Information";
-    document.getElementById("mBody").innerHTML = `
-      <div style="font-size:12px; text-align:left; display:flex; flex-direction:column; gap:6px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;">
-        <div><strong>Name:</strong> ${userName}</div>
-        <div><strong>Username:</strong> ${userHandle}</div>
-        <div><strong>Telegram ID:</strong> ${userId}</div>
-        <div><strong>2FA Status:</strong> <span style="background:#f59e0b; color:#fff; font-size:9px; padding:2px 5px; border-radius:4px;">SOON</span></div>
-      </div>
-      <button class="btn primary" onclick="closeModal()" style="margin-top:12px; width:100%;">Close</button>
-    `;
-    document.getElementById("modal").style.display = "flex";
-  } else if (title === 'Notifications') {
-    document.getElementById("mTitle").innerText = "Notifications";
-    document.getElementById("mBody").innerHTML = `
-      <div style="font-size:12px; text-align:center; padding:15px; color:#94a3b8;">
-        Notifications feature is coming soon! <br><span style="background:#ef4444; color:#fff; font-size:9px; padding:2px 5px; border-radius:4px; display:inline-block; margin-top:6px;">SOON</span>
-      </div>
-      <button class="btn primary" onclick="closeModal()" style="margin-top:12px; width:100%;">Close</button>
-    `;
-    document.getElementById("modal").style.display = "flex";
-  } else {
-    document.getElementById("mTitle").innerText = title;
-    document.getElementById("mBody").innerHTML = `
-      <p style="font-size:12px; color:#94a3b8;">Manage your <strong>${title}</strong> settings smoothly.</p>
-      <button class="btn primary" onclick="closeModal()" style="margin-top:12px; width:100%;">Got it</button>
-    `;
-    document.getElementById("modal").style.display = "flex";
+
+    return;
+
   }
+
+
+  if (
+    title ===
+    "Personal Information"
+  ) {
+
+    document.getElementById(
+      "mTitle"
+    ).innerText =
+      "Personal Information";
+
+
+    document.getElementById(
+      "mBody"
+    ).innerHTML = `
+
+      <div
+        style="
+          font-size:12px;
+          line-height:2;
+          color:#b8c8dd;
+          background:
+            rgba(255,255,255,.035);
+          padding:13px;
+          border-radius:12px;
+        "
+      >
+
+        <div>
+          <strong>Name:</strong>
+          ${escapeHtml(userName)}
+        </div>
+
+        <div>
+          <strong>Username:</strong>
+          ${escapeHtml(username)}
+        </div>
+
+      </div>
+
+    `;
+
+
+    document.getElementById(
+      "modal"
+    ).style.display =
+      "flex";
+
+    return;
+
+  }
+
+
+  document.getElementById(
+    "mTitle"
+  ).innerText =
+    title;
+
+
+  document.getElementById(
+    "mBody"
+  ).innerHTML = `
+
+    <p class="tgn-modal-note">
+      For help, please contact
+      the wallet administrator
+      through Telegram.
+    </p>
+
+  `;
+
+
+  document.getElementById(
+    "modal"
+  ).style.display =
+    "flex";
+
 }
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
 
 function confirmLogout() {
-  if (confirm("Are you sure you want to log out?")) {
-    localStorage.removeItem("TGN_TON_WALLET");
-    location.reload();
-  }
+
+  if (
+    !confirm(
+      "Are you sure you want to log out?"
+    )
+  ) return;
+
+
+  localStorage.removeItem(
+    "TGN_TON_WALLET"
+  );
+
+  localStorage.removeItem(
+    "TGN_USER_TXS"
+  );
+
+  location.reload();
+
 }
 
-function renderWalletPage() { openSettings(); }
+
+/* =========================================================
+   WALLET PAGE
+   ========================================================= */
+
+function renderWalletPage() {
+
+  if (!walletData) {
+
+    renderWelcome();
+
+    return;
+
+  }
+
+
+  const address =
+    walletData.address || "";
+
+
+  const shortAddr =
+    address.length > 14
+      ? address.slice(0,8) +
+        "..." +
+        address.slice(-6)
+      : address;
+
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="tgn-page-title">
+
+      <h2>
+        Wallet
+      </h2>
+
+    </div>
+
+
+    <div
+      class="tgn-card"
+      style="
+        padding:18px;
+        margin-bottom:12px;
+      "
+    >
+
+      <div
+        style="
+          color:#8196b5;
+          font-size:12px;
+          margin-bottom:8px;
+        "
+      >
+        TON Wallet Address
+      </div>
+
+
+      <div
+        style="
+          color:#eaf3ff;
+          font-size:14px;
+          font-weight:700;
+          word-break:break-all;
+        "
+      >
+        ${escapeHtml(shortAddr)}
+      </div>
+
+
+      <button
+        class="tgn-primary"
+        style="margin-top:14px"
+        onclick="copyAddress()"
+      >
+        Copy Address
+      </button>
+
+    </div>
+
+
+    <div
+      class="tgn-card"
+      style="padding:18px"
+    >
+
+      <div
+        style="
+          color:#8196b5;
+          font-size:12px;
+        "
+      >
+        Current Balance
+      </div>
+
+
+      <div
+        id="walletPageBalance"
+        style="
+          font-size:27px;
+          font-weight:800;
+          color:#f5f9ff;
+          margin-top:5px;
+        "
+      >
+        0.00 TON
+      </div>
+
+
+      <div
+        style="
+          color:#8196b5;
+          font-size:12px;
+          margin-top:3px;
+        "
+      >
+        TON Mainnet
+      </div>
+
+    </div>
+
+  `;
+
+
+  refreshBalance();
+
+}
+
+
+/* =========================================================
+   SEND
+   ========================================================= */
 
 function renderSendPage() {
-  document.getElementById("content").innerHTML = `
-    <div style="display:flex; align-items:center; margin-bottom:12px; margin-top:0;">
-      <button onclick="switchNav('home')" style="background:none; border:none; color:#38bdf8; font-size:14px; cursor:pointer;">← Back</button>
-      <h2 style="margin:0 auto; font-size:16px; color:#fff;">Send / Withdraw GRAM</h2>
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="tgn-page-title">
+
+      <button
+        class="tgn-back"
+        onclick="switchNav('home')"
+      >
+        ← Back
+      </button>
+
+      <h2
+        style="
+          margin-left:auto;
+          margin-right:auto;
+        "
+      >
+        Send
+      </h2>
+
+      <span
+        style="
+          width:48px;
+        "
+      ></span>
+
     </div>
-    <div class="section-box">
-      <input id="sendTo" placeholder="Recipient Address UQ..." style="margin-bottom:10px; width:100%;">
-      <input id="sendAmount" type="number" placeholder="Amount GRAM" style="margin-bottom:12px; width:100%;">
-      <button class="btn primary" onclick="doSend()" style="width:100%;">Confirm Withdrawal</button>
+
+
+    <div
+      class="
+        tgn-card
+        tgn-form-card
+      "
+    >
+
+      <div class="tgn-form-title">
+        Send TON
+      </div>
+
+
+      <label class="tgn-label">
+        Recipient Address
+      </label>
+
+
+      <input
+        id="sendTo"
+        class="tgn-input"
+        placeholder="UQ... / EQ..."
+        autocomplete="off"
+      >
+
+
+      <label class="tgn-label">
+        Amount
+      </label>
+
+
+      <input
+        id="sendAmount"
+        class="tgn-input"
+        type="number"
+        inputmode="decimal"
+        min="0"
+        step="any"
+        placeholder="0.00 TON"
+      >
+
+
+      <button
+        class="tgn-primary"
+        onclick="doSend()"
+      >
+        Confirm Withdrawal
+      </button>
+
     </div>
+
   `;
+
 }
+
+
+/* =========================================================
+   RECEIVE
+   ========================================================= */
 
 function renderReceivePage() {
-  if(!walletData) return;
-  document.getElementById("content").innerHTML = `
-    <div style="display:flex; align-items:center; margin-bottom:12px; margin-top:0;">
-      <button onclick="switchNav('home')" style="background:none; border:none; color:#38bdf8; font-size:14px; cursor:pointer;">← Back</button>
-      <h2 style="margin:0 auto; font-size:16px; color:#fff;">Receive / Deposit GRAM</h2>
+
+  if (!walletData) {
+
+    renderWelcome();
+
+    return;
+
+  }
+
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="tgn-page-title">
+
+      <button
+        class="tgn-back"
+        onclick="switchNav('home')"
+      >
+        ← Back
+      </button>
+
+      <h2
+        style="
+          margin-left:auto;
+          margin-right:auto;
+        "
+      >
+        Receive
+      </h2>
+
+      <span
+        style="width:48px"
+      ></span>
+
     </div>
-    <div class="section-box" style="text-align:center;">
-      <div style="font-size:11px; word-break:break-all; background:#070b19; padding:10px; border-radius:8px; margin-bottom:10px;">${walletData.address}</div>
-      <button class="btn primary" onclick="copyAddress()" style="width:100%;">Copy Address</button>
-      <button class="btn" style="background:rgba(16,185,129,0.2); color:#10b981; width:100%; margin-top:8px;" onclick="simulateDeposit()">Simulate Test Deposit (+5 GRAM)</button>
+
+
+    <div
+      class="
+        tgn-card
+        tgn-form-card
+      "
+      style="text-align:center"
+    >
+
+      <div class="tgn-form-title">
+        Receive TON
+      </div>
+
+
+      <p class="tgn-modal-note">
+        Send TON to the wallet
+        address below.
+      </p>
+
+
+      <div
+        style="
+          font-size:12px;
+          word-break:break-all;
+          background:#071021;
+          border:
+            1px solid
+            rgba(110,160,220,.10);
+          padding:13px;
+          border-radius:12px;
+          color:#d9e7f7;
+          text-align:left;
+        "
+      >
+        ${escapeHtml(walletData.address)}
+      </div>
+
+
+      <button
+        class="tgn-primary"
+        style="margin-top:12px"
+        onclick="copyAddress()"
+      >
+        Copy Address
+      </button>
+
     </div>
+
   `;
+
 }
 
-function simulateDeposit() {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  
-  saveUserTransaction({
-    id: Date.now(),
-    type: "deposit",
-    title: "Deposit",
-    subtitle: "Via TON Connect / Gateway",
-    amount: "+5.00 GRAM",
-    usd: "$3.58 USD",
-    date: dateStr,
-    time: timeStr,
-    rawAddr: walletData.address
-  });
-  
-  showToast("Deposit successful! Added to activity.");
-  switchNav('activity');
-}
+
+/* =========================================================
+   BALANCE
+   ========================================================= */
 
 async function refreshBalance() {
-  if (!walletData) return;
+
+  if (
+    !walletData ||
+    !tonweb
+  ) return;
+
+
   try {
-    const balance = await tonweb.getBalance(walletData.address);
-    const gramVal = (Number(balance) / 1e9).toFixed(2);
-    if(isNaN(gramVal)) throw new Error("Invalid balance");
-    if(document.getElementById("balance")) document.getElementById("balance").innerText = gramVal + " GRAM";
-    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = gramVal + " GRAM";
-    const usdVal = (Number(gramVal) * 0.72).toFixed(2);
-    if(document.getElementById("usdBalance")) document.getElementById("usdBalance").innerText = "$" + usdVal + " USD";
-  } catch (e) {
-    if(document.getElementById("balance")) document.getElementById("balance").innerText = "0.00 GRAM";
+
+    const balance =
+      await tonweb.getBalance(
+        walletData.address
+      );
+
+
+    const tonValue =
+      (
+        Number(balance) /
+        1000000000
+      ).toFixed(2);
+
+
+    const usdValue =
+      (
+        Number(tonValue) *
+        0.72
+      ).toFixed(2);
+
+
+    const balanceEl =
+      document.getElementById(
+        "balance"
+      );
+
+    const tokenEl =
+      document.getElementById(
+        "tokenBalance"
+      );
+
+    const usdEl =
+      document.getElementById(
+        "usdBalance"
+      );
+
+    const walletEl =
+      document.getElementById(
+        "walletPageBalance"
+      );
+
+    const tokenUsdEl =
+      document.getElementById(
+        "tokenUsd"
+      );
+
+
+    if (balanceEl) {
+
+      balanceEl.innerText =
+        tonValue +
+        " TON";
+
+    }
+
+
+    if (tokenEl) {
+
+      tokenEl.innerText =
+        tonValue +
+        " TON";
+
+    }
+
+
+    if (usdEl) {
+
+      usdEl.innerText =
+        "$" +
+        usdValue +
+        " USD";
+
+    }
+
+
+    if (walletEl) {
+
+      walletEl.innerText =
+        tonValue +
+        " TON";
+
+    }
+
+
+    if (tokenUsdEl) {
+
+      tokenUsdEl.innerText =
+        "$" +
+        usdValue;
+
+    }
+
   }
+
+  catch (error) {
+
+    console.error(
+      "Balance error:",
+      error
+    );
+
+  }
+
 }
 
-function copyAddress() {
-  if(!walletData) return;
-  navigator.clipboard.writeText(walletData.address);
-  showToast("Address copied!");
+
+/* =========================================================
+   COPY ADDRESS
+   ========================================================= */
+
+async function copyAddress() {
+
+  if (!walletData?.address) {
+
+    alert(
+      "Wallet address not found."
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    await navigator.clipboard.writeText(
+      walletData.address
+    );
+
+    showToast(
+      "Address copied!"
+    );
+
+  }
+
+  catch (error) {
+
+    showToast(
+      "Unable to copy address."
+    );
+
+  }
+
 }
+
+
+/* =========================================================
+   SEND TRANSACTION
+   ========================================================= */
 
 async function doSend() {
-  const to = document.getElementById("sendTo").value.trim();
-  const amount = document.getElementById("sendAmount").value.trim();
-  if (!to || !amount) return alert("Fill all fields");
-  
+
+  const to =
+    document
+      .getElementById("sendTo")
+      ?.value
+      .trim();
+
+
+  const amount =
+    document
+      .getElementById("sendAmount")
+      ?.value
+      .trim();
+
+
+  if (
+    !to ||
+    !amount ||
+    Number(amount) <= 0
+  ) {
+
+    alert(
+      "Enter a valid address and amount."
+    );
+
+    return;
+
+  }
+
+
+  if (!walletData) {
+
+    alert(
+      "Wallet not found."
+    );
+
+    return;
+
+  }
+
+
   try {
-    showToast("Processing withdrawal...");
-    const keyPair = { publicKey: TonWeb.utils.hexToBytes(walletData.publicKey), secretKey: TonWeb.utils.hexToBytes(walletData.secretKey) };
-    const wallet = new tonweb.wallet.all.v4R2(tonweb.provider, { publicKey: keyPair.publicKey });
-    const seqno = await wallet.methods.seqno().call() || 0;
-    await wallet.methods.transfer({ secretKey: keyPair.secretKey, toAddress: to, amount: TonWeb.utils.toNano(amount), seqno: seqno, payload: "TGN Wallet Withdrawal", sendMode: 3 }).send();
-    
-    const now = new Date();
+
+    showToast(
+      "Processing withdrawal..."
+    );
+
+
+    const keyPair = {
+
+      publicKey:
+        TonWeb.utils.hexToBytes(
+          walletData.publicKey
+        ),
+
+      secretKey:
+        TonWeb.utils.hexToBytes(
+          walletData.secretKey
+        )
+
+    };
+
+
+    const wallet =
+      new tonweb.wallet.all.v4R2(
+        tonweb.provider,
+        {
+          publicKey:
+            keyPair.publicKey
+        }
+      );
+
+
+    const seqno =
+      await wallet
+        .methods
+        .seqno()
+        .call() || 0;
+
+
+    await wallet
+      .methods
+      .transfer({
+
+        secretKey:
+          keyPair.secretKey,
+
+        toAddress:
+          to,
+
+        amount:
+          TonWeb.utils.toNano(
+            amount
+          ),
+
+        seqno,
+
+        payload:
+          "TGN Wallet Withdrawal",
+
+        sendMode:3
+
+      })
+      .send();
+
+
+    /*
+       Only save history AFTER
+       successful transaction.
+    */
+
+    const now =
+      new Date();
+
+
     saveUserTransaction({
-      id: Date.now(),
-      type: "withdraw",
-      title: "Withdraw",
-      subtitle: "To: " + to.substring(0, 6) + "...",
-      amount: "-" + amount + " GRAM",
-      usd: "$" + (Number(amount) * 0.72).toFixed(2) + " USD",
-      date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      rawAddr: to
+
+      id:Date.now(),
+
+      type:"withdraw",
+
+      title:"Withdraw",
+
+      subtitle:
+        "To: " +
+        to.substring(0,8) +
+        "...",
+
+      amount:
+        "-" +
+        amount +
+        " TON",
+
+      usd:
+        "$" +
+        (
+          Number(amount) *
+          0.72
+        ).toFixed(2) +
+        " USD",
+
+      date:
+        now.toLocaleDateString(
+          "en-US",
+          {
+            month:"short",
+            day:"numeric",
+            year:"numeric"
+          }
+        ),
+
+      time:
+        now.toLocaleTimeString(
+          "en-US",
+          {
+            hour:"2-digit",
+            minute:"2-digit"
+          }
+        ),
+
+      rawAddr:to
+
     });
 
-    showToast("Withdrawal Success!");
-    switchNav('activity');
-  } catch (e) { 
-    const now = new Date();
-    saveUserTransaction({
-      id: Date.now(),
-      type: "sent",
-      title: "Sent",
-      subtitle: "To: " + to.substring(0, 6) + "...",
-      amount: "-" + amount + " GRAM",
-      usd: "$" + (Number(amount) * 0.72).toFixed(2) + " USD",
-      date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      rawAddr: to
-    });
-    showToast("Transaction sent and recorded!");
-    switchNav('activity');
+
+    showToast(
+      "Withdrawal successful!"
+    );
+
+
+    switchNav(
+      "activity"
+    );
+
   }
+
+  catch (error) {
+
+    console.error(
+      error
+    );
+
+    alert(
+      "Withdrawal failed: " +
+      (
+        error?.message ||
+        "Unknown error"
+      )
+    );
+
+  }
+
 }
+
+
+/* =========================================================
+   SECURITY
+   ========================================================= */
 
 function openSettings() {
-  document.getElementById("mTitle").innerText = "Security & Seed Phrase";
-  document.getElementById("mBody").innerHTML = `
-    <div style="font-size:11px; color:#94a3b8; margin-bottom:8px;">Your 24-word Secret Recovery Phrase is safely stored here. Never share this with anyone!</div>
-    <button class="btn" style="background:#3b82f6; color:#fff; width:100%; margin-bottom:8px;" onclick="showPhrase()">🔑 Show Recovery Phrase</button>
-    <div id="phraseBox" style="display:none; font-size:10px; word-break:break-all; background:#070b19; padding:8px; border-radius:6px; text-align:left; color:#38bdf8; max-height:80px; overflow-y:auto;"></div>
-    <button class="btn" style="background:#dc2626; color:#fff; width:100%; margin-top:8px;" onclick="resetWallet()">⚠️ Reset Wallet</button>
+
+  if (!walletData) return;
+
+
+  document.getElementById(
+    "mTitle"
+  ).innerText =
+    "Security";
+
+
+  document.getElementById(
+    "mBody"
+  ).innerHTML = `
+
+    <p class="tgn-modal-note">
+      Never share your recovery
+      phrase with anyone.
+    </p>
+
+
+    <button
+      class="tgn-primary"
+      onclick="showPhrase()"
+    >
+      Show Recovery Phrase
+    </button>
+
+
+    <div
+      id="phraseBox"
+      class="tgn-secret"
+      style="display:none"
+    ></div>
+
+
+    <button
+      class="tgn-secondary"
+      style="
+        color:#ff6570;
+        border-color:
+          rgba(239,68,68,.15);
+      "
+      onclick="resetWallet()"
+    >
+      Reset Wallet
+    </button>
+
   `;
-  document.getElementById("modal").style.display = "flex";
+
+
+  document.getElementById(
+    "modal"
+  ).style.display =
+    "flex";
+
 }
+
 
 function showPhrase() {
-  const box = document.getElementById("phraseBox");
-  box.style.display = "block";
-  box.innerText = walletData.mnemonic;
+
+  const box =
+    document.getElementById(
+      "phraseBox"
+    );
+
+
+  if (
+    !box ||
+    !walletData
+  ) return;
+
+
+  box.style.display =
+    "block";
+
+
+  box.innerText =
+    walletData.mnemonic ||
+    "Recovery phrase unavailable";
+
 }
+
 
 function resetWallet() {
-  if (confirm("Are you sure you want to reset wallet?")) { 
-    localStorage.removeItem("TGN_TON_WALLET"); 
-    localStorage.removeItem("TGN_USER_TXS");
-    location.reload(); 
-  }
+
+  if (
+    !confirm(
+      "Reset this wallet? Make sure you have your recovery phrase first."
+    )
+  ) return;
+
+
+  localStorage.removeItem(
+    "TGN_TON_WALLET"
+  );
+
+  localStorage.removeItem(
+    "TGN_USER_TXS"
+  );
+
+
+  location.reload();
+
 }
 
-function closeModal() { document.getElementById("modal").style.display = "none"; }
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+function closeModal() {
+
+  const modal =
+    document.getElementById(
+      "modal"
+    );
+
+  if (modal) {
+
+    modal.style.display =
+      "none";
+
+  }
+
+}
+
+
+/* =========================================================
+   START APP
+   ========================================================= */
 
 window.onload = function() {
-  tonweb = new TonWeb(new TonWeb.HttpProvider("https://toncenter.com/api/v2/jsonRPC", { apiKey: API_KEY }));
-  if (walletData) { switchNav('home'); refreshBalance(); } else { renderWelcome(); }
+
+  try {
+
+    /*
+      TonWeb connection
+    */
+
+    tonweb =
+      new TonWeb(
+        new TonWeb.HttpProvider(
+          "https://toncenter.com/api/v2/jsonRPC",
+          {
+            apiKey:
+              API_KEY
+          }
+        )
+      );
+
+
+    if (walletData) {
+
+      switchNav(
+        "home"
+      );
+
+      refreshBalance();
+
+    }
+
+    else {
+
+      renderWelcome();
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "Startup error:",
+      error
+    );
+
+    renderWelcome();
+
+  }
+
 };
