@@ -1,5 +1,5 @@
 const API_KEY = "c09170dd62724a03f3803b0f1023219c672c0fcc02a2deed31bd75faea36e9e1";
-let tonweb, walletData = JSON.parse(localStorage.getItem("TGN_TON_WALLET"));
+let tonweb, walletData = JSON.parse(localStorage.getItem("TGN_GRAM_WALLET"));
 
 const WORDLIST = [
   "abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident",
@@ -34,7 +34,7 @@ function renderWelcome() {
   document.getElementById("content").innerHTML = `
     <div class="hero-card" style="text-align:center; margin-top:40px;">
       <div class="hero-icon">💎</div>
-      <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN TON Wallet</div>
+      <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN GRAM Wallet</div>
       <div class="hero-subbalance" style="margin-top:10px;">Secure Decentralized Web3 Wallet</div>
       <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
         <button class="action-btn primary" onclick="createWallet()" style="width:100%; justify-content:center;">✨ Create New Wallet</button>
@@ -63,7 +63,7 @@ async function createWallet() {
       address: address
     };
 
-    localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
+    localStorage.setItem("TGN_GRAM_WALLET", JSON.stringify(walletData));
     renderMain();
     refreshBalance();
   } catch (e) {
@@ -101,7 +101,7 @@ async function importWallet() {
       address: address
     };
 
-    localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
+    localStorage.setItem("TGN_GRAM_WALLET", JSON.stringify(walletData));
     closeModal();
     renderMain();
     refreshBalance();
@@ -116,7 +116,7 @@ function renderMain() {
   document.getElementById("content").innerHTML = `
     <div class="hero-card">
       <div class="hero-header">My Wallet</div>
-      <div class="hero-balance" id="balance">0.00 TON</div>
+      <div class="hero-balance" id="balance">0.00 GRAM</div>
       <div class="hero-subbalance">$0.00 USD</div>
       <div class="hero-icon">💎</div>
       <div class="action-row">
@@ -143,7 +143,7 @@ function renderMain() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </span>
         <span class="grid-label">Send</span>
-        <span class="grid-sub">Transfer TON</span>
+        <span class="grid-sub">Transfer GRAM</span>
       </div>
       <div class="grid-btn" onclick="renderReceivePage()">
         <span class="grid-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
@@ -174,12 +174,12 @@ function renderMain() {
         <div class="token-left">
           <div class="token-logo">💎</div>
           <div>
-            <div style="font-weight:600; font-size:14px;">TON</div>
+            <div style="font-weight:600; font-size:14px;">GRAM</div>
             <div style="font-size:11px; color:var(--text-muted);">Toncoin</div>
           </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-weight:600; font-size:14px;" id="tokenBalance">0.00 TON</div>
+          <div style="font-weight:600; font-size:14px;" id="tokenBalance">0.00 GRAM</div>
           <div style="font-size:11px; color:var(--text-muted);">$0.00</div>
         </div>
       </div>
@@ -191,7 +191,7 @@ function renderSendPage() {
   document.getElementById("content").innerHTML = `
     <div style="display:flex; align-items:center; margin-bottom:16px;">
       <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:5px;">← Back</button>
-      <h2 style="margin:0 auto; font-size:18px; color:#fff;">Send TON</h2>
+      <h2 style="margin:0 auto; font-size:18px; color:#fff;">Send GRAM</h2>
     </div>
     <div class="section-box">
       <div style="margin-bottom:12px;">
@@ -199,7 +199,7 @@ function renderSendPage() {
         <input id="sendTo" placeholder="UQ... or EQ..." style="margin-top:4px;">
       </div>
       <div style="margin-bottom:16px;">
-        <label style="font-size:12px; color:var(--text-muted);">Amount (TON)</label>
+        <label style="font-size:12px; color:var(--text-muted);">Amount (GRAM)</label>
         <input id="sendAmount" type="number" step="0.01" placeholder="0.00" style="margin-top:4px;">
       </div>
       <button class="btn primary" onclick="doSend()" style="width:100%; padding:14px; font-weight:600;">Confirm & Send</button>
@@ -212,10 +212,10 @@ function renderReceivePage() {
   document.getElementById("content").innerHTML = `
     <div style="display:flex; align-items:center; margin-bottom:16px;">
       <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
-      <h2 style="margin:0 auto; font-size:18px; color:#fff;">Receive TON</h2>
+      <h2 style="margin:0 auto; font-size:18px; color:#fff;">Receive GRAM</h2>
     </div>
     <div class="section-box" style="text-align:center;">
-      <p style="font-size:13px; color:var(--text-muted);">Send only TON to this address:</p>
+      <p style="font-size:13px; color:var(--text-muted);">Send only GRAM to this address:</p>
       <div class="address-row" style="margin:16px 0; font-size:12px; word-break:break-all; background:#070b19; padding:12px; border-radius:8px;">${shortAddr}</div>
       <button class="btn primary" onclick="copyAddress()" style="width:100%;">Copy Address</button>
     </div>
@@ -239,10 +239,10 @@ async function refreshBalance() {
   try {
     const balance = await tonweb.getBalance(walletData.address);
     const tonVal = (balance / 1e9).toFixed(2);
-    if(document.getElementById("balance")) document.getElementById("balance").innerText = tonVal + " TON";
-    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = tonVal + " TON";
+    if(document.getElementById("balance")) document.getElementById("balance").innerText = tonVal + " GRAM";
+    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = tonVal + " GRAM";
   } catch (e) {
-    if(document.getElementById("balance")) document.getElementById("balance").innerText = "0.00 TON";
+    if(document.getElementById("balance")) document.getElementById("balance").innerText = "0.00 GRAM";
   }
 }
 
@@ -301,7 +301,7 @@ function showPhrase() {
 
 function resetWallet() {
   if (confirm("Are you sure? Make sure you backed up your seed phrase!")) {
-    localStorage.removeItem("TGN_TON_WALLET");
+    localStorage.removeItem("TGN_GRAM_WALLET");
     location.reload();
   }
 }
