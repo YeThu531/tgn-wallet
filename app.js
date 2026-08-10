@@ -160,18 +160,10 @@ function renderMain() {
     </div>
 
     <div class="grid-4">
-      <div class="grid-btn" onclick="renderSendPage()">
-        <span class="grid-label">Send</span>
-      </div>
-      <div class="grid-btn" onclick="renderReceivePage()">
-        <span class="grid-label">Receive</span>
-      </div>
-      <div class="grid-btn" onclick="switchNav('activity')">
-        <span class="grid-label">History</span>
-      </div>
-      <div class="grid-btn" onclick="switchNav('profile')">
-        <span class="grid-label">Profile</span>
-      </div>
+      <div class="grid-btn" onclick="renderSendPage()"><span class="grid-label">Send</span></div>
+      <div class="grid-btn" onclick="renderReceivePage()"><span class="grid-label">Receive</span></div>
+      <div class="grid-btn" onclick="switchNav('activity')"><span class="grid-label">History</span></div>
+      <div class="grid-btn" onclick="switchNav('profile')"><span class="grid-label">Profile</span></div>
     </div>
 
     <div class="section-box">
@@ -221,6 +213,8 @@ function renderActivityPage(filter = 'all') {
       <button class="filter-chip ${filter==='all'?'active':''}" onclick="renderActivityPage('all')">All</button>
       <button class="filter-chip ${filter==='received'?'active':''}" onclick="renderActivityPage('received')">Received</button>
       <button class="filter-chip ${filter==='sent'?'active':''}" onclick="renderActivityPage('sent')">Sent</button>
+      <button class="filter-chip ${filter==='deposit'?'active':''}" onclick="renderActivityPage('deposit')">Deposit</button>
+      <button class="filter-chip ${filter==='withdraw'?'active':''}" onclick="renderActivityPage('withdraw')">Withdraw</button>
     </div>
 
     <div id="txList">
@@ -237,6 +231,7 @@ function renderActivityPage(filter = 'all') {
         </div>
       `).join('')}
     </div>
+    <button class="btn" style="background:rgba(255,255,255,0.05); color:#38bdf8; width:100%; margin-top:14px;" onclick="loadMoreTx()">Load More</button>
   `;
 }
 
@@ -252,18 +247,59 @@ function renderProfilePage() {
         ${userName.charAt(0)}
       </div>
       <div>
-        <div style="font-size:16px; font-weight:700; color:#fff;">${userName}</div>
+        <div style="font-size:16px; font-weight:700; color:#fff;">${userName} <span onclick="editProfileModal()" style="cursor:pointer;">✏️</span></div>
         <div style="font-size:12px; color:#38bdf8;">${userHandle}</div>
+        <span style="background:rgba(59,130,246,0.2); color:#38bdf8; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:600;">✓ Verified User</span>
       </div>
     </div>
-    <div class="section-box" style="padding:0; overflow:hidden;">
-      <div class="profile-menu-item" onclick="profileAction('Security')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer;">
-        <span>🛡️ Security Settings</span>
-        <span>›</span>
+
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:16px;">
+      <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:10px; text-align:center;">
+        <div style="font-size:10px; color:var(--text-muted);">Wallet ID</div>
+        <div style="font-size:12px; font-weight:600; color:#fff;">#TGN100245</div>
       </div>
-      <div class="profile-menu-item" onclick="confirmLogout()" style="padding:14px; color:#ef4444; display:flex; justify-content:space-between; cursor:pointer;">
-        <span>🚪 Log Out</span>
-        <span>›</span>
+      <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:10px; text-align:center;">
+        <div style="font-size:10px; color:var(--text-muted);">Member Since</div>
+        <div style="font-size:12px; font-weight:600; color:#fff;">May 10, 2025</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:10px; text-align:center;">
+        <div style="font-size:10px; color:var(--text-muted);">Account Status</div>
+        <div style="font-size:12px; font-weight:600; color:#10b981;">Active</div>
+      </div>
+    </div>
+
+    <div class="section-box" style="padding:0; overflow:hidden;">
+      <div class="profile-menu-item" onclick="profileAction('Personal Information')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#3b82f6;">👤</span><span style="color:#fff; font-size:14px;">Personal Information</span></div>
+        <span style="color:#94a3b8;">›</span>
+      </div>
+      <div class="profile-menu-item" onclick="profileAction('Security')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#10b981;">🛡️</span><span style="color:#fff; font-size:14px;">Security</span></div>
+        <span style="color:#94a3b8;">›</span>
+      </div>
+      <div class="profile-menu-item" onclick="profileAction('Notifications')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#8b5cf6;">🔔</span><span style="color:#fff; font-size:14px;">Notifications</span></div>
+        <span style="color:#94a3b8;">›</span>
+      </div>
+      <div class="profile-menu-item" onclick="profileAction('Payment Methods')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#f59e0b;">💳</span><span style="color:#fff; font-size:14px;">Payment Methods</span></div>
+        <span style="color:#94a3b8;">›</span>
+      </div>
+      <div class="profile-menu-item" onclick="profileAction('Language')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#38bdf8;">🌐</span><span style="color:#fff; font-size:14px;">Language</span></div>
+        <span style="color:#94a3b8;">›</span>
+      </div>
+      <div class="profile-menu-item" onclick="profileAction('Help & Support')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#ec4899;">❓</span><span style="color:#fff; font-size:14px;">Help & Support</span></div>
+        <span style="color:#94a3b8;">›</span>
+      </div>
+      <div class="profile-menu-item" onclick="profileAction('About TGNWallet')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#6366f1;">ℹ️</span><span style="color:#fff; font-size:14px;">About TGNWallet</span></div>
+        <span style="color:#94a3b8;">›</span>
+      </div>
+      <div class="profile-menu-item" onclick="confirmLogout()" style="padding:14px; display:flex; justify-content:space-between; cursor:pointer; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#ef4444;">🚪</span><span style="color:#ef4444; font-size:14px;">Log Out</span></div>
+        <span style="color:#ef4444;">›</span>
       </div>
     </div>
   `;
@@ -272,6 +308,10 @@ function renderProfilePage() {
 function refreshActivity() {
   showToast("Activity refreshed successfully!");
   renderActivityPage();
+}
+
+function loadMoreTx() {
+  showToast("All transactions loaded.");
 }
 
 function showTxDetail(id) {
@@ -283,13 +323,48 @@ function showTxDetail(id) {
       <div style="font-size:24px; font-weight:700; color:${tx.amount.startsWith('+')?'#10b981':'#ef4444'};">${tx.amount}</div>
       <div style="font-size:12px; color:#94a3b8;">${tx.usd}</div>
     </div>
+    <div style="font-size:12px; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:8px; text-align:left;">
+      <div><strong>Status:</strong> Completed ✅</div>
+      <div><strong>Type:</strong> ${tx.title}</div>
+      <div><strong>Address:</strong> <span style="word-break:break-all; color:#38bdf8;">${tx.rawAddr}</span></div>
+      <div><strong>Date:</strong> ${tx.date} at ${tx.time}</div>
+    </div>
     <button class="btn primary" onclick="closeModal()" style="margin-top:14px; width:100%;">Close</button>
   `;
   document.getElementById("modal").style.display = "flex";
 }
 
 function profileAction(title) {
-  openSettings();
+  if (title === 'Security') {
+    openSettings();
+  } else if (title === 'Payment Methods') {
+    renderReceivePage();
+  } else {
+    document.getElementById("mTitle").innerText = title;
+    document.getElementById("mBody").innerHTML = `
+      <p style="font-size:13px; color:#94a3b8;">You are accessing <strong>${title}</strong> settings in TGN Wallet.</p>
+      <button class="btn primary" onclick="closeModal()" style="margin-top:14px; width:100%;">Got it</button>
+    `;
+    document.getElementById("modal").style.display = "flex";
+  }
+}
+
+function editProfileModal() {
+  document.getElementById("mTitle").innerText = "Edit Profile";
+  document.getElementById("mBody").innerHTML = `
+    <div style="margin-bottom:12px; text-align:left;">
+      <label style="font-size:11px; color:#94a3b8;">Display Name</label>
+      <input id="editName" value="Otter User" style="margin-top:4px; width:100%;">
+    </div>
+    <button class="btn primary" onclick="saveProfile()" style="width:100%;">Save Changes</button>
+  `;
+  document.getElementById("modal").style.display = "flex";
+}
+
+function saveProfile() {
+  showToast("Profile updated successfully!");
+  closeModal();
+  renderProfilePage();
 }
 
 function confirmLogout() {
@@ -335,6 +410,8 @@ async function refreshBalance() {
     if(isNaN(gramVal)) throw new Error("Invalid balance");
     if(document.getElementById("balance")) document.getElementById("balance").innerText = gramVal + " GRAM";
     if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = gramVal + " GRAM";
+    const usdVal = (Number(gramVal) * 0.72).toFixed(2);
+    if(document.getElementById("usdBalance")) document.getElementById("usdBalance").innerText = "$" + usdVal + " USD";
   } catch (e) {
     if(document.getElementById("balance")) document.getElementById("balance").innerText = "0.00 GRAM";
   }
@@ -365,7 +442,7 @@ function openSettings() {
   document.getElementById("mTitle").innerText = "Wallet Settings";
   document.getElementById("mBody").innerHTML = `
     <button class="btn" style="background:#3b82f6; color:#fff; width:100%; margin-bottom:10px;" onclick="showPhrase()">🔑 Recovery Phrase</button>
-    <div id="phraseBox" style="display:none; font-size:11px; word-break:break-all; background:#070b19; padding:8px; border-radius:6px;"></div>
+    <div id="phraseBox" style="display:none; font-size:11px; word-break:break-all; background:#070b19; padding:8px; border-radius:6px; text-align:left;"></div>
     <button class="btn" style="background:#dc2626; color:#fff; width:100%; margin-top:10px;" onclick="resetWallet()">⚠️ Reset Wallet</button>
   `;
   document.getElementById("modal").style.display = "flex";
