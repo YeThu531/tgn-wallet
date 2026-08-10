@@ -26,8 +26,33 @@ function generateNativeMnemonic() {
 }
 
 function showToast(msg) {
-  if (window.Telegram?.WebApp) window.Telegram.WebApp.showAlert(msg);
-  else alert(msg);
+  if (window.Telegram?.WebApp) {
+    window.Telegram.WebApp.showAlert(msg);
+  } else {
+    alert(msg);
+  }
+}
+
+let mockTransactions = [
+  { id: 1, type: "received", title: "Received", subtitle: "From: EQD5...3p8K", amount: "+2.50 GRAM", usd: "$1.79 USD", date: "May 10, 2025", time: "5:07 PM", rawAddr: "EQD5123456789abcdefABCDEF0123456789abcdefAB" },
+  { id: 2, type: "sent", title: "Sent", subtitle: "To: EQC8...7x2M", amount: "-1.20 GRAM", usd: "$0.86 USD", date: "May 10, 2025", time: "4:51 PM", rawAddr: "EQC876543210fedcbaFEDCBA9876543210fedcbaCD" },
+  { id: 3, type: "deposit", title: "Deposit", subtitle: "Via TON Connect", amount: "+5.00 GRAM", usd: "$3.58 USD", date: "May 10, 2025", time: "4:30 PM", rawAddr: "EQConnectGateway0000000000000000000000000" },
+  { id: 4, type: "withdraw", title: "Withdraw", subtitle: "To External Wallet", amount: "-2.00 GRAM", usd: "$1.43 USD", date: "May 10, 2025", time: "3:42 PM", rawAddr: "EQB1ExternalWalletAddress0000000000000000" },
+  { id: 5, type: "received", title: "Received", subtitle: "From: EQF2...m9tP", amount: "+3.25 GRAM", usd: "$2.32 USD", date: "May 10, 2025", time: "2:18 PM", rawAddr: "EQF2987654321abcdefABCDEF0123456789abcdef99" }
+];
+
+let activeTab = 'home';
+
+function switchNav(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+  const target = document.getElementById('nav-' + tab);
+  if (target) target.classList.add('active');
+
+  if (tab === 'home') renderMain();
+  else if (tab === 'activity') renderActivityPage();
+  else if (tab === 'wallet') renderWalletPage();
+  else if (tab === 'profile') renderProfilePage();
 }
 
 function renderWelcome() {
@@ -64,7 +89,7 @@ async function createWallet() {
     };
 
     localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
-    renderMain();
+    switchNav('home');
     refreshBalance();
   } catch (e) {
     alert("Error: " + e.message);
@@ -75,7 +100,7 @@ function showImport() {
   document.getElementById("mTitle").innerText = "Import Wallet";
   document.getElementById("mBody").innerHTML = `
     <textarea id="importSeed" rows="4" placeholder="Enter your 24 seed words..."></textarea>
-    <button class="btn" onclick="importWallet()">Import Wallet</button>
+    <button class="btn primary" onclick="importWallet()" style="margin-top:10px; width:100%;">Import Wallet</button>
   `;
   document.getElementById("modal").style.display = "flex";
 }
@@ -103,7 +128,7 @@ async function importWallet() {
 
     localStorage.setItem("TGN_TON_WALLET", JSON.stringify(walletData));
     closeModal();
-    renderMain();
+    switchNav('home');
     refreshBalance();
   } catch (e) {
     alert("Invalid seed phrase: " + e.message);
@@ -111,21 +136,18 @@ async function importWallet() {
 }
 
 function renderMain() {
+  if (!walletData) { renderWelcome(); return; }
   const shortAddr = walletData.address.substring(0, 6) + "..." + walletData.address.substring(walletData.address.length - 4);
   
   document.getElementById("content").innerHTML = `
     <div class="hero-card">
       <div class="hero-header">My Wallet</div>
       <div class="hero-balance" id="balance">0.00 GRAM</div>
-      <div class="hero-subbalance">$0.00 USD</div>
+      <div class="hero-subbalance" id="usdBalance">$0.00 USD</div>
       <div class="hero-icon">💎</div>
       <div class="action-row">
-        <button class="action-btn primary" onclick="renderReceivePage()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M19 12l-7 7-7-7"/></svg> Deposit
-        </button>
-        <button class="action-btn" onclick="renderSendPage()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Withdraw
-        </button>
+        <button class="action-btn primary" onclick="renderReceivePage()">Deposit</button>
+        <button class="action-btn" onclick="renderSendPage()">Withdraw</button>
       </div>
     </div>
 
@@ -139,32 +161,16 @@ function renderMain() {
 
     <div class="grid-4">
       <div class="grid-btn" onclick="renderSendPage()">
-        <span class="grid-icon-wrap" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-        </span>
         <span class="grid-label">Send</span>
-        <span class="grid-sub">GRAM</span>
       </div>
       <div class="grid-btn" onclick="renderReceivePage()">
-        <span class="grid-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        </span>
         <span class="grid-label">Receive</span>
-        <span class="grid-sub">payment</span>
       </div>
-      <div class="grid-btn" onclick="renderHistoryPage()">
-        <span class="grid-icon-wrap" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        </span>
+      <div class="grid-btn" onclick="switchNav('activity')">
         <span class="grid-label">History</span>
-        <span class="grid-sub">Transactions</span>
       </div>
-      <div class="grid-btn" onclick="openSettings()">
-        <span class="grid-icon-wrap" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        </span>
-        <span class="grid-label">Settings</span>
-        <span class="grid-sub">Preferences</span>
+      <div class="grid-btn" onclick="switchNav('profile')">
+        <span class="grid-label">Profile</span>
       </div>
     </div>
 
@@ -180,56 +186,143 @@ function renderMain() {
         </div>
         <div style="text-align:right;">
           <div style="font-weight:600; font-size:14px;" id="tokenBalance">0.00 GRAM</div>
-          <div style="font-size:11px; color:var(--text-muted);">$0.00</div>
+          <div style="font-size:11px; color:var(--text-muted);" id="tokenUsd">$0.00</div>
         </div>
       </div>
     </div>
   `;
+  refreshBalance();
 }
 
+function renderActivityPage(filter = 'all') {
+  const filteredTx = filter === 'all' ? mockTransactions : mockTransactions.filter(tx => tx.type === filter);
+  
+  document.getElementById("content").innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h2 style="font-size:20px; font-weight:700; color:#fff; margin:0;">Activity</h2>
+      <div style="font-size:12px; color:#38bdf8; cursor:pointer;" onclick="refreshActivity()">Refresh 🔄</div>
+    </div>
+    
+    <div class="section-box" style="background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); padding:16px; margin-bottom:16px;">
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Overview</div>
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+        <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;">
+          <div style="font-size:11px; color:var(--text-muted);">Total Transactions</div>
+          <div style="font-size:18px; font-weight:700; color:#fff;">24</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;">
+          <div style="font-size:11px; color:var(--text-muted);">Total Received</div>
+          <div style="font-size:16px; font-weight:700; color:#10b981;">12.45 GRAM</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:16px;">
+      <button class="filter-chip ${filter==='all'?'active':''}" onclick="renderActivityPage('all')">All</button>
+      <button class="filter-chip ${filter==='received'?'active':''}" onclick="renderActivityPage('received')">Received</button>
+      <button class="filter-chip ${filter==='sent'?'active':''}" onclick="renderActivityPage('sent')">Sent</button>
+    </div>
+
+    <div id="txList">
+      ${filteredTx.map(tx => `
+        <div class="tx-card" onclick="showTxDetail(${tx.id})" style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          <div>
+            <div style="font-weight:600; font-size:14px; color:#fff;">${tx.title}</div>
+            <div style="font-size:11px; color:#94a3b8;">${tx.subtitle}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:600; font-size:14px; color:${tx.amount.startsWith('+')?'#10b981':'#ef4444'};">${tx.amount}</div>
+            <div style="font-size:11px; color:#94a3b8;">${tx.date}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderProfilePage() {
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  const userName = tgUser ? (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '')) : "Otter User";
+  const userHandle = tgUser?.username ? ('@' + tgUser.username) : "@otter_user";
+
+  document.getElementById("content").innerHTML = `
+    <h2 style="font-size:20px; font-weight:700; color:#fff; margin-bottom:4px;">Profile</h2>
+    <div class="section-box" style="display:flex; align-items:center; gap:16px; background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));">
+      <div style="width:64px; height:64px; border-radius:50%; background:#3b82f6; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; color:#fff;">
+        ${userName.charAt(0)}
+      </div>
+      <div>
+        <div style="font-size:16px; font-weight:700; color:#fff;">${userName}</div>
+        <div style="font-size:12px; color:#38bdf8;">${userHandle}</div>
+      </div>
+    </div>
+    <div class="section-box" style="padding:0; overflow:hidden;">
+      <div class="profile-menu-item" onclick="profileAction('Security')" style="padding:14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; cursor:pointer;">
+        <span>🛡️ Security Settings</span>
+        <span>›</span>
+      </div>
+      <div class="profile-menu-item" onclick="confirmLogout()" style="padding:14px; color:#ef4444; display:flex; justify-content:space-between; cursor:pointer;">
+        <span>🚪 Log Out</span>
+        <span>›</span>
+      </div>
+    </div>
+  `;
+}
+
+function refreshActivity() {
+  showToast("Activity refreshed successfully!");
+  renderActivityPage();
+}
+
+function showTxDetail(id) {
+  const tx = mockTransactions.find(t => t.id === id);
+  if(!tx) return;
+  document.getElementById("mTitle").innerText = "Transaction Details";
+  document.getElementById("mBody").innerHTML = `
+    <div style="text-align:center; margin-bottom:16px;">
+      <div style="font-size:24px; font-weight:700; color:${tx.amount.startsWith('+')?'#10b981':'#ef4444'};">${tx.amount}</div>
+      <div style="font-size:12px; color:#94a3b8;">${tx.usd}</div>
+    </div>
+    <button class="btn primary" onclick="closeModal()" style="margin-top:14px; width:100%;">Close</button>
+  `;
+  document.getElementById("modal").style.display = "flex";
+}
+
+function profileAction(title) {
+  openSettings();
+}
+
+function confirmLogout() {
+  if (confirm("Are you sure you want to log out?")) {
+    localStorage.removeItem("TGN_TON_WALLET");
+    location.reload();
+  }
+}
+
+function renderWalletPage() { openSettings(); }
 function renderSendPage() {
   document.getElementById("content").innerHTML = `
     <div style="display:flex; align-items:center; margin-bottom:16px;">
-      <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:5px;">← Back</button>
+      <button onclick="switchNav('home')" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
       <h2 style="margin:0 auto; font-size:18px; color:#fff;">Send GRAM</h2>
     </div>
     <div class="section-box">
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12px; color:var(--text-muted);">Recipient Address</label>
-        <input id="sendTo" placeholder="UQ... or EQ..." style="margin-top:4px;">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="font-size:12px; color:var(--text-muted);">Amount (GRAM)</label>
-        <input id="sendAmount" type="number" step="0.01" placeholder="0.00" style="margin-top:4px;">
-      </div>
-      <button class="btn primary" onclick="doSend()" style="width:100%; padding:14px; font-weight:600;">Confirm & Send</button>
+      <input id="sendTo" placeholder="Recipient Address UQ..." style="margin-bottom:12px; width:100%;">
+      <input id="sendAmount" type="number" placeholder="Amount GRAM" style="margin-bottom:16px; width:100%;">
+      <button class="btn primary" onclick="doSend()" style="width:100%;">Send</button>
     </div>
   `;
 }
-
 function renderReceivePage() {
-  const shortAddr = walletData.address;
+  if(!walletData) return;
   document.getElementById("content").innerHTML = `
     <div style="display:flex; align-items:center; margin-bottom:16px;">
-      <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
+      <button onclick="switchNav('home')" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
       <h2 style="margin:0 auto; font-size:18px; color:#fff;">Receive GRAM</h2>
     </div>
     <div class="section-box" style="text-align:center;">
-      <p style="font-size:13px; color:var(--text-muted);">Send only GRAM to this address:</p>
-      <div class="address-row" style="margin:16px 0; font-size:12px; word-break:break-all; background:#070b19; padding:12px; border-radius:8px;">${shortAddr}</div>
+      <div style="font-size:12px; word-break:break-all; background:#070b19; padding:12px; border-radius:8px; margin-bottom:12px;">${walletData.address}</div>
       <button class="btn primary" onclick="copyAddress()" style="width:100%;">Copy Address</button>
-    </div>
-  `;
-}
-
-function renderHistoryPage() {
-  document.getElementById("content").innerHTML = `
-    <div style="display:flex; align-items:center; margin-bottom:16px;">
-      <button onclick="renderMain()" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
-      <h2 style="margin:0 auto; font-size:18px; color:#fff;">History</h2>
-    </div>
-    <div class="section-box" style="text-align:center; padding:30px; color:var(--text-muted);">
-      No recent transactions found.
     </div>
   `;
 }
@@ -239,57 +332,41 @@ async function refreshBalance() {
   try {
     const balance = await tonweb.getBalance(walletData.address);
     const gramVal = (Number(balance) / 1e9).toFixed(2);
+    if(isNaN(gramVal)) throw new Error("Invalid balance");
     if(document.getElementById("balance")) document.getElementById("balance").innerText = gramVal + " GRAM";
     if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = gramVal + " GRAM";
   } catch (e) {
     if(document.getElementById("balance")) document.getElementById("balance").innerText = "0.00 GRAM";
-    if(document.getElementById("tokenBalance")) document.getElementById("tokenBalance").innerText = "0.00 GRAM";
   }
 }
 
 function copyAddress() {
+  if(!walletData) return;
   navigator.clipboard.writeText(walletData.address);
-  showToast("Address copied to clipboard!");
+  showToast("Address copied!");
 }
 
 async function doSend() {
   const to = document.getElementById("sendTo").value.trim();
   const amount = document.getElementById("sendAmount").value.trim();
-  if (!to || !amount) return alert("Please fill all fields");
-
+  if (!to || !amount) return alert("Fill all fields");
   try {
-    showToast("Preparing transaction...");
-    const keyPair = {
-      publicKey: TonWeb.utils.hexToBytes(walletData.publicKey),
-      secretKey: TonWeb.utils.hexToBytes(walletData.secretKey)
-    };
-    const WalletClass = tonweb.wallet.all.v4R2;
-    const wallet = new WalletClass(tonweb.provider, { publicKey: keyPair.publicKey });
+    showToast("Sending...");
+    const keyPair = { publicKey: TonWeb.utils.hexToBytes(walletData.publicKey), secretKey: TonWeb.utils.hexToBytes(walletData.secretKey) };
+    const wallet = new tonweb.wallet.all.v4R2(tonweb.provider, { publicKey: keyPair.publicKey });
     const seqno = await wallet.methods.seqno().call() || 0;
-
-    await wallet.methods.transfer({
-      secretKey: keyPair.secretKey,
-      toAddress: to,
-      amount: TonWeb.utils.toNano(amount),
-      seqno: seqno,
-      payload: "Sent from TGN Wallet",
-      sendMode: 3
-    }).send();
-
-    showToast("Transaction sent successfully!");
-    renderMain();
-    setTimeout(refreshBalance, 3000);
-  } catch (e) {
-    alert("Transfer failed: " + e.message);
-  }
+    await wallet.methods.transfer({ secretKey: keyPair.secretKey, toAddress: to, amount: TonWeb.utils.toNano(amount), seqno: seqno, payload: "TGN Wallet", sendMode: 3 }).send();
+    showToast("Success!");
+    switchNav('home');
+  } catch (e) { alert("Error: " + e.message); }
 }
 
 function openSettings() {
   document.getElementById("mTitle").innerText = "Wallet Settings";
   document.getElementById("mBody").innerHTML = `
-    <button class="btn btn-secondary" onclick="showPhrase()" style="width:100%;">🔑 View Recovery Phrase</button>
-    <div id="phraseBox" class="address-row" style="display:none; margin-top:10px; font-size:11px; max-height:100px; overflow-y:auto; word-break:break-all;"></div>
-    <button class="btn btn-danger" onclick="resetWallet()" style="margin-top:12px; width:100%;">⚠️ Reset Wallet</button>
+    <button class="btn" style="background:#3b82f6; color:#fff; width:100%; margin-bottom:10px;" onclick="showPhrase()">🔑 Recovery Phrase</button>
+    <div id="phraseBox" style="display:none; font-size:11px; word-break:break-all; background:#070b19; padding:8px; border-radius:6px;"></div>
+    <button class="btn" style="background:#dc2626; color:#fff; width:100%; margin-top:10px;" onclick="resetWallet()">⚠️ Reset Wallet</button>
   `;
   document.getElementById("modal").style.display = "flex";
 }
@@ -301,22 +378,11 @@ function showPhrase() {
 }
 
 function resetWallet() {
-  if (confirm("Are you sure? Make sure you backed up your seed phrase!")) {
-    localStorage.removeItem("TGN_TON_WALLET");
-    location.reload();
-  }
+  if (confirm("Reset wallet?")) { localStorage.removeItem("TGN_TON_WALLET"); location.reload(); }
 }
-
-function closeModal() {
-  document.getElementById("modal").style.display = "none";
-}
+function closeModal() { document.getElementById("modal").style.display = "none"; }
 
 window.onload = function() {
   tonweb = new TonWeb(new TonWeb.HttpProvider("https://toncenter.com/api/v2/jsonRPC", { apiKey: API_KEY }));
-  if (walletData) {
-    renderMain();
-    refreshBalance();
-  } else {
-    renderWelcome();
-  }
+  if (walletData) { switchNav('home'); refreshBalance(); } else { renderWelcome(); }
 };
