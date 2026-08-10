@@ -1,410 +1,366 @@
-const loadScript = (src) => {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-};
-
-const NETWORKS = {
-    TON: { name: "TON Network", symbol: "TON", rpc: "https://toncenter.com/api/v2/jsonRPC", icon: "https://assets.coingecko.com/coins/images/17980/small/ton_token_teal.png" },
-    BSC: { name: "BNB Smart Chain", symbol: "BNB", rpc: "https://bsc-dataseed.binance.org/", icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
-    ETH: { name: "Ethereum", symbol: "ETH", rpc: "https://cloudflare-eth.com", icon: "https://assets.coingecko.com/coins/images/279/small/ethereum.png" },
-    POLYGON: { name: "Polygon", symbol: "MATIC", rpc: "https://polygon-rpc.com", icon: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" },
-    ARBITRUM: { name: "Arbitrum One", symbol: "ETH", rpc: "https://arb1.arbitrum.io/rpc", icon: "https://assets.coingecko.com/coins/images/16547/small/arbitrum_logo.png" },
-    OPTIMISM: { name: "Optimism", symbol: "ETH", rpc: "https://mainnet.optimism.io", icon: "https://assets.coingecko.com/coins/images/25244/small/Optimism.png" },
-    AVAX: { name: "Avalanche C-Chain", symbol: "AVAX", rpc: "https://api.avax.network/ext/bc/C/rpc", icon: "https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png" },
-    BASE: { name: "Base Network", symbol: "ETH", rpc: "https://mainnet.base.org", icon: "https://assets.coingecko.com/coins/images/31323/small/base.png" }
-};
-
-const TOKEN_LIST = [
-    { name: "Gram", symbol: "GRAM", icon: "https://cache.tonapi.io/imgproxy/Q3S-769q_aVl8H6598c4Z6a17gNl1w1939103929.png" },
-    { name: "Toncoin", symbol: "TON", icon: "https://assets.coingecko.com/coins/images/17980/small/ton_token_teal.png" },
-    { name: "Tether USD", symbol: "USDT", icon: "https://assets.coingecko.com/coins/images/325/small/Tether.png" },
-    { name: "USD Coin", symbol: "USDC", icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png" },
-    { name: "BNB Smart Chain", symbol: "BNB", icon: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
-    { name: "Ethereum", symbol: "ETH", icon: "https://assets.coingecko.com/coins/images/279/small/ethereum.png" },
-    { name: "Polygon", symbol: "MATIC", icon: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" },
-    { name: "Avalanche", symbol: "AVAX", icon: "https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png" }
-];
-
-let currentNetwork = "TON";
-let activeTab = "WALLET";
-
-document.addEventListener("DOMContentLoaded", async () => {
-    const app = document.getElementById("app");
-    app.innerHTML = `<div style="color:white; padding:50px; text-align:center;">Loading Wallet Engine...</div>`;
-
-    try {
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js");
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js");
-        
-        let walletData = localStorage.getItem("TGN_SECURE_WALLET");
-
-        if (!walletData) {
-            renderInitWalletUI();
-        } else {
-            renderMainLayout(JSON.parse(walletData));
-        }
-    } catch (err) {
-        app.innerHTML = `<div style="color:red; padding:20px; text-align:center;">Failed to load Engine!</div>`;
+// ====================== TGN Wallet - TON 
+// Only (Testnet) ======================
+const API_KEY = 
+"c09170dd62724a03f3803b0f1023219c672c0fcc02a2deed31bd75faea36e9e1"; 
+const IS_TESTNET = true; let walletData = 
+null; let currentBalance = "0"; let tonweb, 
+tonMnemonic; function shortenAddress(addr) 
+{
+  if (!addr) return ""; return 
+  addr.slice(0, 6) + "..." + 
+  addr.slice(-4);
+}
+function formatTon(nano) { return 
+  (Number(nano) / 1e9).toFixed(4);
+}
+function showToast(msg) { const toast = 
+  document.createElement("div"); 
+  toast.innerText = msg; 
+  toast.style.cssText = 
+  `position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#2AABEE;color:white;padding:10px 
+  18px;border-radius:12px;font-size:13px;z-index:999;`; 
+  document.body.appendChild(toast); 
+  setTimeout(() => toast.remove(), 2200);
+}
+function loadScript(src) { return new 
+  Promise((resolve, reject) => {
+    const s = 
+    document.createElement("script"); s.src 
+    = src; s.onload = resolve; s.onerror = 
+    reject; document.head.appendChild(s);
+  });
+}
+document.addEventListener("DOMContentLoaded", 
+async () => {
+  const app = 
+  document.getElementById("app"); 
+  app.innerHTML = `<div 
+  style="color:#aaa;text-align:center;padding:80px 
+  20px;">Loading TGN Wallet...</div>`; try 
+  {
+    await 
+    loadScript("https://cdn.jsdelivr.net/npm/tonweb@0.0.66/dist/tonweb.js"); 
+    await 
+    loadScript("https://cdn.jsdelivr.net/npm/tonweb-mnemonic@1.0.1/dist/tonweb-mnemonic.js"); 
+    await 
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"); 
+    tonweb = new TonWeb(new 
+    TonWeb.HttpProvider(
+      IS_TESTNET ? 
+      "https://testnet.toncenter.com/api/v2/jsonRPC" 
+      : 
+      "https://toncenter.com/api/v2/jsonRPC", 
+      { apiKey: API_KEY }
+    )); tonMnemonic = TonWeb.mnemonic; 
+    const saved = 
+    localStorage.getItem("TGN_TON_WALLET"); 
+    if (saved) {
+      walletData = JSON.parse(saved); 
+      renderMain(); refreshBalance();
+    } else {
+      renderWelcome();
     }
+  } catch (e) {
+    app.innerHTML = `<div 
+    style="color:#ff5555;padding:40px;text-align:center;">Failed 
+    to load<br>${e.message}</div>`;
+  }
 });
-
-function renderInitWalletUI() {
-    const app = document.getElementById("app");
-    app.innerHTML = `
-        <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif; background-color:#0e1621; color:#ffffff; min-height:100vh; padding:30px 20px; box-sizing:border-box; text-align:center;">
-            <div style="font-size:50px; margin-top:40px;">👛</div>
-            <h2 style="color:#ffffff; font-size:24px; margin-top:10px;">TGN Wallet</h2>
-            <p style="color:#708499; font-size:13px; margin-bottom:50px;">Secure & Non-Custodial Multi-Chain Wallet</p>
-            
-            <button id="createBtn" style="width:100%; padding:16px; border-radius:14px; border:none; background:#248bca; color:white; font-weight:bold; font-size:15px; cursor:pointer; margin-bottom:12px;">
-                Create New Wallet
-            </button>
-            <button id="importBtn" style="width:100%; padding:16px; border-radius:14px; border:1px solid #242f3d; background:#17212b; color:#248bca; font-weight:bold; font-size:15px; cursor:pointer;">
-                Import Existing Wallet
-            </button>
-            
-            <div id="importBox" style="display:none; margin-top:20px; text-align:left; background:#17212b; padding:15px; border-radius:14px;">
-                <label style="font-size:12px; color:#708499;">Enter 12-Word Recovery Phrase:</label>
-                <textarea id="mnemonicInput" rows="3" style="width:100%; margin-top:8px; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:10px; box-sizing:border-box; font-size:12px;"></textarea>
-                <button id="confirmImportBtn" style="width:100%; margin-top:10px; padding:12px; background:#22c55e; border:none; border-radius:8px; color:white; font-weight:bold; cursor:pointer;">Confirm Import</button>
-            </div>
-        </div>
-    `;
-
-    document.getElementById("createBtn").addEventListener("click", () => {
-        const randomWallet = ethers.Wallet.createRandom();
-        saveAndLaunchWallet(randomWallet);
-    });
-
-    document.getElementById("importBtn").addEventListener("click", () => {
-        document.getElementById("importBox").style.display = "block";
-    });
-
-    document.getElementById("confirmImportBtn").addEventListener("click", () => {
-        const phrase = document.getElementById("mnemonicInput").value.trim();
-        try {
-            const importedWallet = ethers.Wallet.fromMnemonic(phrase);
-            saveAndLaunchWallet(importedWallet);
-        } catch (e) {
-            alert("Invalid 12-Word Seed Phrase!");
-        }
-    });
+function renderWelcome() { const app = 
+  document.getElementById("app"); 
+  app.innerHTML = `
+    <div 
+    style="font-family:-apple-system,sans-serif;background:#0e1621;color:white;min-height:100vh;padding:40px 
+    24px;text-align:center;">
+      <div 
+      style="font-size:56px;margin-top:30px;">💎</div> 
+      <h1 style="font-size:26px;margin:12px 
+      0 6px;">TGN Wallet</h1> <p 
+      style="color:#8b9bb4;font-size:14px;margin-bottom:50px;">TON 
+      Network • Non-Custodial</p> <button 
+      onclick="createWallet()" 
+      style="width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#2AABEE,#1e88c7);color:white;font-size:16px;font-weight:600;margin-bottom:14px;">Create 
+      New Wallet</button> <button 
+      onclick="showImport()" 
+      style="width:100%;padding:16px;border:1px 
+      solid 
+      #2a3544;border-radius:14px;background:#17212b;color:#2AABEE;font-size:16px;font-weight:600;">Import 
+      Wallet</button> <div id="importBox" 
+      style="display:none;margin-top:24px;text-align:left;">
+        <textarea id="mnemonicInput" 
+        rows="4" placeholder="Enter 24-word 
+        recovery phrase..." 
+        style="width:100%;background:#0e1621;border:1px 
+        solid 
+        #2a3544;border-radius:12px;color:white;padding:14px;font-size:14px;box-sizing:border-box;"></textarea>
+        <button onclick="importWallet()" 
+        style="width:100%;margin-top:12px;padding:14px;background:#22c55e;border:none;border-radius:12px;color:white;font-weight:600;">Confirm 
+        Import</button>
+      </div> <p 
+      style="color:#5a6a7e;font-size:12px;margin-top:40px;">Testnet 
+      Mode</p>
+    </div>`;
 }
-
-function saveAndLaunchWallet(walletObj) {
-    const secureData = {
-        address: walletObj.address,
-        privateKey: walletObj.privateKey,
-        mnemonic: walletObj.mnemonic ? walletObj.mnemonic.phrase : "Imported via Private Key"
+function showImport() { 
+  document.getElementById("importBox").style.display 
+  = "block";
+}async function createWallet() {
+  try { const words = await 
+    tonMnemonic.generateMnemonic(); const 
+    keyPair = await 
+    tonMnemonic.mnemonicToKeyPair(words); 
+    const WalletClass = 
+    tonweb.wallet.all.v4R2; const wallet = 
+    new WalletClass(tonweb.provider, { 
+    publicKey: keyPair.publicKey }); const 
+    address = await wallet.getAddress(); 
+    const addrStr = address.toString(true, 
+    true, false); walletData = {
+      mnemonic: words.join(" "), address: 
+      addrStr, publicKey: 
+      TonWeb.utils.bytesToHex(keyPair.publicKey), 
+      secretKey: 
+      TonWeb.utils.bytesToHex(keyPair.secretKey)
     };
-    localStorage.setItem("TGN_SECURE_WALLET", JSON.stringify(secureData));
-    renderMainLayout(secureData);
+    localStorage.setItem("TGN_TON_WALLET", 
+    JSON.stringify(walletData)); 
+    renderMain(); refreshBalance(); 
+    showToast("Wallet created!");
+  } catch (e) {
+    alert("Create failed: " + e.message);
+  }
 }
-
-function renderMainLayout(wallet) {
-    const app = document.getElementById("app");
-    app.innerHTML = `
-        <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif; background-color:#0e1621; color:#ffffff; min-height:100vh; padding-bottom:75px; box-sizing:border-box;">
-            
-            <!-- Top Header -->
-            <div style="padding:15px 20px; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px; background:#17212b; padding:6px 12px; border-radius:20px; border:1px solid #242f3d;">
-                    <img id="netIcon" src="${NETWORKS[currentNetwork].icon}" style="width:18px; height:18px;" />
-                    <select id="networkSelect" style="background:transparent; color:white; border:none; font-weight:bold; outline:none; font-size:13px;">
-                        ${Object.keys(NETWORKS).map(key => `<option value="${key}" ${key === currentNetwork ? 'selected' : ''} style="background:#17212b;">${NETWORKS[key].name}</option>`).join("")}
-                    </select>
-                </div>
-                <div id="scanBtn" style="font-size:18px; cursor:pointer; background:#17212b; padding:8px; border-radius:50%;">📷</div>
-            </div>
-
-            <!-- Main Content Container -->
-            <div id="tabContent"></div>
-
-            <!-- Bottom Navigation Bar -->
-            <div style="position:fixed; bottom:0; left:0; right:0; height:65px; background:#17212b; display:flex; border-top:1px solid #242f3d; justify-content:space-around; align-items:center; z-index:100;">
-                <button class="nav-btn" data-tab="WALLET" style="background:none; border:none; color:#248bca; font-size:11px; text-align:center; cursor:pointer;">
-                    <div style="font-size:20px;">👛</div>Wallet
-                </button>
-                <button class="nav-btn" data-tab="TRADE" style="background:none; border:none; color:#708499; font-size:11px; text-align:center; cursor:pointer;">
-                    <div style="font-size:20px;">📈</div>Trade
-                </button>
-                <button class="nav-btn" data-tab="HISTORY" style="background:none; border:none; color:#708499; font-size:11px; text-align:center; cursor:pointer;">
-                    <div style="font-size:20px;">🕒</div>Activity
-                </button>
-                <button class="nav-btn" data-tab="SETTINGS" style="background:none; border:none; color:#708499; font-size:11px; text-align:center; cursor:pointer;">
-                    <div style="font-size:20px;">⚙️</div>Settings
-                </button>
-            </div><!-- Modal Container -->
-            <div id="actionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:200; padding:20px; box-sizing:border-box;">
-                <div style="background:#17212b; border-radius:16px; padding:20px; max-height:85vh; overflow-y:auto; position:relative; margin-top:5vh;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h4 id="modalTitle" style="margin:0; color:white; font-size:16px;">Action</h4>
-                        <span id="closeModal" style="color:#708499; font-size:20px; cursor:pointer;">✕</span>
-                    </div>
-                    <div id="modalBody"></div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.getElementById("networkSelect").addEventListener("change", (e) => {
-        currentNetwork = e.target.value;
-        document.getElementById("netIcon").src = NETWORKS[currentNetwork].icon;
-        loadTab(activeTab, wallet);
-    });
-
-    document.getElementById("closeModal").addEventListener("click", () => {
-        document.getElementById("actionModal").style.display = "none";
-    });
-
-    document.querySelectorAll(".nav-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const targetTab = e.currentTarget.getAttribute("data-tab");
-            activeTab = targetTab;
-            document.querySelectorAll(".nav-btn").forEach(b => b.style.color = "#708499");
-            e.currentTarget.style.color = "#248bca";
-            loadTab(targetTab, wallet);
-        });
-    });
-
-    loadTab("WALLET", wallet);
+async function importWallet() { const 
+  phrase = 
+  document.getElementById("mnemonicInput").value.trim(); 
+  if (!phrase) return alert("Please enter 
+  recovery phrase"); try {
+    const words = phrase.split(/\s+/); 
+    const valid = await 
+    tonMnemonic.validateMnemonic(words); if 
+    (!valid) return alert("Invalid recovery 
+    phrase"); const keyPair = await 
+    tonMnemonic.mnemonicToKeyPair(words); 
+    const WalletClass = 
+    tonweb.wallet.all.v4R2; const wallet = 
+    new WalletClass(tonweb.provider, { 
+    publicKey: keyPair.publicKey }); const 
+    address = await wallet.getAddress(); 
+    const addrStr = address.toString(true, 
+    true, false); walletData = {
+      mnemonic: words.join(" "), address: 
+      addrStr, publicKey: 
+      TonWeb.utils.bytesToHex(keyPair.publicKey), 
+      secretKey: 
+      TonWeb.utils.bytesToHex(keyPair.secretKey)
+    };
+    localStorage.setItem("TGN_TON_WALLET", 
+    JSON.stringify(walletData)); 
+    renderMain(); refreshBalance(); 
+    showToast("Wallet imported!");
+  } catch (e) {
+    alert("Import failed: " + e.message);
+  }
 }
-
-function loadTab(tab, wallet) {
-    const container = document.getElementById("tabContent");
-    
-    if (tab === "WALLET") {
-        container.innerHTML = `
-            <div style="text-align:center; padding:20px 0 10px 0;">
-                <div style="font-size:38px; font-weight:800; color:white; letter-spacing:-0.5px;">$0.00</div>
-                <div id="copyAddrBtn" style="font-size:12px; color:#8e9bae; margin-top:6px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:rgba(23,33,43,0.8); padding:5px 12px; border-radius:20px; border:1px solid #242f3d;">
-                    <span>${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)}</span> 📋
-                </div>
-            </div>
-
-            <!-- Modern Action Buttons Layout -->
-            <div style="display:flex; justify-content:center; gap:28px; margin:28px 0 32px 0;">
-                <!-- Send Button -->
-                <div id="sendAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #0088cc 0%, #005588 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(0, 136, 204, 0.3);">
-                        ↗
-                    </div>
-                    <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Send</span>
-                </div>
-
-                <!-- Receive Button -->
-                <div id="receiveAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #10b981 0%, #047857 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);">
-                        ↙
-                    </div>
-                    <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Receive</span>
-                </div><!-- Swap Button -->
-                <div id="swapAction" style="text-align:center; cursor:pointer;">
-                    <div style="width:54px; height:54px; border-radius:20px; background:linear-gradient(135deg, #6366f1 0%, #4338ca 100%); display:flex; justify-content:center; align-items:center; font-size:22px; margin:0 auto 8px auto; color:#ffffff; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);">
-                        🔄
-                    </div>
-                    <span style="font-size:12px; font-weight:600; color:#c1c9d3;">Swap</span>
-                </div>
-            </div>
-
-            <div style="padding:0 20px;">
-                <div style="font-size:14px; font-weight:bold; color:#708499; margin-bottom:12px;">Assets</div>
-                <div id="tokenAssetList"></div>
-            </div>
-        `;
-
-        document.getElementById("copyAddrBtn").addEventListener("click", () => {
-            navigator.clipboard.writeText(wallet.address);
-            alert("Address Copied!");
-        });
-
-        document.getElementById("sendAction").addEventListener("click", () => openTokenPicker("Send", wallet));
-        document.getElementById("receiveAction").addEventListener("click", () => openTokenPicker("Receive", wallet));
-
-        renderTokenAssets();
-
-    } else if (tab === "SETTINGS") {
-        container.innerHTML = `
-            <div style="padding:15px 20px;">
-                <div style="background:#17212b; border-radius:14px; padding:15px; margin-bottom:15px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div style="font-size:30px;">👛</div>
-                        <div>
-                            <div style="font-weight:bold; color:white;">Wallet Main</div>
-                            <div style="font-size:11px; color:#708499;">Customize & Backup</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="background:#17212b; border-radius:14px; overflow:hidden; margin-bottom:15px;">
-                    <div id="backupMenu" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #242f3d; cursor:pointer;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span>🔍</span> <span style="font-size:14px;">Backup</span>
-                        </div>
-                        <span style="color:#708499;">›</span>
-                    </div>
-                    <div id="securityMenu" style="padding:15px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span>🔒</span> <span style="font-size:14px;">Security</span>
-                        </div>
-                        <span style="color:#708499;">›</span>
-                    </div>
-                </div>
-
-                <div id="settingSubArea"></div>
-            </div>
-        `;
-
-        document.getElementById("backupMenu").addEventListener("click", () => {
-            const sub = document.getElementById("settingSubArea");
-            sub.innerHTML = `
-                <div style="background:#17212b; border-radius:14px; padding:15px; margin-top:10px;">
-                    <h4 style="margin:0 0 8px 0; color:white; font-size:14px;">Manual Backup</h4>
-                    <p style="font-size:11px; color:#708499; margin-bottom:15px;">Back up your wallet manually by writing down the recovery phrase.</p>
-                    <button id="showPhraseBtn" style="width:100%; padding:12px; background:#242f3d; border:1px solid #334155; border-radius:10px; color:#248bca; font-weight:bold; cursor:pointer;">
-                        🔑 Show recovery phrase
-                    </button>
-                    <div id="phraseDisplay" style="display:none; margin-top:15px; background:#0e1621; padding:12px; border-radius:8px; font-size:12px; color:#22c55e; word-break:break-all;">
-                        ${wallet.mnemonic}
-                    </div>
-                </div>
-            `;document.getElementById("showPhraseBtn").addEventListener("click", () => {
-                document.getElementById("phraseDisplay").style.display = "block";
-            });
-        });
-
-        document.getElementById("securityMenu").addEventListener("click", () => {
-            const sub = document.getElementById("settingSubArea");
-            sub.innerHTML = `
-                <div style="background:#17212b; border-radius:14px; padding:15px; margin-top:10px;">
-                    <h4 style="margin:0 0 10px 0; color:white; font-size:14px;">Security Settings</h4>
-                    <button id="logoutBtn" style="width:100%; padding:12px; background:#ef4444; border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer;">Reset Wallet Data</button>
-                </div>
-            `;
-            document.getElementById("logoutBtn").addEventListener("click", () => {
-                if (confirm("Reset wallet data? Make sure recovery phrase is saved!")) {
-                    localStorage.removeItem("TGN_SECURE_WALLET");
-                    location.reload();
-                }
-            });
-        });
-    }
-}
-
-function renderTokenAssets() {
-    const list = document.getElementById("tokenAssetList");
-    list.innerHTML = TOKEN_LIST.map(t => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#17212b; padding:12px 15px; border-radius:14px; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="${t.icon}" style="width:32px; height:32px; border-radius:50%;" />
-                <div>
-                    <div style="font-weight:bold; font-size:14px; color:white;">${t.symbol}</div>
-                    <div style="font-size:11px; color:#708499;">${t.name}</div>
-                </div>
-            </div>
-            <div style="text-align:right;">
-                <div style="font-weight:bold; font-size:14px; color:white;">0.0000</div>
-                <div style="font-size:11px; color:#22c55e;">$0.00</div>
-            </div>
-        </div>
-    `).join("");
-}
-
-function openTokenPicker(actionType, wallet) {
-    const modal = document.getElementById("actionModal");
-    const title = document.getElementById("modalTitle");
-    const body = document.getElementById("modalBody");
-    
-    title.innerText = `${actionType} - Select Token`;
-    modal.style.display = "block";
-
-    body.innerHTML = TOKEN_LIST.map(t => `
-        <div class="token-item" style="display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #242f3d; cursor:pointer;">
-            <img src="${t.icon}" style="width:28px; height:28px; border-radius:50%;" />
+function renderMain() { const app = 
+  document.getElementById("app"); 
+  app.innerHTML = `
+    <div 
+    style="font-family:-apple-system,sans-serif;background:#0e1621;color:white;min-height:100vh;padding-bottom:80px;">
+      <div style="padding:16px 
+      20px;display:flex;justify-content:space-between;align-items:center;">
+        <div 
+        style="font-size:15px;font-weight:600;color:#8b9bb4;">TGN 
+        Wallet</div> <div 
+        style="background:#17212b;padding:5px 
+        12px;border-radius:20px;font-size:12px;color:#2AABEE;border:1px 
+        solid #2a3544;">Testnet</div>
+      </div> <div 
+      style="text-align:center;padding:20px 
+      0 10px;">
+        <div id="balanceDisplay" 
+        style="font-size:42px;font-weight:700;">${currentBalance} 
+        TON</div> <div 
+        onclick="copyAddress()" 
+        style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#17212b;padding:6px 
+        14px;border-radius:20px;font-size:13px;color:#8b9bb4;border:1px 
+        solid #2a3544;">
+          ${shortenAddress(walletData.address)} 
+          📋
+        </div> </div> <div 
+      style="display:flex;justify-content:center;gap:32px;margin:28px 
+      0 36px;">
+        <div onclick="openSend()" 
+        style="text-align:center;">
+          <div 
+          style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#2AABEE,#1a7bb0);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 
+          auto 8px;">↗</div> <div 
+          style="font-size:13px;color:#c1c9d3;">Send</div>
+        </div> <div onclick="openReceive()" 
+        style="text-align:center;">
+          <div 
+          style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 
+          auto 8px;">↙</div> <div 
+          style="font-size:13px;color:#c1c9d3;">Receive</div>
+        </div> <div 
+        onclick="refreshBalance()" 
+        style="text-align:center;">
+          <div 
+          style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 
+          auto 8px;">↻</div> <div 
+          style="font-size:13px;color:#c1c9d3;">Refresh</div>
+        </div> </div> <div style="padding:0 
+      20px;">
+        <div 
+        style="font-size:14px;color:#8b9bb4;margin-bottom:12px;">Assets</div> 
+        <div 
+        style="background:#17212b;border-radius:16px;padding:16px;display:flex;justify-content:space-between;align-items:center;border:1px 
+        solid #2a3544;">
+          <div 
+          style="display:flex;align-items:center;gap:12px;">
+            <img 
+            src="https://assets.coingecko.com/coins/images/17980/small/ton_token_teal.png" 
+            style="width:36px;height:36px;border-radius:50%;"> 
             <div>
-                <div style="font-weight:bold; font-size:14px; color:white;">${t.symbol}</div>
-                <div style="font-size:11px; color:#708499;">${NETWORKS[currentNetwork].name}</div>
-            </div>
-        </div>
-    `).join("");
-
-    document.querySelectorAll(".token-item").forEach((item, idx) => {
-        item.addEventListener("click", () => {
-            const selectedToken = TOKEN_LIST[idx];
-            if (actionType === "Receive") {
-                renderReceiveUI(selectedToken, wallet);
-            } else {
-                renderSendUI(selectedToken, wallet);
-            }
-        });
-    });
-}function renderReceiveUI(token, wallet) {
-    const title = document.getElementById("modalTitle");
-    const body = document.getElementById("modalBody");
-
-    title.innerText = `Receive ${token.symbol}`;
-    body.innerHTML = `
-        <div style="text-align:center; padding:10px 0;">
-            <div style="background:white; padding:15px; border-radius:12px; display:inline-block; margin-bottom:15px;">
-                <div id="qrcode"></div>
-            </div>
-            <div style="font-size:12px; color:#708499; margin-bottom:5px;">Network: ${NETWORKS[currentNetwork].name}</div>
-            <div style="font-size:11px; background:#0e1621; color:#22c55e; padding:10px; border-radius:8px; word-break:break-all; border:1px solid #242f3d;">
-                ${wallet.address}
-            </div>
-            <button id="copyRecAddr" style="width:100%; margin-top:15px; padding:12px; background:#248bca; border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer;">
-                📋 Copy Address
-            </button>
-        </div>
-    `;
-
-    new QRCode(document.getElementById("qrcode"), {
-        text: wallet.address,
-        width: 160,
-        height: 160
-    });
-
-    document.getElementById("copyRecAddr").addEventListener("click", () => {
-        navigator.clipboard.writeText(wallet.address);
-        alert("Address Copied!");
-    });
+              <div 
+              style="font-weight:600;font-size:15px;">TON</div> 
+              <div 
+              style="font-size:12px;color:#8b9bb4;">Toncoin</div>
+            </div> </div> <div 
+          style="text-align:right;">
+            <div id="assetBalance" 
+            style="font-weight:600;font-size:15px;">${currentBalance}</div> 
+            <div 
+            style="font-size:12px;color:#8b9bb4;">Testnet</div>
+          </div> </div> <div 
+      style="position:fixed;bottom:0;left:0;right:0;height:70px;background:#17212b;border-top:1px 
+      solid 
+      #2a3544;display:flex;justify-content:space-around;align-items:center;">
+        <div 
+        style="text-align:center;color:#2AABEE;font-size:11px;"><div 
+        style="font-size:20px;">👛</div>Wallet</div> <div 
+        onclick="openSettings()" 
+        style="text-align:center;color:#8b9bb4;font-size:11px;"><div 
+        style="font-size:20px;">⚙️</div>Settings</div>
+      </div> <div id="modal" 
+      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;padding:20px;">
+        <div 
+        style="background:#17212b;border-radius:18px;padding:20px;max-height:85vh;overflow-y:auto;margin-top:8vh;">
+          <div 
+          style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="modalTitle" 
+            style="margin:0;font-size:17px;"></h3> <span 
+            onclick="closeModal()" 
+            style="font-size:22px;color:#8b9bb4;">✕</span>
+          </div> <div id="modalBody"></div> </div> </div> 
+    </div>`;
 }
-
-function renderSendUI(token, wallet) {
-    const title = document.getElementById("modalTitle");
-    const body = document.getElementById("modalBody");
-
-    title.innerText = `Send ${token.symbol}`;
-    body.innerHTML = `
-        <div style="padding:5px 0;">
-            <div style="font-size:12px; color:#708499; margin-bottom:15px;">Network: ${NETWORKS[currentNetwork].name}</div>
-            
-            <label style="font-size:12px; color:#708499;">Recipient Address:</label>
-            <input id="sendToAddr" type="text" placeholder="UQ... / 0x..." style="width:100%; margin:6px 0 15px 0; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:12px; box-sizing:border-box; font-size:13px;" />
-
-            <label style="font-size:12px; color:#708499;">Amount (${token.symbol}):</label>
-            <input id="sendAmount" type="number" placeholder="0.0" style="width:100%; margin:6px 0 20px 0; background:#0e1621; color:white; border:1px solid #242f3d; border-radius:8px; padding:12px; box-sizing:border-box; font-size:13px;" />
-
-            <button id="submitSendBtn" style="width:100%; padding:14px; background:#248bca; border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer;">
-                Confirm & Send
-            </button>
-        </div>
-    `;
-
-    document.getElementById("submitSendBtn").addEventListener("click", () => {
-        const toAddr = document.getElementById("sendToAddr").value.trim();
-        const amt = document.getElementById("sendAmount").value.trim();
-
-        if (!toAddr || !amt) {
-            alert("Please fill in recipient address and amount!");
-            return;
-        }
-
-        alert(`Preparing to send ${amt} ${token.symbol} to ${toAddr}...`);
-    });
+async function refreshBalance() { if (!walletData) return; try { 
+    const balance = await tonweb.getBalance(walletData.address); 
+    currentBalance = formatTon(balance); const el1 = 
+    document.getElementById("balanceDisplay"); const el2 = 
+    document.getElementById("assetBalance"); if (el1) 
+    el1.innerText = currentBalance + " TON"; if (el2) 
+    el2.innerText = currentBalance; showToast("Balance 
+    updated");
+  } catch (e) {
+    showToast("Failed to fetch balance");
+  }
+}
+function copyAddress() { 
+  navigator.clipboard.writeText(walletData.address); 
+  showToast("Address copied!");
+}
+function openReceive() { 
+  document.getElementById("modal").style.display = "block"; 
+  document.getElementById("modalTitle").innerText = "Receive 
+  TON"; document.getElementById("modalBody").innerHTML = `
+    <div style="text-align:center;"> <div 
+      style="background:white;padding:16px;border-radius:12px;display:inline-block;margin-bottom:16px;">
+        <div id="qrcode"></div> </div> <div 
+      style="font-size:12px;color:#8b9bb4;margin-bottom:8px;">Your 
+      Testnet Address</div> <div 
+      style="background:#0e1621;padding:12px;border-radius:10px;font-size:13px;word-break:break-all;border:1px 
+      solid #2a3544;color:#22c55e;">
+        ${walletData.address} </div> <button 
+      onclick="copyAddress()" 
+      style="width:100%;margin-top:16px;padding:14px;background:#2AABEE;border:none;border-radius:12px;color:white;font-weight:600;">Copy 
+      Address</button>
+    </div>`; new QRCode(document.getElementById("qrcode"), { 
+  text: walletData.address, width: 170, height: 170 });
+}
+function openSend() { 
+  document.getElementById("modal").style.display = "block"; 
+  document.getElementById("modalTitle").innerText = "Send TON"; 
+  document.getElementById("modalBody").innerHTML = `
+    <div> <label style="font-size:13px;color:#8b9bb4;">Recipient 
+      Address</label> <input id="sendTo" type="text" 
+      placeholder="EQ... or UQ..." style="width:100%;margin:8px 
+      0 16px;padding:13px;background:#0e1621;border:1px solid 
+      #2a3544;border-radius:10px;color:white;font-size:14px;box-sizing:border-box;">
+      <label style="font-size:13px;color:#8b9bb4;">Amount 
+      (TON)</label> <input id="sendAmount" type="number" 
+      step="0.01" placeholder="0.00" 
+      style="width:100%;margin:8px 0 
+      20px;padding:13px;background:#0e1621;border:1px solid 
+      #2a3544;border-radius:10px;color:white;font-size:14px;box-sizing:border-box;">
+      <button onclick="doSend()" 
+      style="width:100%;padding:15px;background:linear-gradient(135deg,#2AABEE,#1e88c7);border:none;border-radius:12px;color:white;font-weight:600;font-size:15px;">Confirm 
+      Send</button> <p 
+      style="font-size:11px;color:#5a6a7e;margin-top:12px;text-align:center;">Testnet 
+      only</p>
+    </div>`;
+}
+async function doSend() { const to = 
+  document.getElementById("sendTo").value.trim(); const amount = 
+  document.getElementById("sendAmount").value.trim(); if (!to || 
+  !amount) return alert("Please fill address and amount");
+  try { const keyPair = { publicKey: 
+      TonWeb.utils.hexToBytes(walletData.publicKey), secretKey: 
+      TonWeb.utils.hexToBytes(walletData.secretKey)
+    };
+    const WalletClass = tonweb.wallet.all.v4R2; const wallet = 
+    new WalletClass(tonweb.provider, { publicKey: 
+    keyPair.publicKey }); const seqno = await 
+    wallet.methods.seqno().call() || 0; await 
+    wallet.methods.transfer({
+      secretKey: keyPair.secretKey, toAddress: to, amount: 
+      TonWeb.utils.toNano(amount), seqno: seqno, payload: "Sent 
+      from TGN Wallet", sendMode: 3
+    }).send();
+    closeModal(); showToast("Transaction sent!"); 
+    setTimeout(refreshBalance, 3000);
+  } catch (e) {
+    alert("Send failed: " + e.message);
+  }
+}
+function openSettings() { 
+  document.getElementById("modal").style.display = "block"; 
+  document.getElementById("modalTitle").innerText = "Settings"; 
+  document.getElementById("modalBody").innerHTML = `
+    document.getElementById("modalBody").innerHTML = ` <button 
+    onclick="showPhrase()" 
+    style="width:100%;padding:14px;background:#0e1621;border:1px 
+    solid 
+    #2a3544;border-radius:12px;color:#2AABEE;font-weight:500;margin-bottom:10px;">🔑 
+    Show Recovery Phrase</button> <div id="phraseBox" 
+    style="display:none;background:#0e1621;padding:14px;border-radius:10px;font-size:13px;color:#22c55e;word-break:break-all;border:1px 
+    solid #2a3544;margin-bottom:16px;"></div> <button 
+    onclick="resetWallet()" 
+    style="width:100%;padding:14px;background:#ef4444;border:none;border-radius:12px;color:white;font-weight:600;">Reset 
+    Wallet</button>`;
+}
+function showPhrase() { 
+  document.getElementById("phraseBox").style.display = "block"; 
+  document.getElementById("phraseBox").innerText = 
+  walletData.mnemonic;
+}
+function resetWallet() { if (confirm("Are you sure? Make sure 
+  you saved the recovery phrase!")) {
+    localStorage.removeItem("TGN_TON_WALLET"); 
+    location.reload();
+  }
+}
+function closeModal() { 
+  document.getElementById("modal").style.display = "none";
 }
