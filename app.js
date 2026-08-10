@@ -15,7 +15,7 @@
    CONFIG
    ========================================================= */
 
-const API_KEY = "YOUR_TONCENTER_API_KEY";
+const API_KEY = "c09170dd62724a03f3803b0f1023219c672c0fcc02a2deed31bd75faea36e9e1";
 
 let tonweb = null;
 let walletData = JSON.parse(
