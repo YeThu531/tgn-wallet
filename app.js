@@ -55,7 +55,6 @@ function switchNav(tab) {
   const target = document.getElementById('nav-' + tab);
   if (target) target.classList.add('active');
 
-  // Clear previous content strictly to prevent overlapping
   const contentEl = document.getElementById('content');
   contentEl.innerHTML = '';
 
@@ -169,11 +168,9 @@ function renderMain() {
       </div>
     </div>
 
-    <div class="grid-4">
-      <div class="grid-btn" onclick="renderSendPage()"><span class="grid-label">Send</span></div>
-      <div class="grid-btn" onclick="renderReceivePage()"><span class="grid-label">Receive</span></div>
-      <div class="grid-btn" onclick="switchNav('activity')"><span class="grid-label">History</span></div>
-      <div class="grid-btn" onclick="switchNav('profile')"><span class="grid-label">Profile</span></div>
+    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:14px;">
+      <div class="grid-btn" onclick="renderSendPage()" style="padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; text-align:center; cursor:pointer;"><span class="grid-label" style="font-weight:600; color:#fff;">📤 Send</span></div>
+      <div class="grid-btn" onclick="renderReceivePage()" style="padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; text-align:center; cursor:pointer;"><span class="grid-label" style="font-weight:600; color:#fff;">📥 Receive</span></div>
     </div>
 
     <div class="section-box">
