@@ -88,3 +88,21 @@ input, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px
 .btn { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
 .btn-secondary { background: #374151; }
 .btn-danger { background: #dc2626; }
+.grid-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 6px auto;
+}
+.grid-icon-wrap svg {
+  width: 20px;
+  height: 20px;
+}
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 2px;
+}

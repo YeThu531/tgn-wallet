@@ -120,8 +120,12 @@ function renderMain() {
       <div class="hero-subbalance">$0.00 USD</div>
       <div class="hero-icon">💎</div>
       <div class="action-row">
-        <button class="action-btn primary" onclick="openReceive()">⬇️ Deposit</button>
-        <button class="action-btn" onclick="openSend()">⬆️ Withdraw</button>
+        <button class="action-btn primary" onclick="openReceive()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M19 12l-7 7-7-7"/></svg> Deposit
+        </button>
+        <button class="action-btn" onclick="openSend()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Withdraw
+        </button>
       </div>
     </div>
 
@@ -135,22 +139,30 @@ function renderMain() {
 
     <div class="grid-4">
       <div class="grid-btn" onclick="openSend()">
-        <span class="grid-icon">✈️</span>
+        <span class="grid-icon-wrap" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </span>
         <span class="grid-label">Send</span>
         <span class="grid-sub">Transfer TON</span>
       </div>
       <div class="grid-btn" onclick="openReceive()">
-        <span class="grid-icon">📥</span>
+        <span class="grid-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        </span>
         <span class="grid-label">Receive</span>
         <span class="grid-sub">Get payment</span>
       </div>
       <div class="grid-btn" onclick="showToast('History coming soon!')">
-        <span class="grid-icon">⏱️</span>
+        <span class="grid-icon-wrap" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </span>
         <span class="grid-label">History</span>
         <span class="grid-sub">Transactions</span>
       </div>
       <div class="grid-btn" onclick="openSettings()">
-        <span class="grid-icon">⚙️</span>
+        <span class="grid-icon-wrap" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </span>
         <span class="grid-label">Settings</span>
         <span class="grid-sub">Preferences</span>
       </div>
