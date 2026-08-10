@@ -1,13 +1,6 @@
 /* =========================================================
    TGN TON WALLET
-   Clean / Professional App Logic
-
-   - No fake transaction history
-   - No demo transactions
-   - Clean Activity page
-   - 5-tab navigation
-   - Send / Wallet / Profile pages
-   - Responsive UI
+   PROFESSIONAL TELEGRAM PROFILE VERSION
    ========================================================= */
 
 
@@ -18,633 +11,763 @@
 const API_KEY = "c09170dd62724a03f3803b0f1023219c672c0fcc02a2deed31bd75faea36e9e1";
 
 let tonweb = null;
+
 let walletData = JSON.parse(
-  localStorage.getItem("TGN_TON_WALLET")
+    localStorage.getItem("TGN_TON_WALLET")
 );
 
 let activeTab = "home";
 
 
 /* =========================================================
-   UI STYLE
+   TELEGRAM
    ========================================================= */
 
-(function injectStyles() {
+const tg = window.Telegram?.WebApp;
 
-  if (document.getElementById("tgn-app-style")) return;
+if (tg) {
+    tg.ready();
+    tg.expand();
 
-  const style = document.createElement("style");
+    try {
+        tg.setHeaderColor("#07101f");
+        tg.setBackgroundColor("#050a16");
+    } catch (e) {}
+}
 
-  style.id = "tgn-app-style";
 
-  style.textContent = `
+/* =========================================================
+   TELEGRAM USER
+   ========================================================= */
 
-    /* ================================
+function getTelegramUser() {
+
+    return tg?.initDataUnsafe?.user || null;
+
+}
+
+
+function getUserFullName() {
+
+    const user = getTelegramUser();
+
+    if (!user) {
+        return "Telegram User";
+    }
+
+    return [
+        user.first_name,
+        user.last_name
+    ]
+        .filter(Boolean)
+        .join(" ") || "Telegram User";
+
+}
+
+
+function getUsername() {
+
+    const user = getTelegramUser();
+
+    if (!user?.username) {
+        return "No username";
+    }
+
+    return "@" + user.username;
+
+}
+
+
+function getUserId() {
+
+    const user = getTelegramUser();
+
+    return user?.id
+        ? String(user.id)
+        : "Unavailable";
+
+}
+
+
+function getUserPhoto() {
+
+    const user = getTelegramUser();
+
+    return user?.photo_url || "";
+
+}
+
+
+/* =========================================================
+   TELEGRAM PROFILE PHOTO
+   ========================================================= */
+
+function createTelegramAvatar(size = 64) {
+
+    const user = getTelegramUser();
+
+    const photo =
+        getUserPhoto();
+
+    const name =
+        getUserFullName();
+
+    const initial =
+        name
+            .trim()
+            .charAt(0)
+            .toUpperCase() || "T";
+
+
+    if (photo) {
+
+        return `
+            <img
+                src="${escapeHtml(photo)}"
+                alt="Telegram Profile"
+                style="
+                    width:${size}px;
+                    height:${size}px;
+                    border-radius:22px;
+                    object-fit:cover;
+                    display:block;
+                    border:2px solid rgba(255,255,255,.12);
+                "
+                onerror="
+                    this.style.display='none';
+                    this.nextElementSibling.style.display='flex';
+                "
+            >
+
+            <div
+                style="
+                    display:none;
+                    width:${size}px;
+                    height:${size}px;
+                    border-radius:22px;
+                    align-items:center;
+                    justify-content:center;
+                    background:linear-gradient(145deg,#299cff,#176de7);
+                    color:white;
+                    font-size:${Math.round(size * .38)}px;
+                    font-weight:800;
+                "
+            >
+                ${escapeHtml(initial)}
+            </div>
+        `;
+
+    }
+
+
+    return `
+        <div
+            style="
+                width:${size}px;
+                height:${size}px;
+                border-radius:22px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                background:linear-gradient(145deg,#299cff,#176de7);
+                color:white;
+                font-size:${Math.round(size * .38)}px;
+                font-weight:800;
+            "
+        >
+            ${escapeHtml(initial)}
+        </div>
+    `;
+
+}
+
+
+/* =========================================================
+   STYLES
+   ========================================================= */
+
+(function injectTGNStyles() {
+
+    if (document.getElementById("tgn-professional-style")) {
+        return;
+    }
+
+    const style =
+        document.createElement("style");
+
+    style.id =
+        "tgn-professional-style";
+
+
+    style.textContent = `
+
+    /* =====================================================
        GENERAL
-       ================================ */
+       ===================================================== */
 
     #content {
-      width:100%;
-      max-width:720px;
-      margin:0 auto;
-      padding:10px 0 120px;
-    }
-
-    button,
-    input,
-    textarea {
-      font-family:inherit;
+        width:100%;
+        max-width:720px;
+        margin:0 auto;
+        padding:10px 0 120px;
     }
 
 
-    /* ================================
+    /* =====================================================
        PAGE HEADER
-       ================================ */
+       ===================================================== */
 
     .tgn-page-title {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin:5px 3px 15px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        margin:6px 4px 16px;
     }
 
     .tgn-page-title h2 {
-      margin:0;
-      color:#f5f9ff;
-      font-size:23px;
-      font-weight:800;
-      letter-spacing:-.4px;
-    }
-
-    .tgn-refresh {
-      border:0;
-      background:transparent;
-      color:#39a7ff;
-      font-size:14px;
-      font-weight:700;
-      padding:8px;
-      cursor:pointer;
+        margin:0;
+        color:#f5f9ff;
+        font-size:23px;
+        font-weight:800;
+        letter-spacing:-.5px;
     }
 
 
-    /* ================================
-       CARD
-       ================================ */
+    /* =====================================================
+       PROFESSIONAL CARD
+       ===================================================== */
 
     .tgn-card {
-      background:
-        linear-gradient(
-          145deg,
-          rgba(19,34,58,.97),
-          rgba(8,18,35,.97)
-        );
+        background:
+            linear-gradient(
+                145deg,
+                rgba(18,34,58,.96),
+                rgba(7,17,32,.98)
+            );
 
-      border:
-        1px solid rgba(110,160,220,.13);
+        border:
+            1px solid rgba(100,155,220,.13);
 
-      border-radius:20px;
+        border-radius:22px;
 
-      box-shadow:
-        0 12px 35px rgba(0,0,0,.18);
+        box-shadow:
+            0 15px 40px rgba(0,0,0,.18);
     }
 
 
-    /* ================================
-       ACTIVITY EMPTY
-       ================================ */
+    /* =====================================================
+       REMOVE OLD QUICK ACTIONS
+       ===================================================== */
+
+    .old-quick-actions,
+    .quick-actions,
+    .home-quick-actions {
+        display:none !important;
+    }
+
+
+    /* =====================================================
+       PROFILE HERO
+       ===================================================== */
+
+    .profile-hero {
+        position:relative;
+        overflow:hidden;
+
+        padding:22px;
+
+        margin-bottom:13px;
+
+        background:
+            radial-gradient(
+                circle at 90% 10%,
+                rgba(42,150,255,.18),
+                transparent 40%
+            ),
+            linear-gradient(
+                145deg,
+                #10243e,
+                #071224
+            );
+
+        border:
+            1px solid rgba(70,150,255,.18);
+
+        border-radius:24px;
+
+        box-shadow:
+            0 15px 45px rgba(0,0,0,.22);
+    }
+
+    .profile-hero::after {
+        content:"";
+
+        position:absolute;
+
+        width:150px;
+        height:150px;
+
+        right:-60px;
+        top:-70px;
+
+        border-radius:50%;
+
+        background:
+            rgba(42,150,255,.08);
+
+        filter:blur(5px);
+    }
+
+    .profile-main {
+        position:relative;
+        z-index:2;
+
+        display:flex;
+        align-items:center;
+
+        gap:15px;
+    }
+
+    .profile-avatar-wrap {
+        position:relative;
+
+        width:72px;
+        height:72px;
+
+        flex:0 0 72px;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+
+        border-radius:25px;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(42,156,255,.22),
+                rgba(42,156,255,.04)
+            );
+
+        border:
+            1px solid rgba(70,160,255,.22);
+
+        box-shadow:
+            0 8px 28px rgba(0,0,0,.18);
+    }
+
+    .profile-online {
+        position:absolute;
+
+        width:12px;
+        height:12px;
+
+        right:-2px;
+        bottom:0;
+
+        border-radius:50%;
+
+        background:#22c58b;
+
+        border:3px solid #0b182b;
+
+        z-index:4;
+    }
+
+    .profile-name {
+        color:#f5f9ff;
+
+        font-size:21px;
+
+        font-weight:850;
+
+        line-height:1.2;
+    }
+
+    .profile-username {
+        margin-top:5px;
+
+        color:#3ca8ff;
+
+        font-size:13px;
+
+        font-weight:700;
+    }
+
+    .profile-id {
+        margin-top:5px;
+
+        color:#7188a7;
+
+        font-size:11px;
+    }
+
+
+    /* =====================================================
+       PROFILE STATS
+       ===================================================== */
+
+    .profile-stats {
+        position:relative;
+        z-index:2;
+
+        display:grid;
+
+        grid-template-columns:
+            repeat(3,1fr);
+
+        gap:8px;
+
+        margin-top:19px;
+    }
+
+    .profile-stat {
+        padding:12px 9px;
+
+        text-align:center;
+
+        border-radius:15px;
+
+        background:
+            rgba(255,255,255,.035);
+
+        border:
+            1px solid
+            rgba(110,160,220,.08);
+    }
+
+    .profile-stat-value {
+        color:#edf6ff;
+
+        font-size:13px;
+
+        font-weight:800;
+    }
+
+    .profile-stat-label {
+        margin-top:4px;
+
+        color:#7086a4;
+
+        font-size:10px;
+    }
+
+
+    /* =====================================================
+       PROFILE MENU
+       ===================================================== */
+
+    .profile-menu {
+        overflow:hidden;
+
+        margin-top:13px;
+    }
+
+    .profile-menu-item {
+        width:100%;
+
+        display:flex;
+
+        align-items:center;
+
+        justify-content:space-between;
+
+        padding:15px 17px;
+
+        background:transparent;
+
+        border:0;
+
+        border-bottom:
+            1px solid
+            rgba(110,160,220,.08);
+
+        color:#f2f7ff;
+
+        text-align:left;
+
+        cursor:pointer;
+
+        transition:
+            background .18s ease,
+            transform .18s ease;
+    }
+
+    .profile-menu-item:last-child {
+        border-bottom:0;
+    }
+
+    .profile-menu-item:active {
+        transform:scale(.985);
+
+        background:
+            rgba(42,156,255,.07);
+    }
+
+    .profile-menu-left {
+        display:flex;
+
+        align-items:center;
+
+        gap:13px;
+
+        min-width:0;
+    }
+
+    .profile-menu-icon {
+        width:43px;
+        height:43px;
+
+        flex:0 0 43px;
+
+        display:flex;
+
+        align-items:center;
+        justify-content:center;
+
+        border-radius:14px;
+
+        color:#3da9ff;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(42,156,255,.13),
+                rgba(42,156,255,.04)
+            );
+
+        border:
+            1px solid
+            rgba(42,156,255,.09);
+
+        font-size:18px;
+    }
+
+    .profile-menu-title {
+        color:#edf5ff;
+
+        font-size:14px;
+
+        font-weight:800;
+    }
+
+    .profile-menu-sub {
+        margin-top:3px;
+
+        color:#7187a5;
+
+        font-size:10px;
+    }
+
+    .profile-menu-arrow {
+        color:#5d7695;
+
+        font-size:22px;
+
+        padding-left:8px;
+    }
+
+
+    /* =====================================================
+       INFO CARD
+       ===================================================== */
+
+    .info-card {
+        padding:5px 17px;
+
+        overflow:hidden;
+    }
+
+    .info-row {
+        display:flex;
+
+        align-items:center;
+
+        justify-content:space-between;
+
+        gap:12px;
+
+        padding:14px 0;
+
+        border-bottom:
+            1px solid
+            rgba(110,160,220,.08);
+    }
+
+    .info-row:last-child {
+        border-bottom:0;
+    }
+
+    .info-label {
+        color:#748aa7;
+
+        font-size:11px;
+    }
+
+    .info-value {
+        color:#edf5ff;
+
+        font-size:12px;
+
+        font-weight:700;
+
+        text-align:right;
+
+        word-break:break-all;
+    }
+
+    .copy-id {
+        border:0;
+
+        padding:6px 9px;
+
+        margin-left:6px;
+
+        border-radius:9px;
+
+        background:
+            rgba(42,156,255,.10);
+
+        color:#3ca8ff;
+
+        font-size:10px;
+
+        font-weight:700;
+
+        cursor:pointer;
+    }
+
+
+    /* =====================================================
+       SECURITY
+       ===================================================== */
+
+    .security-warning {
+        padding:14px;
+
+        margin-bottom:13px;
+
+        border-radius:15px;
+
+        background:
+            rgba(239,68,68,.07);
+
+        border:
+            1px solid
+            rgba(239,68,68,.13);
+
+        color:#ff9ba0;
+
+        font-size:11px;
+
+        line-height:1.6;
+    }
+
+
+    /* =====================================================
+       MODAL
+       ===================================================== */
+
+    .tgn-modal-box {
+        background:
+            linear-gradient(
+                145deg,
+                #102039,
+                #071224
+            );
+
+        border:
+            1px solid
+            rgba(80,150,230,.18);
+
+        border-radius:22px;
+
+        padding:20px;
+
+        width:
+            min(92vw,420px);
+
+        box-shadow:
+            0 25px 70px rgba(0,0,0,.45);
+    }
+
+
+    /* =====================================================
+       EMPTY ACTIVITY
+       ===================================================== */
 
     .tgn-empty {
-      padding:48px 22px;
-      text-align:center;
+        padding:45px 20px;
 
-      background:
-        linear-gradient(
-          145deg,
-          rgba(18,33,56,.88),
-          rgba(8,18,34,.96)
-        );
+        text-align:center;
 
-      border:
-        1px solid rgba(110,160,220,.12);
+        background:
+            linear-gradient(
+                145deg,
+                rgba(18,34,58,.92),
+                rgba(7,17,32,.98)
+            );
 
-      border-radius:20px;
+        border:
+            1px solid
+            rgba(100,155,220,.11);
+
+        border-radius:21px;
     }
 
     .tgn-empty-icon {
-      width:68px;
-      height:68px;
+        width:64px;
+        height:64px;
 
-      margin:0 auto 17px;
+        margin:0 auto 15px;
 
-      display:flex;
-      align-items:center;
-      justify-content:center;
+        display:flex;
 
-      border-radius:20px;
+        align-items:center;
+        justify-content:center;
 
-      background:
-        rgba(38,147,255,.09);
+        border-radius:20px;
 
-      border:
-        1px solid rgba(58,167,255,.15);
+        color:#3ca8ff;
 
-      color:#39a7ff;
+        background:
+            rgba(42,156,255,.09);
 
-      font-size:31px;
-    }
-
-    .tgn-empty h3 {
-      margin:0 0 8px;
-
-      color:#f1f7ff;
-
-      font-size:19px;
-      font-weight:800;
-    }
-
-    .tgn-empty p {
-      margin:0 auto;
-
-      max-width:300px;
-
-      color:#8196b5;
-
-      font-size:13px;
-
-      line-height:1.65;
+        font-size:28px;
     }
 
 
-    /* ================================
-       FILTER
-       ================================ */
-
-    .tgn-filter-row {
-      display:flex;
-      gap:8px;
-
-      overflow-x:auto;
-
-      padding:2px 1px 11px;
-
-      scrollbar-width:none;
-    }
-
-    .tgn-filter-row::-webkit-scrollbar {
-      display:none;
-    }
-
-    .tgn-filter {
-      border:
-        1px solid rgba(130,160,200,.15);
-
-      background:
-        rgba(255,255,255,.035);
-
-      color:#91a7c4;
-
-      padding:9px 14px;
-
-      border-radius:12px;
-
-      white-space:nowrap;
-
-      font-size:12px;
-      font-weight:700;
-
-      cursor:pointer;
-    }
-
-    .tgn-filter.active {
-      color:#39a7ff;
-
-      background:
-        rgba(38,147,255,.14);
-
-      border-color:
-        rgba(38,147,255,.35);
-    }
-
-
-    /* ================================
-       TRANSACTION
-       ================================ */
-
-    .tgn-tx {
-      display:flex;
-      align-items:center;
-
-      gap:12px;
-
-      padding:14px;
-
-      margin-bottom:9px;
-
-      border-radius:17px;
-
-      background:
-        rgba(17,31,52,.75);
-
-      border:
-        1px solid rgba(110,160,220,.09);
-    }
-
-    .tgn-tx-icon {
-      width:43px;
-      height:43px;
-
-      flex:0 0 auto;
-
-      display:flex;
-      align-items:center;
-      justify-content:center;
-
-      border-radius:14px;
-
-      font-size:20px;
-      font-weight:800;
-    }
-
-    .tgn-tx-icon.receive {
-      color:#22c58b;
-      background:rgba(16,185,129,.12);
-    }
-
-    .tgn-tx-icon.deposit {
-      color:#39a7ff;
-      background:rgba(38,147,255,.12);
-    }
-
-    .tgn-tx-icon.send,
-    .tgn-tx-icon.withdraw {
-      color:#ff6570;
-      background:rgba(239,68,68,.11);
-    }
-
-    .tgn-tx-main {
-      min-width:0;
-      flex:1;
-    }
-
-    .tgn-tx-title {
-      color:#f5f9ff;
-      font-size:14px;
-      font-weight:800;
-    }
-
-    .tgn-tx-sub {
-      margin-top:4px;
-
-      color:#8196b5;
-
-      font-size:11px;
-
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-
-    .tgn-tx-right {
-      text-align:right;
-      flex:0 0 auto;
-    }
-
-    .tgn-tx-amount {
-      font-size:14px;
-      font-weight:800;
-    }
-
-    .tgn-tx-date {
-      margin-top:4px;
-
-      color:#7187a5;
-
-      font-size:10px;
-    }
-
-
-    /* ================================
-       PROFILE
-       ================================ */
-
-    .tgn-profile-head {
-      padding:18px;
-
-      display:flex;
-      align-items:center;
-
-      gap:14px;
-
-      margin-bottom:12px;
-    }
-
-    .tgn-avatar {
-      width:58px;
-      height:58px;
-
-      flex:0 0 auto;
-
-      display:flex;
-      align-items:center;
-      justify-content:center;
-
-      border-radius:18px;
-
-      background:
-        linear-gradient(
-          145deg,
-          #2497ff,
-          #155fe0
-        );
-
-      color:#fff;
-
-      font-size:22px;
-      font-weight:800;
-
-      box-shadow:
-        0 8px 22px
-        rgba(36,151,255,.22);
-    }
-
-    .tgn-name {
-      color:#f5f9ff;
-
-      font-size:17px;
-      font-weight:800;
-    }
-
-    .tgn-handle {
-      margin-top:4px;
-
-      color:#39a7ff;
-
-      font-size:12px;
-    }
-
-
-    /* ================================
-       MENU
-       ================================ */
-
-    .tgn-menu {
-      overflow:hidden;
-    }
-
-    .tgn-menu-item {
-      width:100%;
-
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-
-      padding:15px 17px;
-
-      border:0;
-      border-bottom:
-        1px solid rgba(110,160,220,.08);
-
-      background:transparent;
-
-      color:#edf5ff;
-
-      text-align:left;
-
-      cursor:pointer;
-    }
-
-    .tgn-menu-item:last-child {
-      border-bottom:0;
-    }
-
-    .tgn-menu-left {
-      display:flex;
-      align-items:center;
-
-      gap:12px;
-
-      font-size:13px;
-      font-weight:700;
-    }
-
-    .tgn-menu-icon {
-      width:36px;
-      height:36px;
-
-      display:flex;
-      align-items:center;
-      justify-content:center;
-
-      border-radius:11px;
-
-      background:
-        rgba(38,147,255,.10);
-
-      color:#39a7ff;
-    }
-
-    .tgn-menu-arrow {
-      color:#617894;
-      font-size:20px;
-    }
-
-
-    /* ================================
-       FORMS
-       ================================ */
-
-    .tgn-form-card {
-      padding:18px;
-    }
-
-    .tgn-form-title {
-      margin-bottom:17px;
-
-      color:#f5f9ff;
-
-      font-size:18px;
-      font-weight:800;
-    }
-
-    .tgn-label {
-      display:block;
-
-      margin-bottom:7px;
-
-      color:#8fa5c1;
-
-      font-size:12px;
-      font-weight:700;
-    }
-
-    .tgn-input {
-      width:100%;
-
-      padding:13px 14px;
-
-      margin-bottom:13px;
-
-      border:
-        1px solid rgba(110,160,220,.14);
-
-      border-radius:14px;
-
-      background:#091326;
-
-      color:#f5f9ff;
-
-      outline:none;
-
-      font-size:13px;
-    }
-
-    .tgn-input:focus {
-      border-color:
-        rgba(58,167,255,.5);
-
-      box-shadow:
-        0 0 0 3px
-        rgba(58,167,255,.08);
-    }
-
-
-    /* ================================
-       BUTTONS
-       ================================ */
-
-    .tgn-primary {
-      width:100%;
-
-      border:0;
-
-      border-radius:14px;
-
-      padding:13px;
-
-      background:
-        linear-gradient(
-          135deg,
-          #299cff,
-          #176de7
-        );
-
-      color:#fff;
-
-      font-size:14px;
-      font-weight:800;
-
-      cursor:pointer;
-
-      box-shadow:
-        0 8px 20px
-        rgba(23,109,231,.20);
-    }
-
-    .tgn-secondary {
-      width:100%;
-
-      margin-top:9px;
-
-      padding:12px;
-
-      border:
-        1px solid rgba(110,160,220,.14);
-
-      border-radius:14px;
-
-      background:
-        rgba(255,255,255,.035);
-
-      color:#b9c9de;
-
-      font-size:13px;
-      font-weight:700;
-
-      cursor:pointer;
-    }
-
-    .tgn-back {
-      border:0;
-      background:transparent;
-
-      color:#39a7ff;
-
-      font-weight:700;
-
-      padding:5px 0;
-
-      cursor:pointer;
-    }
-
-
-    /* ================================
-       MODAL
-       ================================ */
-
-    .tgn-modal-note {
-      margin-bottom:13px;
-
-      color:#879bb7;
-
-      font-size:12px;
-
-      line-height:1.6;
-    }
-
-    .tgn-secret {
-      margin-top:10px;
-
-      padding:12px;
-
-      border:
-        1px solid rgba(110,160,220,.10);
-
-      border-radius:12px;
-
-      background:#071021;
-
-      color:#39a7ff;
-
-      font-size:11px;
-
-      line-height:1.55;
-
-      word-break:break-word;
-
-      max-height:120px;
-
-      overflow:auto;
-    }
-
-
-    /* ================================
+    /* =====================================================
        MOBILE
-       ================================ */
+       ===================================================== */
 
     @media(max-width:420px) {
 
-      #content {
-        padding-top:5px;
-      }
+        #content {
+            padding-top:5px;
+        }
 
-      .tgn-page-title h2 {
-        font-size:20px;
-      }
+        .profile-hero {
+            padding:19px;
+        }
 
-      .tgn-card {
-        border-radius:18px;
-      }
+        .profile-name {
+            font-size:19px;
+        }
 
-      .tgn-empty {
-        padding:42px 18px;
-      }
+        .profile-avatar-wrap {
+            width:65px;
+            height:65px;
+            flex-basis:65px;
+        }
 
     }
 
-  `;
+    `;
 
-  document.head.appendChild(style);
+
+    document.head.appendChild(style);
 
 })();
 
@@ -653,182 +776,80 @@ let activeTab = "home";
    HELPERS
    ========================================================= */
 
-const WORDLIST = [
-  "abandon","ability","able","about","above","absent",
-  "absorb","abstract","absurd","abuse","access","accident",
-  "account","accuse","achieve","acid","acoustic","acquire",
-  "across","act","action","actor","actual","adapt",
-  "addict","address","adjust","admit","adult","advance",
-  "advice","aerobic","affair","afford","afraid","again",
-  "age","agent","agree","ahead","aim","air","airport",
-  "aisle","alarm","album","alert","alien","all","alley",
-  "allow","almost","alone","alpha","already","also",
-  "alter","always","amazing","among","amount","amused",
-  "analyst","anchor","ancient","anger","angle","angry",
-  "animal","ankle","announce","annual","answer","antenna",
-  "antique","anxiety","apart","apology","appear","apple",
-  "approve","april","arch","arctic","area","arena",
-  "argue","arm","army","around","arrange","arrive",
-  "arrow","art","artist","artwork","ask","aspect",
-  "asset","assist","assume","athlete","atom","attack",
-  "attend","attitude","attract","auction","audit",
-  "august","author","auto","autumn","average","avocado",
-  "avoid","awake","aware","away","awesome","awful","axis"
-];
+function escapeHtml(value) {
 
+    return String(value ?? "")
+        .replace(
+            /[&<>'"]/g,
+            char => ({
+                "&":"&amp;",
+                "<":"&lt;",
+                ">":"&gt;",
+                "'":"&#39;",
+                '"':"&quot;"
+            }[char])
+        );
 
-function generateNativeMnemonic() {
-
-  const words = [];
-
-  const randomValues =
-    new Uint8Array(24);
-
-  window.crypto.getRandomValues(
-    randomValues
-  );
-
-  for (let i = 0; i < 24; i++) {
-    words.push(
-      WORDLIST[
-        randomValues[i] %
-        WORDLIST.length
-      ]
-    );
-  }
-
-  return words;
 }
 
 
 function showToast(message) {
 
-  if (window.Telegram?.WebApp) {
-    window.Telegram.WebApp.showAlert(
-      message
-    );
-  } else {
+    if (tg) {
+
+        try {
+            tg.showAlert(message);
+            return;
+        } catch (e) {}
+
+    }
+
     alert(message);
-  }
-
-}
-
-
-function escapeHtml(value) {
-
-  return String(value ?? "")
-    .replace(
-      /[&<>'"]/g,
-      char => ({
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        "'":"&#39;",
-        '"':"&quot;"
-      }[char])
-    );
 
 }
 
 
 /* =========================================================
-   TRANSACTIONS
+   TRANSACTION STORAGE
    ========================================================= */
-
-/*
-   IMPORTANT:
-   No default/fake transaction.
-*/
 
 function getUserTransactions() {
 
-  try {
+    try {
 
-    const data =
-      JSON.parse(
-        localStorage.getItem(
-          "TGN_USER_TXS"
-        )
-      );
+        const data =
+            JSON.parse(
+                localStorage.getItem(
+                    "TGN_USER_TXS"
+                )
+            );
 
-    return Array.isArray(data)
-      ? data
-      : [];
+        return Array.isArray(data)
+            ? data
+            : [];
 
-  } catch (error) {
+    } catch (e) {
 
-    return [];
+        return [];
 
-  }
+    }
 
 }
 
 
 function saveUserTransaction(tx) {
 
-  const transactions =
-    getUserTransactions();
+    const list =
+        getUserTransactions();
 
-  transactions.unshift(tx);
-
-  localStorage.setItem(
-    "TGN_USER_TXS",
-    JSON.stringify(transactions)
-  );
-
-}
-
-
-/*
-   Remove old Gemini demo transactions
-*/
-
-(function cleanOldDemoData() {
-
-  const transactions =
-    getUserTransactions();
-
-  const cleaned =
-    transactions.filter(tx => {
-
-      if (!tx) return false;
-
-      const text =
-        JSON.stringify(tx)
-          .toLowerCase();
-
-      /*
-        Remove known demo/test records.
-      */
-
-      if (
-        text.includes("2.50 gram") ||
-        text.includes("1.20 gram") ||
-        text.includes("may 10, 2025") ||
-        text.includes("simulate test") ||
-        text.includes("eqd5") ||
-        text.includes("eqc8")
-      ) {
-        return false;
-      }
-
-      return true;
-
-    });
-
-  if (
-    cleaned.length !==
-    transactions.length
-  ) {
+    list.unshift(tx);
 
     localStorage.setItem(
-      "TGN_USER_TXS",
-      JSON.stringify(cleaned)
+        "TGN_USER_TXS",
+        JSON.stringify(list)
     );
 
-  }
-
-})();
+}
 
 
 /* =========================================================
@@ -837,60 +858,69 @@ function saveUserTransaction(tx) {
 
 function switchNav(tab) {
 
-  activeTab = tab;
-
-  document
-    .querySelectorAll(
-      ".bottom-nav-item"
-    )
-    .forEach(button => {
-
-      button.classList.remove(
-        "active"
-      );
-
-    });
+    activeTab = tab;
 
 
-  const nav =
-    document.getElementById(
-      "nav-" + tab
-    );
+    document
+        .querySelectorAll(
+            ".bottom-nav-item"
+        )
+        .forEach(item => {
 
-  if (nav) {
-    nav.classList.add("active");
-  }
+            item.classList.remove(
+                "active"
+            );
 
-
-  const content =
-    document.getElementById(
-      "content"
-    );
-
-  if (!content) return;
-
-  content.innerHTML = "";
+        });
 
 
-  if (tab === "home") {
-    renderMain();
-  }
+    const nav =
+        document.getElementById(
+            "nav-" + tab
+        );
 
-  else if (tab === "activity") {
-    renderActivityPage();
-  }
+    if (nav) {
+        nav.classList.add("active");
+    }
 
-  else if (tab === "send") {
-    renderSendPage();
-  }
 
-  else if (tab === "wallet") {
-    renderWalletPage();
-  }
+    const content =
+        document.getElementById(
+            "content"
+        );
 
-  else if (tab === "profile") {
-    renderProfilePage();
-  }
+    if (!content) return;
+
+
+    if (tab === "home") {
+
+        renderMain();
+
+    }
+
+    else if (tab === "activity") {
+
+        renderActivityPage();
+
+    }
+
+    else if (tab === "wallet") {
+
+        renderWalletPage();
+
+    }
+
+    else if (tab === "profile") {
+
+        renderProfilePage();
+
+    }
+
+    else if (tab === "send") {
+
+        renderSendPage();
+
+    }
 
 }
 
@@ -901,67 +931,77 @@ function switchNav(tab) {
 
 function renderWelcome() {
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+    const content =
+        document.getElementById(
+            "content"
+        );
 
-    <div
-      class="tgn-card"
-      style="
-        padding:30px 20px;
-        text-align:center;
-        margin-top:10px;
-      "
-    >
+    content.innerHTML = `
 
-      <div
-        style="
-          font-size:48px;
-          margin-bottom:10px;
-        "
-      >
-        💎
-      </div>
+        <div
+            class="tgn-card"
+            style="
+                padding:32px 20px;
+                text-align:center;
+                margin-top:10px;
+            "
+        >
 
-      <h2
-        style="
-          margin:0;
-          color:#fff;
-          font-size:23px;
-        "
-      >
-        TGN Wallet
-      </h2>
+            <div
+                style="
+                    width:70px;
+                    height:70px;
+                    margin:0 auto 15px;
+                    border-radius:22px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    background:rgba(42,156,255,.10);
+                    font-size:38px;
+                "
+            >
+                💎
+            </div>
 
-      <p
-        style="
-          color:#8fa5c1;
-          font-size:13px;
-          line-height:1.6;
-          margin:9px 0 22px;
-        "
-      >
-        Your TON wallet for simple
-        and secure Web3 transfers.
-      </p>
+            <h2
+                style="
+                    color:#fff;
+                    margin:0;
+                    font-size:23px;
+                "
+            >
+                TGN Wallet
+            </h2>
 
-      <button
-        class="tgn-primary"
-        onclick="createWallet()"
-      >
-        Create New Wallet
-      </button>
+            <p
+                style="
+                    color:#7f95b3;
+                    font-size:12px;
+                    line-height:1.7;
+                    margin:9px 0 22px;
+                "
+            >
+                Secure TON wallet for
+                Telegram Web3.
+            </p>
 
-      <button
-        class="tgn-secondary"
-        onclick="showImport()"
-      >
-        Import Existing Wallet
-      </button>
+            <button
+                class="tgn-primary"
+                onclick="createWallet()"
+            >
+                Create New Wallet
+            </button>
 
-    </div>
+            <button
+                class="tgn-secondary"
+                onclick="showImport()"
+            >
+                Import Existing Wallet
+            </button>
 
-  `;
+        </div>
+
+    `;
 
 }
 
@@ -972,253 +1012,309 @@ function renderWelcome() {
 
 async function createWallet() {
 
-  try {
+    try {
 
-    const seed =
-      generateNativeMnemonic();
+        const words = [
+            "apple","book","camera","cloud",
+            "dance","earth","future","garden",
+            "happy","island","jungle","kitten",
+            "lemon","magic","night","ocean",
+            "planet","river","silver","sunset",
+            "tiger","umbrella","violet","window"
+        ];
 
-    const seedBytes =
-      new TextEncoder()
-        .encode(
-          seed.join(" ")
+
+        const random =
+            new Uint8Array(24);
+
+        crypto.getRandomValues(random);
+
+
+        const mnemonic =
+            Array.from(
+                random,
+                byte =>
+                    words[
+                        byte % words.length
+                    ]
+            ).join(" ");
+
+
+        const seedBytes =
+            new TextEncoder()
+                .encode(mnemonic);
+
+
+        const hash =
+            await crypto.subtle.digest(
+                "SHA-256",
+                seedBytes
+            );
+
+
+        const secretKey =
+            new Uint8Array(hash);
+
+
+        const keyPair =
+            TonWeb.utils.nacl.sign
+                .keyPair.fromSeed(
+                    secretKey
+                );
+
+
+        const WalletClass =
+            tonweb.wallet.all.v4R2;
+
+
+        const wallet =
+            new WalletClass(
+                tonweb.provider,
+                {
+                    publicKey:
+                        keyPair.publicKey
+                }
+            );
+
+
+        const address =
+            (
+                await wallet.getAddress()
+            ).toString(
+                true,
+                true,
+                true
+            );
+
+
+        walletData = {
+
+            mnemonic,
+
+            publicKey:
+                TonWeb.utils.bytesToHex(
+                    keyPair.publicKey
+                ),
+
+            secretKey:
+                TonWeb.utils.bytesToHex(
+                    keyPair.secretKey
+                ),
+
+            address
+
+        };
+
+
+        localStorage.setItem(
+            "TGN_TON_WALLET",
+            JSON.stringify(
+                walletData
+            )
         );
 
-    const hash =
-      await crypto.subtle.digest(
-        "SHA-256",
-        seedBytes
-      );
 
-    const secretKey =
-      new Uint8Array(hash);
+        switchNav("home");
 
-    const keyPair =
-      TonWeb.utils.nacl.sign
-        .keyPair.fromSeed(
-          secretKey
+        refreshBalance();
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Wallet creation failed: " +
+            error.message
         );
 
-    const WalletClass =
-      tonweb.wallet.all.v4R2;
-
-    const wallet =
-      new WalletClass(
-        tonweb.provider,
-        {
-          publicKey:
-            keyPair.publicKey
-        }
-      );
-
-    const address =
-      (
-        await wallet.getAddress()
-      ).toString(
-        true,
-        true,
-        true
-      );
-
-
-    walletData = {
-
-      mnemonic:
-        seed.join(" "),
-
-      publicKey:
-        TonWeb.utils.bytesToHex(
-          keyPair.publicKey
-        ),
-
-      secretKey:
-        TonWeb.utils.bytesToHex(
-          keyPair.secretKey
-        ),
-
-      address
-
-    };
-
-
-    localStorage.setItem(
-      "TGN_TON_WALLET",
-      JSON.stringify(
-        walletData
-      )
-    );
-
-
-    switchNav("home");
-
-    refreshBalance();
-
-  }
-
-  catch (error) {
-
-    alert(
-      "Wallet creation failed: " +
-      error.message
-    );
-
-  }
+    }
 
 }
 
 
 /* =========================================================
-   IMPORT WALLET
+   IMPORT
    ========================================================= */
 
 function showImport() {
 
-  document.getElementById(
-    "mTitle"
-  ).innerText =
-    "Import Wallet";
+    const title =
+        document.getElementById(
+            "mTitle"
+        );
+
+    const body =
+        document.getElementById(
+            "mBody"
+        );
 
 
-  document.getElementById(
-    "mBody"
-  ).innerHTML = `
-
-    <p class="tgn-modal-note">
-      Enter your recovery phrase
-      to restore your wallet.
-    </p>
-
-    <textarea
-      id="importSeed"
-      class="tgn-input"
-      rows="4"
-      placeholder="Enter your recovery phrase..."
-    ></textarea>
-
-    <button
-      class="tgn-primary"
-      onclick="importWallet()"
-    >
-      Import Wallet
-    </button>
-
-  `;
+    title.innerText =
+        "Import Wallet";
 
 
-  document.getElementById(
-    "modal"
-  ).style.display =
-    "flex";
+    body.innerHTML = `
+
+        <p
+            style="
+                color:#8196b5;
+                font-size:12px;
+                line-height:1.6;
+            "
+        >
+            Enter your recovery phrase
+            to restore your wallet.
+        </p>
+
+        <textarea
+            id="importSeed"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:13px;
+                min-height:100px;
+                resize:none;
+                border-radius:14px;
+                border:1px solid rgba(100,155,220,.14);
+                background:#071224;
+                color:white;
+                outline:none;
+            "
+            placeholder="Recovery phrase..."
+        ></textarea>
+
+        <button
+            class="tgn-primary"
+            style="margin-top:12px"
+            onclick="importWallet()"
+        >
+            Import Wallet
+        </button>
+
+    `;
+
+
+    openModal();
 
 }
 
 
 async function importWallet() {
 
-  const input =
-    document.getElementById(
-      "importSeed"
-    );
-
-  const text =
-    input?.value.trim();
-
-
-  if (!text) {
-
-    alert(
-      "Please enter your recovery phrase."
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    const seedBytes =
-      new TextEncoder()
-        .encode(text);
-
-    const hash =
-      await crypto.subtle.digest(
-        "SHA-256",
-        seedBytes
-      );
-
-    const secretKey =
-      new Uint8Array(hash);
-
-    const keyPair =
-      TonWeb.utils.nacl.sign
-        .keyPair.fromSeed(
-          secretKey
+    const input =
+        document.getElementById(
+            "importSeed"
         );
 
-    const WalletClass =
-      tonweb.wallet.all.v4R2;
 
-    const wallet =
-      new WalletClass(
-        tonweb.provider,
-        {
-          publicKey:
-            keyPair.publicKey
-        }
-      );
-
-    const address =
-      (
-        await wallet.getAddress()
-      ).toString(
-        true,
-        true,
-        true
-      );
+    const phrase =
+        input?.value.trim();
 
 
-    walletData = {
+    if (!phrase) {
 
-      mnemonic:text,
+        alert(
+            "Enter your recovery phrase."
+        );
 
-      publicKey:
-        TonWeb.utils.bytesToHex(
-          keyPair.publicKey
-        ),
+        return;
 
-      secretKey:
-        TonWeb.utils.bytesToHex(
-          keyPair.secretKey
-        ),
-
-      address
-
-    };
+    }
 
 
-    localStorage.setItem(
-      "TGN_TON_WALLET",
-      JSON.stringify(
-        walletData
-      )
-    );
+    try {
+
+        const bytes =
+            new TextEncoder()
+                .encode(phrase);
 
 
-    closeModal();
+        const hash =
+            await crypto.subtle.digest(
+                "SHA-256",
+                bytes
+            );
 
-    switchNav("home");
 
-    refreshBalance();
+        const secretKey =
+            new Uint8Array(hash);
 
-  }
 
-  catch (error) {
+        const keyPair =
+            TonWeb.utils.nacl.sign
+                .keyPair.fromSeed(
+                    secretKey
+                );
 
-    alert(
-      "Invalid recovery phrase."
-    );
 
-  }
+        const WalletClass =
+            tonweb.wallet.all.v4R2;
+
+
+        const wallet =
+            new WalletClass(
+                tonweb.provider,
+                {
+                    publicKey:
+                        keyPair.publicKey
+                }
+            );
+
+
+        const address =
+            (
+                await wallet.getAddress()
+            ).toString(
+                true,
+                true,
+                true
+            );
+
+
+        walletData = {
+
+            mnemonic:phrase,
+
+            publicKey:
+                TonWeb.utils.bytesToHex(
+                    keyPair.publicKey
+                ),
+
+            secretKey:
+                TonWeb.utils.bytesToHex(
+                    keyPair.secretKey
+                ),
+
+            address
+
+        };
+
+
+        localStorage.setItem(
+            "TGN_TON_WALLET",
+            JSON.stringify(
+                walletData
+            )
+        );
+
+
+        closeModal();
+
+        switchNav("home");
+
+        refreshBalance();
+
+    }
+
+    catch (error) {
+
+        alert(
+            "Wallet import failed."
+        );
+
+    }
 
 }
 
@@ -1229,465 +1325,213 @@ async function importWallet() {
 
 function renderMain() {
 
-  if (!walletData) {
+    if (!walletData) {
 
-    renderWelcome();
+        renderWelcome();
 
-    return;
+        return;
 
-  }
-
-
-  const address =
-    walletData.address || "";
-
-  const shortAddr =
-    address.length > 12
-      ? address.slice(0,6) +
-        "..." +
-        address.slice(-4)
-      : address;
+    }
 
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+    const address =
+        walletData.address || "";
 
-    <!-- WALLET HERO -->
 
-    <div
-      class="hero-card"
-      style="margin-top:0"
-    >
+    const shortAddress =
+        address.length > 12
+            ? address.slice(0,6) +
+              "..." +
+              address.slice(-4)
+            : address;
 
-      <div class="hero-header">
-        My Wallet
-      </div>
 
-      <div
-        class="hero-balance"
-        id="balance"
-      >
-        0.00 TON
-      </div>
+    document.getElementById(
+        "content"
+    ).innerHTML = `
 
-      <div
-        class="hero-subbalance"
-        id="usdBalance"
-      >
-        $0.00 USD
-      </div>
+        <!-- HERO -->
 
-      <div class="hero-icon">
-        💎
-      </div>
-
-      <div class="action-row">
-
-        <button
-          class="action-btn primary"
-          onclick="renderReceivePage()"
+        <div
+            class="hero-card"
+            style="margin-top:0"
         >
-          Deposit
-        </button>
 
-        <button
-          class="action-btn"
-          onclick="renderSendPage()"
-        >
-          Withdraw
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <!-- ADDRESS -->
-
-    <div class="section-box">
-
-      <div class="section-title">
-        Wallet Address
-      </div>
-
-      <div class="address-row">
-
-        <span
-          style="
-            color:#38bdf8;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-          "
-        >
-          ● ${escapeHtml(shortAddr)}
-        </span>
-
-        <button
-          class="copy-pill"
-          onclick="copyAddress()"
-        >
-          Copy
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <!-- QUICK ACTION -->
-
-    <div
-      style="
-        display:grid;
-        grid-template-columns:
-          repeat(2,1fr);
-        gap:10px;
-        margin-bottom:14px;
-      "
-    >
-
-      <button
-        class="grid-btn"
-        onclick="renderSendPage()"
-        style="
-          padding:14px;
-          background:rgba(255,255,255,.035);
-          border:1px solid
-            rgba(110,160,220,.10);
-          border-radius:14px;
-          color:#fff;
-          font-weight:700;
-          cursor:pointer;
-        "
-      >
-        📤 Send
-      </button>
-
-      <button
-        class="grid-btn"
-        onclick="renderReceivePage()"
-        style="
-          padding:14px;
-          background:rgba(255,255,255,.035);
-          border:1px solid
-            rgba(110,160,220,.10);
-          border-radius:14px;
-          color:#fff;
-          font-weight:700;
-          cursor:pointer;
-        "
-      >
-        📥 Receive
-      </button>
-
-    </div>
-
-
-    <!-- TOKEN -->
-
-    <div class="section-box">
-
-      <div class="section-title">
-
-        <span>
-          Tokens
-        </span>
-
-        <span
-          style="
-            color:#38bdf8;
-            cursor:pointer;
-          "
-          onclick="refreshBalance()"
-        >
-          Refresh ↻
-        </span>
-
-      </div>
-
-
-      <div class="token-item">
-
-        <div class="token-left">
-
-          <div class="token-logo">
-            💎
-          </div>
-
-          <div>
-
-            <div
-              style="
-                font-weight:700;
-                font-size:14px;
-              "
-            >
-              TON
+            <div class="hero-header">
+                My Wallet
             </div>
 
             <div
-              style="
-                font-size:11px;
-                color:var(--text-muted);
-              "
+                class="hero-balance"
+                id="balance"
             >
-              Toncoin
+                0.00 TON
             </div>
 
-          </div>
+            <div
+                class="hero-subbalance"
+                id="usdBalance"
+            >
+                $0.00 USD
+            </div>
+
+            <div class="hero-icon">
+                💎
+            </div>
+
+            <div class="action-row">
+
+                <button
+                    class="action-btn primary"
+                    onclick="renderReceivePage()"
+                >
+                    Deposit
+                </button>
+
+                <button
+                    class="action-btn"
+                    onclick="renderSendPage()"
+                >
+                    Withdraw
+                </button>
+
+            </div>
 
         </div>
 
 
-        <div style="text-align:right">
+        <!-- ADDRESS -->
 
-          <div
-            id="tokenBalance"
-            style="
-              font-weight:700;
-              font-size:14px;
-            "
-          >
-            0.00 TON
-          </div>
+        <div class="section-box">
 
-          <div
-            id="tokenUsd"
-            style="
-              font-size:11px;
-              color:var(--text-muted);
-            "
-          >
-            $0.00
-          </div>
+            <div class="section-title">
+                Wallet Address
+            </div>
+
+            <div class="address-row">
+
+                <span
+                    style="
+                        color:#38bdf8;
+                        overflow:hidden;
+                        text-overflow:ellipsis;
+                        white-space:nowrap;
+                    "
+                >
+                    ● ${escapeHtml(shortAddress)}
+                </span>
+
+                <button
+                    class="copy-pill"
+                    onclick="copyAddress()"
+                >
+                    Copy
+                </button>
+
+            </div>
 
         </div>
 
-      </div>
 
-    </div>
+        <!-- TOKENS -->
 
-  `;
+        <div class="section-box">
 
+            <div class="section-title">
 
-  refreshBalance();
+                <span>
+                    Tokens
+                </span>
 
-}
+                <span
+                    style="
+                        color:#38bdf8;
+                        cursor:pointer;
+                    "
+                    onclick="refreshBalance()"
+                >
+                    Refresh ↻
+                </span>
 
-
-/* =========================================================
-   ACTIVITY
-   ========================================================= */
-
-function renderActivityPage(
-  filter = "all"
-) {
-
-  const transactions =
-    getUserTransactions();
-
-
-  const filtered =
-    filter === "all"
-      ? transactions
-      : transactions.filter(
-          tx => tx.type === filter
-        );
+            </div>
 
 
-  let content = "";
+            <div class="token-item">
+
+                <div class="token-left">
+
+                    <div class="token-logo">
+                        💎
+                    </div>
+
+                    <div>
+
+                        <div
+                            style="
+                                font-weight:700;
+                                font-size:14px;
+                            "
+                        >
+                            TON
+                        </div>
+
+                        <div
+                            style="
+                                font-size:11px;
+                                color:var(--text-muted);
+                            "
+                        >
+                            Toncoin
+                        </div>
+
+                    </div>
+
+                </div>
 
 
-  /*
-     EMPTY STATE
+                <div
+                    style="
+                        text-align:right;
+                    "
+                >
 
-     No fake transactions.
-  */
+                    <div
+                        id="tokenBalance"
+                        style="
+                            font-weight:700;
+                            font-size:14px;
+                        "
+                    >
+                        0.00 TON
+                    </div>
 
-  if (!transactions.length) {
+                    <div
+                        id="tokenUsd"
+                        style="
+                            font-size:11px;
+                            color:var(--text-muted);
+                        "
+                    >
+                        $0.00
+                    </div>
 
-    content = `
+                </div>
 
-      <div class="tgn-empty">
+            </div>
 
-        <div class="tgn-empty-icon">
-          ◷
         </div>
-
-        <h3>
-          No Transactions Yet
-        </h3>
-
-        <p>
-          Your wallet activity will
-          appear here after your
-          first transaction.
-        </p>
-
-      </div>
 
     `;
 
-  }
 
-  else {
-
-    content = `
-
-      <div class="tgn-filter-row">
-
-        ${[
-          "all",
-          "received",
-          "sent",
-          "deposit",
-          "withdraw"
-        ].map(type => `
-
-          <button
-            class="tgn-filter ${
-              filter === type
-                ? "active"
-                : ""
-            }"
-            onclick="
-              renderActivityPage('${type}')
-            "
-          >
-            ${
-              type.charAt(0)
-                .toUpperCase() +
-              type.slice(1)
-            }
-          </button>
-
-        `).join("")}
-
-      </div>
+    /*
+       IMPORTANT:
+       Send / Receive quick buttons
+       are intentionally removed.
+    */
 
 
-      ${
-        filtered.length
-
-        ? filtered.map(tx => `
-
-          <div class="tgn-tx">
-
-            <div
-              class="
-                tgn-tx-icon
-                ${escapeHtml(tx.type)}
-              "
-            >
-              ${
-                tx.type === "received" ||
-                tx.type === "deposit"
-                  ? "↓"
-                  : "↑"
-              }
-            </div>
-
-
-            <div class="tgn-tx-main">
-
-              <div class="tgn-tx-title">
-                ${escapeHtml(tx.title)}
-              </div>
-
-              <div class="tgn-tx-sub">
-                ${escapeHtml(tx.subtitle)}
-              </div>
-
-            </div>
-
-
-            <div class="tgn-tx-right">
-
-              <div
-                class="tgn-tx-amount"
-                style="
-                  color:
-                    ${
-                      String(tx.amount)
-                        .startsWith("+")
-                        ? "#22c58b"
-                        : "#ff6570"
-                    };
-                "
-              >
-                ${escapeHtml(tx.amount)}
-              </div>
-
-              <div class="tgn-tx-date">
-                ${escapeHtml(tx.date || "")}
-              </div>
-
-            </div>
-
-          </div>
-
-        `).join("")
-
-        : `
-
-          <div class="tgn-empty">
-
-            <div class="tgn-empty-icon">
-              ◷
-            </div>
-
-            <h3>
-              No Activity
-            </h3>
-
-            <p>
-              No transactions found
-              in this category.
-            </p>
-
-          </div>
-
-        `
-      }
-
-    `;
-
-  }
-
-
-  document.getElementById(
-    "content"
-  ).innerHTML = `
-
-    <div class="tgn-page-title">
-
-      <h2>
-        Activity
-      </h2>
-
-      <button
-        class="tgn-refresh"
-        onclick="refreshActivity()"
-      >
-        Refresh ↻
-      </button>
-
-    </div>
-
-    ${content}
-
-  `;
-
-}
-
-
-function refreshActivity() {
-
-  renderActivityPage(
-    "all"
-  );
+    refreshBalance();
 
 }
 
@@ -1698,311 +1542,718 @@ function refreshActivity() {
 
 function renderProfilePage() {
 
-  const tgUser =
-    window.Telegram
-      ?.WebApp
-      ?.initDataUnsafe
-      ?.user;
+    const user =
+        getTelegramUser();
 
 
-  const userName =
-    tgUser
-      ? [
-          tgUser.first_name,
-          tgUser.last_name
-        ]
-        .filter(Boolean)
-        .join(" ")
-      : "Telegram User";
+    const name =
+        getUserFullName();
 
 
-  const username =
-    tgUser?.username
-      ? "@" + tgUser.username
-      : "Telegram account";
+    const username =
+        getUsername();
 
 
-  const initial =
-    (
-      userName.trim()[0] ||
-      "T"
-    ).toUpperCase();
+    const userId =
+        getUserId();
 
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+    document.getElementById(
+        "content"
+    ).innerHTML = `
 
-    <div class="tgn-page-title">
+        <div class="tgn-page-title">
 
-      <h2>
-        Profile
-      </h2>
+            <h2>
+                Profile
+            </h2>
 
-    </div>
-
-
-    <div
-      class="
-        tgn-card
-        tgn-profile-head
-      "
-    >
-
-      <div class="tgn-avatar">
-        ${escapeHtml(initial)}
-      </div>
-
-      <div
-        style="
-          min-width:0;
-        "
-      >
-
-        <div class="tgn-name">
-          ${escapeHtml(userName)}
         </div>
 
-        <div class="tgn-handle">
-          ${escapeHtml(username)}
+
+        <!-- PROFILE HERO -->
+
+        <div class="profile-hero">
+
+            <div class="profile-main">
+
+                <div class="profile-avatar-wrap">
+
+                    ${createTelegramAvatar(64)}
+
+                    <span
+                        class="profile-online"
+                    ></span>
+
+                </div>
+
+
+                <div
+                    style="
+                        min-width:0;
+                    "
+                >
+
+                    <div
+                        class="profile-name"
+                    >
+                        ${escapeHtml(name)}
+                    </div>
+
+                    <div
+                        class="profile-username"
+                    >
+                        ${escapeHtml(username)}
+                    </div>
+
+                    <div
+                        class="profile-id"
+                    >
+                        Telegram ID:
+                        ${escapeHtml(userId)}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- PROFILE STATS -->
+
+            <div
+                class="profile-stats"
+            >
+
+                <div class="profile-stat">
+
+                    <div
+                        class="profile-stat-value"
+                    >
+                        Telegram
+                    </div>
+
+                    <div
+                        class="profile-stat-label"
+                    >
+                        Account
+                    </div>
+
+                </div>
+
+
+                <div class="profile-stat">
+
+                    <div
+                        class="profile-stat-value"
+                    >
+                        TON
+                    </div>
+
+                    <div
+                        class="profile-stat-label"
+                    >
+                        Network
+                    </div>
+
+                </div>
+
+
+                <div class="profile-stat">
+
+                    <div
+                        class="profile-stat-value"
+                    >
+                        ${getUserPhoto() ? "✓" : "—"}
+                    </div>
+
+                    <div
+                        class="profile-stat-label"
+                    >
+                        Photo
+                    </div>
+
+                </div>
+
+            </div>
+
         </div>
 
-      </div>
 
-    </div>
+        <!-- PROFILE MENU -->
 
-
-    <div
-      class="
-        tgn-card
-        tgn-menu
-      "
-    >
-
-      <button
-        class="tgn-menu-item"
-        onclick="
-          profileAction('Personal Information')
-        "
-      >
-
-        <span class="tgn-menu-left">
-
-          <span class="tgn-menu-icon">
-            ♙
-          </span>
-
-          Personal Information
-
-        </span>
-
-        <span class="tgn-menu-arrow">
-          ›
-        </span>
-
-      </button>
-
-
-      <button
-        class="tgn-menu-item"
-        onclick="
-          profileAction('Security')
-        "
-      >
-
-        <span class="tgn-menu-left">
-
-          <span class="tgn-menu-icon">
-            ⌾
-          </span>
-
-          Security & Seed Phrase
-
-        </span>
-
-        <span class="tgn-menu-arrow">
-          ›
-        </span>
-
-      </button>
-
-
-      <button
-        class="tgn-menu-item"
-        onclick="
-          profileAction('Help & Support')
-        "
-      >
-
-        <span class="tgn-menu-left">
-
-          <span class="tgn-menu-icon">
-            ?
-          </span>
-
-          Help & Support
-
-        </span>
-
-        <span class="tgn-menu-arrow">
-          ›
-        </span>
-
-      </button>
-
-
-      <button
-        class="tgn-menu-item"
-        onclick="confirmLogout()"
-      >
-
-        <span
-          class="tgn-menu-left"
-          style="color:#ff6570"
+        <div
+            class="
+                tgn-card
+                profile-menu
+            "
         >
 
-          <span
-            class="tgn-menu-icon"
-            style="
-              color:#ff6570;
-              background:
-                rgba(239,68,68,.10);
-            "
-          >
-            ↪
-          </span>
+            <!-- PERSONAL -->
 
-          Log Out
+            <button
+                class="profile-menu-item"
+                onclick="showPersonalInformation()"
+            >
 
-        </span>
+                <div
+                    class="profile-menu-left"
+                >
 
-        <span class="tgn-menu-arrow">
-          ›
-        </span>
+                    <div
+                        class="profile-menu-icon"
+                    >
+                        ♙
+                    </div>
 
-      </button>
+                    <div>
 
-    </div>
+                        <div
+                            class="profile-menu-title"
+                        >
+                            Personal Information
+                        </div>
 
-  `;
+                        <div
+                            class="profile-menu-sub"
+                        >
+                            Name, Telegram ID & account
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div
+                    class="profile-menu-arrow"
+                >
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- SECURITY -->
+
+            <button
+                class="profile-menu-item"
+                onclick="openSecurity()"
+            >
+
+                <div
+                    class="profile-menu-left"
+                >
+
+                    <div
+                        class="profile-menu-icon"
+                    >
+                        ◉
+                    </div>
+
+                    <div>
+
+                        <div
+                            class="profile-menu-title"
+                        >
+                            Security & Seed Phrase
+                        </div>
+
+                        <div
+                            class="profile-menu-sub"
+                        >
+                            Protect your wallet
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div
+                    class="profile-menu-arrow"
+                >
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- HELP -->
+
+            <button
+                class="profile-menu-item"
+                onclick="showHelp()"
+            >
+
+                <div
+                    class="profile-menu-left"
+                >
+
+                    <div
+                        class="profile-menu-icon"
+                    >
+                        ?
+                    </div>
+
+                    <div>
+
+                        <div
+                            class="profile-menu-title"
+                        >
+                            Help & Support
+                        </div>
+
+                        <div
+                            class="profile-menu-sub"
+                        >
+                            Wallet help & information
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div
+                    class="profile-menu-arrow"
+                >
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- LOGOUT -->
+
+            <button
+                class="profile-menu-item"
+                onclick="logoutWallet()"
+            >
+
+                <div
+                    class="profile-menu-left"
+                >
+
+                    <div
+                        class="profile-menu-icon"
+                        style="
+                            color:#ff6871;
+                            background:
+                                rgba(239,68,68,.08);
+                        "
+                    >
+                        ↪
+                    </div>
+
+                    <div>
+
+                        <div
+                            class="profile-menu-title"
+                            style="
+                                color:#ff6871;
+                            "
+                        >
+                            Log Out
+                        </div>
+
+                        <div
+                            class="profile-menu-sub"
+                        >
+                            Remove this wallet from device
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div
+                    class="profile-menu-arrow"
+                >
+                    ›
+                </div>
+
+            </button>
+
+        </div>
+
+    `;
 
 }
 
 
 /* =========================================================
-   PROFILE ACTION
+   PERSONAL INFORMATION
    ========================================================= */
 
-function profileAction(title) {
+function showPersonalInformation() {
 
-  const tgUser =
-    window.Telegram
-      ?.WebApp
-      ?.initDataUnsafe
-      ?.user;
+    const user =
+        getTelegramUser();
 
 
-  const userName =
-    tgUser
-      ? [
-          tgUser.first_name,
-          tgUser.last_name
-        ]
-        .filter(Boolean)
-        .join(" ")
-      : "Telegram User";
+    const name =
+        getUserFullName();
 
 
-  const username =
-    tgUser?.username
-      ? "@" + tgUser.username
-      : "Telegram account";
+    const username =
+        getUsername();
 
 
-  if (title === "Security") {
-
-    openSettings();
-
-    return;
-
-  }
+    const id =
+        getUserId();
 
 
-  if (
-    title ===
-    "Personal Information"
-  ) {
+    const photo =
+        getUserPhoto();
+
 
     document.getElementById(
-      "mTitle"
+        "mTitle"
     ).innerText =
-      "Personal Information";
+        "Personal Information";
 
 
     document.getElementById(
-      "mBody"
+        "mBody"
     ).innerHTML = `
 
-      <div
-        style="
-          font-size:12px;
-          line-height:2;
-          color:#b8c8dd;
-          background:
-            rgba(255,255,255,.035);
-          padding:13px;
-          border-radius:12px;
-        "
-      >
+        <div
+            style="
+                text-align:center;
+                margin-bottom:18px;
+            "
+        >
 
-        <div>
-          <strong>Name:</strong>
-          ${escapeHtml(userName)}
+            <div
+                style="
+                    display:inline-flex;
+                    padding:4px;
+                    border-radius:25px;
+                    background:
+                        rgba(42,156,255,.10);
+                "
+            >
+                ${createTelegramAvatar(82)}
+            </div>
+
+            <div
+                style="
+                    margin-top:9px;
+                    color:#f3f8ff;
+                    font-size:17px;
+                    font-weight:800;
+                "
+            >
+                ${escapeHtml(name)}
+            </div>
+
+            <div
+                style="
+                    margin-top:3px;
+                    color:#3ca8ff;
+                    font-size:12px;
+                "
+            >
+                ${escapeHtml(username)}
+            </div>
+
         </div>
 
-        <div>
-          <strong>Username:</strong>
-          ${escapeHtml(username)}
+
+        <div class="info-card">
+
+            <div class="info-row">
+
+                <div class="info-label">
+                    Telegram Name
+                </div>
+
+                <div class="info-value">
+                    ${escapeHtml(name)}
+                </div>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <div class="info-label">
+                    Telegram ID
+                </div>
+
+                <div
+                    class="info-value"
+                    style="
+                        display:flex;
+                        align-items:center;
+                    "
+                >
+
+                    ${escapeHtml(id)}
+
+                    <button
+                        class="copy-id"
+                        onclick="copyTelegramId()"
+                    >
+                        Copy
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <div class="info-label">
+                    Username
+                </div>
+
+                <div class="info-value">
+                    ${escapeHtml(username)}
+                </div>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <div class="info-label">
+                    Account Year
+                </div>
+
+                <div
+                    class="info-value"
+                    style="color:#8298b5"
+                >
+                    Not available
+                </div>
+
+            </div>
+
         </div>
 
-      </div>
+
+        <p
+            style="
+                margin:12px 3px 0;
+                color:#687f9e;
+                font-size:10px;
+                line-height:1.6;
+            "
+        >
+            Telegram Mini Apps do not provide
+            the account creation date/year,
+            so no fake year is shown.
+        </p>
 
     `;
 
 
+    openModal();
+
+}
+
+
+/* =========================================================
+   COPY TELEGRAM ID
+   ========================================================= */
+
+async function copyTelegramId() {
+
+    const id =
+        getUserId();
+
+
+    if (
+        !id ||
+        id === "Unavailable"
+    ) {
+
+        showToast(
+            "Telegram ID unavailable."
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        await navigator.clipboard.writeText(
+            id
+        );
+
+        showToast(
+            "Telegram ID copied!"
+        );
+
+    }
+
+    catch (e) {
+
+        alert(id);
+
+    }
+
+}
+
+
+/* =========================================================
+   SECURITY
+   ========================================================= */
+
+function openSecurity() {
+
+    if (!walletData) {
+
+        showToast(
+            "Wallet not found."
+        );
+
+        return;
+
+    }
+
+
     document.getElementById(
-      "modal"
-    ).style.display =
-      "flex";
-
-    return;
-
-  }
+        "mTitle"
+    ).innerText =
+        "Wallet Security";
 
 
-  document.getElementById(
-    "mTitle"
-  ).innerText =
-    title;
+    document.getElementById(
+        "mBody"
+    ).innerHTML = `
+
+        <div
+            class="security-warning"
+        >
+            ⚠️ Never share your recovery
+            phrase with anyone. Anyone who
+            has it can control your wallet.
+        </div>
 
 
-  document.getElementById(
-    "mBody"
-  ).innerHTML = `
-
-    <p class="tgn-modal-note">
-      For help, please contact
-      the wallet administrator
-      through Telegram.
-    </p>
-
-  `;
+        <button
+            class="tgn-primary"
+            onclick="showSeedPhrase()"
+        >
+            🔐 Show Recovery Phrase
+        </button>
 
 
-  document.getElementById(
-    "modal"
-  ).style.display =
-    "flex";
+        <div
+            id="seedBox"
+            style="
+                display:none;
+                margin-top:12px;
+                padding:14px;
+                border-radius:14px;
+                background:#050c18;
+                border:
+                    1px solid
+                    rgba(239,68,68,.15);
+                color:#f5f9ff;
+                font-size:11px;
+                line-height:1.7;
+                word-break:break-word;
+            "
+        ></div>
+
+    `;
+
+
+    openModal();
+
+}
+
+
+function showSeedPhrase() {
+
+    const box =
+        document.getElementById(
+            "seedBox"
+        );
+
+
+    if (!box) return;
+
+
+    box.style.display =
+        "block";
+
+
+    box.innerText =
+        walletData?.mnemonic ||
+        "Recovery phrase unavailable.";
+
+}
+
+
+/* =========================================================
+   HELP
+   ========================================================= */
+
+function showHelp() {
+
+    document.getElementById(
+        "mTitle"
+    ).innerText =
+        "Help & Support";
+
+
+    document.getElementById(
+        "mBody"
+    ).innerHTML = `
+
+        <div
+            style="
+                color:#d7e6f8;
+                font-size:13px;
+                line-height:1.8;
+            "
+        >
+
+            <div
+                style="
+                    padding:13px;
+                    border-radius:14px;
+                    background:
+                        rgba(42,156,255,.06);
+                    border:
+                        1px solid
+                        rgba(42,156,255,.10);
+                    margin-bottom:10px;
+                "
+            >
+                💎
+                <strong>
+                    TGN Wallet
+                </strong>
+
+                <br>
+
+                Secure TON wallet for
+                Telegram Web3.
+            </div>
+
+
+            <div
+                style="
+                    color:#8196b5;
+                    font-size:11px;
+                "
+            >
+                If you have a problem with
+                your wallet, contact the
+                official TGN Wallet support.
+            </div>
+
+        </div>
+
+    `;
+
+
+    openModal();
 
 }
 
@@ -2011,24 +2262,88 @@ function profileAction(title) {
    LOGOUT
    ========================================================= */
 
-function confirmLogout() {
+function logoutWallet() {
 
-  if (
-    !confirm(
-      "Are you sure you want to log out?"
-    )
-  ) return;
+    const ok =
+        confirm(
+            "Log out from this wallet?"
+        );
 
 
-  localStorage.removeItem(
-    "TGN_TON_WALLET"
-  );
+    if (!ok) return;
 
-  localStorage.removeItem(
-    "TGN_USER_TXS"
-  );
 
-  location.reload();
+    localStorage.removeItem(
+        "TGN_TON_WALLET"
+    );
+
+
+    /*
+       Keep transaction history
+       separate from logout.
+    */
+
+    walletData = null;
+
+
+    closeModal();
+
+
+    switchNav("home");
+
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+function openModal() {
+
+    const modal =
+        document.getElementById(
+            "modal"
+        );
+
+
+    if (!modal) return;
+
+
+    const content =
+        modal.querySelector(
+            ".modal-content"
+        );
+
+
+    if (content) {
+
+        content.classList.add(
+            "tgn-modal-box"
+        );
+
+    }
+
+
+    modal.style.display =
+        "flex";
+
+}
+
+
+function closeModal() {
+
+    const modal =
+        document.getElementById(
+            "modal"
+        );
+
+
+    if (modal) {
+
+        modal.style.display =
+            "none";
+
+    }
 
 }
 
@@ -2039,126 +2354,122 @@ function confirmLogout() {
 
 function renderWalletPage() {
 
-  if (!walletData) {
+    if (!walletData) {
 
-    renderWelcome();
+        renderWelcome();
 
-    return;
+        return;
 
-  }
-
-
-  const address =
-    walletData.address || "";
+    }
 
 
-  const shortAddr =
-    address.length > 14
-      ? address.slice(0,8) +
-        "..." +
-        address.slice(-6)
-      : address;
+    const address =
+        walletData.address || "";
 
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
-
-    <div class="tgn-page-title">
-
-      <h2>
-        Wallet
-      </h2>
-
-    </div>
+    const shortAddress =
+        address.length > 14
+            ? address.slice(0,8) +
+              "..." +
+              address.slice(-6)
+            : address;
 
 
-    <div
-      class="tgn-card"
-      style="
-        padding:18px;
-        margin-bottom:12px;
-      "
-    >
+    document.getElementById(
+        "content"
+    ).innerHTML = `
 
-      <div
-        style="
-          color:#8196b5;
-          font-size:12px;
-          margin-bottom:8px;
-        "
-      >
-        TON Wallet Address
-      </div>
+        <div class="tgn-page-title">
+
+            <h2>
+                Wallet
+            </h2>
+
+        </div>
 
 
-      <div
-        style="
-          color:#eaf3ff;
-          font-size:14px;
-          font-weight:700;
-          word-break:break-all;
-        "
-      >
-        ${escapeHtml(shortAddr)}
-      </div>
+        <div
+            class="tgn-card"
+            style="
+                padding:19px;
+                margin-bottom:12px;
+            "
+        >
+
+            <div
+                style="
+                    color:#8096b4;
+                    font-size:11px;
+                    margin-bottom:7px;
+                "
+            >
+                TON Wallet Address
+            </div>
+
+            <div
+                style="
+                    color:#eaf3ff;
+                    font-size:13px;
+                    font-weight:700;
+                    word-break:break-all;
+                "
+            >
+                ${escapeHtml(shortAddress)}
+            </div>
+
+            <button
+                class="tgn-primary"
+                style="margin-top:13px"
+                onclick="copyAddress()"
+            >
+                Copy Address
+            </button>
+
+        </div>
 
 
-      <button
-        class="tgn-primary"
-        style="margin-top:14px"
-        onclick="copyAddress()"
-      >
-        Copy Address
-      </button>
+        <div
+            class="tgn-card"
+            style="padding:19px"
+        >
 
-    </div>
+            <div
+                style="
+                    color:#8096b4;
+                    font-size:11px;
+                "
+            >
+                Current Balance
+            </div>
 
+            <div
+                id="walletPageBalance"
+                style="
+                    color:#f4f9ff;
+                    font-size:28px;
+                    font-weight:850;
+                    margin-top:5px;
+                "
+            >
+                0.00 TON
+            </div>
 
-    <div
-      class="tgn-card"
-      style="padding:18px"
-    >
+            <div
+                style="
+                    color:#7187a5;
+                    font-size:10px;
+                    margin-top:3px;
+                "
+            >
+                TON Mainnet
+            </div>
 
-      <div
-        style="
-          color:#8196b5;
-          font-size:12px;
-        "
-      >
-        Current Balance
-      </div>
+        </div>
 
-
-      <div
-        id="walletPageBalance"
-        style="
-          font-size:27px;
-          font-weight:800;
-          color:#f5f9ff;
-          margin-top:5px;
-        "
-      >
-        0.00 TON
-      </div>
-
-
-      <div
-        style="
-          color:#8196b5;
-          font-size:12px;
-          margin-top:3px;
-        "
-      >
-        TON Mainnet
-      </div>
-
-    </div>
-
-  `;
+    `;
 
 
-  refreshBalance();
+    refreshBalance();
 
 }
 
@@ -2169,88 +2480,118 @@ function renderWalletPage() {
 
 function renderSendPage() {
 
-  document.getElementById(
-    "content"
-  ).innerHTML = `
+    document.getElementById(
+        "content"
+    ).innerHTML = `
 
-    <div class="tgn-page-title">
+        <div class="tgn-page-title">
 
-      <button
-        class="tgn-back"
-        onclick="switchNav('home')"
-      >
-        ← Back
-      </button>
+            <button
+                class="tgn-back"
+                onclick="switchNav('home')"
+            >
+                ← Back
+            </button>
 
-      <h2
-        style="
-          margin-left:auto;
-          margin-right:auto;
-        "
-      >
-        Send
-      </h2>
+            <h2>
+                Send
+            </h2>
 
-      <span
-        style="
-          width:48px;
-        "
-      ></span>
+            <span style="width:40px"></span>
 
-    </div>
+        </div>
 
 
-    <div
-      class="
-        tgn-card
-        tgn-form-card
-      "
-    >
+        <div
+            class="tgn-card"
+            style="padding:19px"
+        >
 
-      <div class="tgn-form-title">
-        Send TON
-      </div>
-
-
-      <label class="tgn-label">
-        Recipient Address
-      </label>
-
-
-      <input
-        id="sendTo"
-        class="tgn-input"
-        placeholder="UQ... / EQ..."
-        autocomplete="off"
-      >
+            <div
+                style="
+                    color:#f4f9ff;
+                    font-size:18px;
+                    font-weight:800;
+                    margin-bottom:17px;
+                "
+            >
+                Send TON
+            </div>
 
 
-      <label class="tgn-label">
-        Amount
-      </label>
+            <label
+                style="
+                    display:block;
+                    color:#8096b4;
+                    font-size:11px;
+                    margin-bottom:7px;
+                "
+            >
+                Recipient Address
+            </label>
 
 
-      <input
-        id="sendAmount"
-        class="tgn-input"
-        type="number"
-        inputmode="decimal"
-        min="0"
-        step="any"
-        placeholder="0.00 TON"
-      >
+            <input
+                id="sendTo"
+                type="text"
+                placeholder="UQ... / EQ..."
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:13px;
+                    margin-bottom:13px;
+                    border-radius:14px;
+                    border:1px solid rgba(100,155,220,.14);
+                    background:#071224;
+                    color:white;
+                    outline:none;
+                "
+            >
 
 
-      <button
-        class="tgn-primary"
-        onclick="doSend()"
-      >
-        Confirm Withdrawal
-      </button>
+            <label
+                style="
+                    display:block;
+                    color:#8096b4;
+                    font-size:11px;
+                    margin-bottom:7px;
+                "
+            >
+                Amount
+            </label>
 
-    </div>
 
-  `;
+            <input
+                id="sendAmount"
+                type="number"
+                min="0"
+                step="any"
+                inputmode="decimal"
+                placeholder="0.00 TON"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:13px;
+                    margin-bottom:13px;
+                    border-radius:14px;
+                    border:1px solid rgba(100,155,220,.14);
+                    background:#071224;
+                    color:white;
+                    outline:none;
+                "
+            >
+
+
+            <button
+                class="tgn-primary"
+                onclick="doSend()"
+            >
+                Confirm Withdrawal
+            </button>
+
+        </div>
+
+    `;
 
 }
 
@@ -2261,92 +2602,105 @@ function renderSendPage() {
 
 function renderReceivePage() {
 
-  if (!walletData) {
+    if (!walletData) {
 
-    renderWelcome();
+        renderWelcome();
 
-    return;
+        return;
 
-  }
-
-
-  document.getElementById(
-    "content"
-  ).innerHTML = `
-
-    <div class="tgn-page-title">
-
-      <button
-        class="tgn-back"
-        onclick="switchNav('home')"
-      >
-        ← Back
-      </button>
-
-      <h2
-        style="
-          margin-left:auto;
-          margin-right:auto;
-        "
-      >
-        Receive
-      </h2>
-
-      <span
-        style="width:48px"
-      ></span>
-
-    </div>
+    }
 
 
-    <div
-      class="
-        tgn-card
-        tgn-form-card
-      "
-      style="text-align:center"
-    >
+    document.getElementById(
+        "content"
+    ).innerHTML = `
 
-      <div class="tgn-form-title">
-        Receive TON
-      </div>
+        <div class="tgn-page-title">
 
+            <button
+                class="tgn-back"
+                onclick="switchNav('home')"
+            >
+                ← Back
+            </button>
 
-      <p class="tgn-modal-note">
-        Send TON to the wallet
-        address below.
-      </p>
+            <h2>
+                Deposit
+            </h2>
 
+            <span style="width:40px"></span>
 
-      <div
-        style="
-          font-size:12px;
-          word-break:break-all;
-          background:#071021;
-          border:
-            1px solid
-            rgba(110,160,220,.10);
-          padding:13px;
-          border-radius:12px;
-          color:#d9e7f7;
-          text-align:left;
-        "
-      >
-        ${escapeHtml(walletData.address)}
-      </div>
+        </div>
 
 
-      <button
-        class="tgn-primary"
-        style="margin-top:12px"
-        onclick="copyAddress()"
-      >
-        Copy Address
-      </button>
+        <div
+            class="tgn-card"
+            style="
+                padding:20px;
+                text-align:center;
+            "
+        >
 
-    </div>
+            <div
+                style="
+                    font-size:38px;
+                    margin-bottom:10px;
+                "
+            >
+                ↓
+            </div>
 
-  `;
+            <div
+                style="
+                    color:#f4f9ff;
+                    font-size:19px;
+                    font-weight:800;
+                "
+            >
+                Receive TON
+            </div>
+
+            <p
+                style="
+                    color:#8096b4;
+                    font-size:11px;
+                    line-height:1.6;
+                "
+            >
+                Send TON to this wallet address.
+            </p>
+
+
+            <div
+                style="
+                    text-align:left;
+                    padding:14px;
+                    border-radius:14px;
+                    background:#050c18;
+                    border:1px solid rgba(100,155,220,.10);
+                    color:#dbe9f8;
+                    font-size:11px;
+                    line-height:1.6;
+                    word-break:break-all;
+                "
+            >
+                ${escapeHtml(
+                    walletData.address
+                )}
+            </div>
+
+
+            <button
+                class="tgn-primary"
+                style="margin-top:12px"
+                onclick="copyAddress()"
+            >
+                Copy Address
+            </button>
+
+        </div>
+
+    `;
 
 }
 
@@ -2357,155 +2711,512 @@ function renderReceivePage() {
 
 async function refreshBalance() {
 
-  if (
-    !walletData ||
-    !tonweb
-  ) return;
-
-
-  try {
-
-    const balance =
-      await tonweb.getBalance(
-        walletData.address
-      );
-
-
-    const tonValue =
-      (
-        Number(balance) /
-        1000000000
-      ).toFixed(2);
-
-
-    const usdValue =
-      (
-        Number(tonValue) *
-        0.72
-      ).toFixed(2);
-
-
-    const balanceEl =
-      document.getElementById(
-        "balance"
-      );
-
-    const tokenEl =
-      document.getElementById(
-        "tokenBalance"
-      );
-
-    const usdEl =
-      document.getElementById(
-        "usdBalance"
-      );
-
-    const walletEl =
-      document.getElementById(
-        "walletPageBalance"
-      );
-
-    const tokenUsdEl =
-      document.getElementById(
-        "tokenUsd"
-      );
-
-
-    if (balanceEl) {
-
-      balanceEl.innerText =
-        tonValue +
-        " TON";
-
+    if (
+        !walletData ||
+        !tonweb
+    ) {
+        return;
     }
 
 
-    if (tokenEl) {
+    const setBalance =
+        (
+            ton,
+            usd
+        ) => {
 
-      tokenEl.innerText =
-        tonValue +
-        " TON";
+            const ids = [
+                "balance",
+                "tokenBalance",
+                "walletPageBalance"
+            ];
+
+
+            ids.forEach(id => {
+
+                const el =
+                    document.getElementById(
+                        id
+                    );
+
+                if (el) {
+
+                    el.innerText =
+                        ton + " TON";
+
+                }
+
+            });
+
+
+            const usdElements = [
+                "usdBalance",
+                "tokenUsd"
+            ];
+
+
+            usdElements.forEach(id => {
+
+                const el =
+                    document.getElementById(
+                        id
+                    );
+
+                if (el) {
+
+                    el.innerText =
+                        "$" + usd;
+
+                }
+
+            });
+
+        };
+
+
+    try {
+
+        const raw =
+            await tonweb.getBalance(
+                walletData.address
+            );
+
+
+        let nano =
+            Number(raw);
+
+
+        if (
+            !Number.isFinite(nano) ||
+            nano < 0
+        ) {
+
+            nano = 0;
+
+        }
+
+
+        const ton =
+            nano / 1000000000;
+
+
+        const tonText =
+            ton.toFixed(2);
+
+
+        /*
+           Do not display NaN.
+           USD price is kept at 0 until
+           a real price API is connected.
+        */
+
+        const usd =
+            "0.00";
+
+
+        setBalance(
+            tonText,
+            usd
+        );
 
     }
 
+    catch (error) {
 
-    if (usdEl) {
-
-      usdEl.innerText =
-        "$" +
-        usdValue +
-        " USD";
-
-    }
+        console.error(
+            "Balance error:",
+            error
+        );
 
 
-    if (walletEl) {
-
-      walletEl.innerText =
-        tonValue +
-        " TON";
+        setBalance(
+            "0.00",
+            "0.00"
+        );
 
     }
-
-
-    if (tokenUsdEl) {
-
-      tokenUsdEl.innerText =
-        "$" +
-        usdValue;
-
-    }
-
-  }
-
-  catch (error) {
-
-    console.error(
-      "Balance error:",
-      error
-    );
-
-  }
 
 }
 
 
 /* =========================================================
-   COPY ADDRESS
+   COPY WALLET ADDRESS
    ========================================================= */
 
 async function copyAddress() {
 
-  if (!walletData?.address) {
+    if (!walletData?.address) {
 
-    alert(
-      "Wallet address not found."
-    );
+        showToast(
+            "Wallet address unavailable."
+        );
 
-    return;
+        return;
 
-  }
+    }
 
 
-  try {
+    try {
 
-    await navigator.clipboard.writeText(
-      walletData.address
-    );
+        await navigator.clipboard.writeText(
+            walletData.address
+        );
 
-    showToast(
-      "Address copied!"
-    );
 
-  }
+        showToast(
+            "Wallet address copied!"
+        );
 
-  catch (error) {
+    }
 
-    showToast(
-      "Unable to copy address."
-    );
+    catch (error) {
 
-  }
+        alert(
+            walletData.address
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ACTIVITY
+   ========================================================= */
+
+function renderActivityPage(
+    filter = "all"
+) {
+
+    const transactions =
+        getUserTransactions();
+
+
+    document.getElementById(
+        "content"
+    ).innerHTML = `
+
+        <div class="tgn-page-title">
+
+            <h2>
+                Activity
+            </h2>
+
+            <button
+                style="
+                    border:0;
+                    background:transparent;
+                    color:#3ca8ff;
+                    font-weight:700;
+                    cursor:pointer;
+                "
+                onclick="renderActivityPage()"
+            >
+                Refresh ↻
+            </button>
+
+        </div>
+
+
+        ${
+            transactions.length
+            ? renderTransactions(
+                transactions,
+                filter
+            )
+            : `
+
+                <div class="tgn-empty">
+
+                    <div
+                        class="tgn-empty-icon"
+                    >
+                        ◷
+                    </div>
+
+                    <div
+                        style="
+                            color:#edf5ff;
+                            font-size:18px;
+                            font-weight:800;
+                        "
+                    >
+                        No Transactions Yet
+                    </div>
+
+                    <p
+                        style="
+                            color:#7187a5;
+                            font-size:11px;
+                            line-height:1.7;
+                            margin-top:7px;
+                        "
+                    >
+                        Your real wallet activity
+                        will appear here after
+                        a transaction.
+                    </p>
+
+                </div>
+
+            `
+        }
+
+    `;
+
+}
+
+
+function renderTransactions(
+    transactions,
+    filter
+) {
+
+    const filtered =
+        filter === "all"
+            ? transactions
+            : transactions.filter(
+                tx =>
+                    tx.type === filter
+            );
+
+
+    const filters = [
+        "all",
+        "received",
+        "sent",
+        "deposit",
+        "withdraw"
+    ];
+
+
+    let html = `
+
+        <div
+            style="
+                display:flex;
+                gap:7px;
+                overflow-x:auto;
+                padding-bottom:11px;
+            "
+        >
+
+            ${filters.map(
+                item => `
+
+                    <button
+                        onclick="
+                            renderActivityPage(
+                                '${item}'
+                            )
+                        "
+                        style="
+                            flex:0 0 auto;
+                            border:1px solid
+                                ${
+                                    filter === item
+                                    ? "rgba(42,156,255,.35)"
+                                    : "rgba(100,155,220,.12)"
+                                };
+                            background:
+                                ${
+                                    filter === item
+                                    ? "rgba(42,156,255,.12)"
+                                    : "rgba(255,255,255,.03)"
+                                };
+                            color:
+                                ${
+                                    filter === item
+                                    ? "#3ca8ff"
+                                    : "#8499b5"
+                                };
+                            padding:9px 13px;
+                            border-radius:11px;
+                            font-size:11px;
+                            font-weight:700;
+                        "
+                    >
+                        ${
+                            item
+                                .charAt(0)
+                                .toUpperCase() +
+                            item.slice(1)
+                        }
+                    </button>
+
+                `
+            ).join("")}
+
+        </div>
+
+    `;
+
+
+    if (!filtered.length) {
+
+        html += `
+
+            <div class="tgn-empty">
+
+                <div
+                    class="tgn-empty-icon"
+                >
+                    ◷
+                </div>
+
+                <div
+                    style="
+                        color:#edf5ff;
+                        font-size:17px;
+                        font-weight:800;
+                    "
+                >
+                    No Activity
+                </div>
+
+            </div>
+
+        `;
+
+        return html;
+
+    }
+
+
+    filtered.forEach(tx => {
+
+        html += `
+
+            <div
+                class="tgn-card"
+                style="
+                    padding:14px;
+                    margin-bottom:8px;
+                    display:flex;
+                    align-items:center;
+                    gap:11px;
+                "
+            >
+
+                <div
+                    style="
+                        width:42px;
+                        height:42px;
+                        flex:0 0 42px;
+                        border-radius:13px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        background:
+                            ${
+                                String(tx.amount)
+                                    .startsWith("+")
+                                ? "rgba(34,197,139,.10)"
+                                : "rgba(239,68,68,.08)"
+                            };
+                        color:
+                            ${
+                                String(tx.amount)
+                                    .startsWith("+")
+                                ? "#22c58b"
+                                : "#ff6871"
+                            };
+                        font-size:20px;
+                        font-weight:800;
+                    "
+                >
+                    ${
+                        String(tx.amount)
+                            .startsWith("+")
+                        ? "↓"
+                        : "↑"
+                    }
+                </div>
+
+
+                <div
+                    style="
+                        flex:1;
+                        min-width:0;
+                    "
+                >
+
+                    <div
+                        style="
+                            color:#edf5ff;
+                            font-size:13px;
+                            font-weight:800;
+                        "
+                    >
+                        ${escapeHtml(
+                            tx.title || "Transaction"
+                        )}
+                    </div>
+
+                    <div
+                        style="
+                            color:#7187a5;
+                            font-size:10px;
+                            margin-top:4px;
+                            overflow:hidden;
+                            text-overflow:ellipsis;
+                            white-space:nowrap;
+                        "
+                    >
+                        ${escapeHtml(
+                            tx.subtitle || ""
+                        )}
+                    </div>
+
+                </div>
+
+
+                <div
+                    style="
+                        text-align:right;
+                    "
+                >
+
+                    <div
+                        style="
+                            color:
+                                ${
+                                    String(tx.amount)
+                                        .startsWith("+")
+                                    ? "#22c58b"
+                                    : "#ff6871"
+                                };
+                            font-size:13px;
+                            font-weight:800;
+                        "
+                    >
+                        ${escapeHtml(
+                            tx.amount
+                        )}
+                    </div>
+
+                    <div
+                        style="
+                            color:#7187a5;
+                            font-size:9px;
+                            margin-top:4px;
+                        "
+                    >
+                        ${escapeHtml(
+                            tx.date || ""
+                        )}
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+    });
+
+
+    return html;
 
 }
 
@@ -2516,383 +3227,214 @@ async function copyAddress() {
 
 async function doSend() {
 
-  const to =
-    document
-      .getElementById("sendTo")
-      ?.value
-      .trim();
+    if (!walletData) {
+
+        showToast(
+            "Wallet not found."
+        );
+
+        return;
+
+    }
 
 
-  const amount =
-    document
-      .getElementById("sendAmount")
-      ?.value
-      .trim();
+    const to =
+        document
+            .getElementById("sendTo")
+            ?.value
+            .trim();
 
 
-  if (
-    !to ||
-    !amount ||
-    Number(amount) <= 0
-  ) {
-
-    alert(
-      "Enter a valid address and amount."
-    );
-
-    return;
-
-  }
+    const amount =
+        document
+            .getElementById("sendAmount")
+            ?.value
+            .trim();
 
 
-  if (!walletData) {
+    if (
+        !to ||
+        !amount ||
+        Number(amount) <= 0
+    ) {
 
-    alert(
-      "Wallet not found."
-    );
+        showToast(
+            "Enter a valid address and amount."
+        );
 
-    return;
+        return;
 
-  }
-
-
-  try {
-
-    showToast(
-      "Processing withdrawal..."
-    );
+    }
 
 
-    const keyPair = {
+    try {
 
-      publicKey:
-        TonWeb.utils.hexToBytes(
-          walletData.publicKey
-        ),
+        const keyPair = {
 
-      secretKey:
-        TonWeb.utils.hexToBytes(
-          walletData.secretKey
-        )
+            publicKey:
+                TonWeb.utils.hexToBytes(
+                    walletData.publicKey
+                ),
 
-    };
+            secretKey:
+                TonWeb.utils.hexToBytes(
+                    walletData.secretKey
+                )
 
-
-    const wallet =
-      new tonweb.wallet.all.v4R2(
-        tonweb.provider,
-        {
-          publicKey:
-            keyPair.publicKey
-        }
-      );
+        };
 
 
-    const seqno =
-      await wallet
-        .methods
-        .seqno()
-        .call() || 0;
+        const wallet =
+            new tonweb.wallet.all.v4R2(
+                tonweb.provider,
+                {
+                    publicKey:
+                        keyPair.publicKey
+                }
+            );
 
 
-    await wallet
-      .methods
-      .transfer({
-
-        secretKey:
-          keyPair.secretKey,
-
-        toAddress:
-          to,
-
-        amount:
-          TonWeb.utils.toNano(
-            amount
-          ),
-
-        seqno,
-
-        payload:
-          "TGN Wallet Withdrawal",
-
-        sendMode:3
-
-      })
-      .send();
+        const seqno =
+            await wallet
+                .methods
+                .seqno()
+                .call() || 0;
 
 
-    /*
-       Only save history AFTER
-       successful transaction.
-    */
+        await wallet
+            .methods
+            .transfer({
 
-    const now =
-      new Date();
+                secretKey:
+                    keyPair.secretKey,
 
+                toAddress:
+                    to,
 
-    saveUserTransaction({
+                amount:
+                    TonWeb.utils.toNano(
+                        amount
+                    ),
 
-      id:Date.now(),
+                seqno,
 
-      type:"withdraw",
+                payload:
+                    "TGN Wallet Withdrawal",
 
-      title:"Withdraw",
+                sendMode:3
 
-      subtitle:
-        "To: " +
-        to.substring(0,8) +
-        "...",
-
-      amount:
-        "-" +
-        amount +
-        " TON",
-
-      usd:
-        "$" +
-        (
-          Number(amount) *
-          0.72
-        ).toFixed(2) +
-        " USD",
-
-      date:
-        now.toLocaleDateString(
-          "en-US",
-          {
-            month:"short",
-            day:"numeric",
-            year:"numeric"
-          }
-        ),
-
-      time:
-        now.toLocaleTimeString(
-          "en-US",
-          {
-            hour:"2-digit",
-            minute:"2-digit"
-          }
-        ),
-
-      rawAddr:to
-
-    });
+            })
+            .send();
 
 
-    showToast(
-      "Withdrawal successful!"
-    );
+        const now =
+            new Date();
 
 
-    switchNav(
-      "activity"
-    );
+        saveUserTransaction({
 
-  }
+            id:Date.now(),
 
-  catch (error) {
+            type:"withdraw",
 
-    console.error(
-      error
-    );
+            title:"Withdraw",
 
-    alert(
-      "Withdrawal failed: " +
-      (
-        error?.message ||
-        "Unknown error"
-      )
-    );
+            subtitle:
+                "To: " +
+                to.slice(0,8) +
+                "...",
 
-  }
+            amount:
+                "-" +
+                amount +
+                " TON",
+
+            date:
+                now.toLocaleDateString(
+                    "en-US",
+                    {
+                        month:"short",
+                        day:"numeric",
+                        year:"numeric"
+                    }
+                )
+
+        });
+
+
+        showToast(
+            "Withdrawal successful!"
+        );
+
+
+        switchNav(
+            "activity"
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Withdrawal failed: " +
+            (
+                error?.message ||
+                "Unknown error"
+            )
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   SECURITY
-   ========================================================= */
-
-function openSettings() {
-
-  if (!walletData) return;
-
-
-  document.getElementById(
-    "mTitle"
-  ).innerText =
-    "Security";
-
-
-  document.getElementById(
-    "mBody"
-  ).innerHTML = `
-
-    <p class="tgn-modal-note">
-      Never share your recovery
-      phrase with anyone.
-    </p>
-
-
-    <button
-      class="tgn-primary"
-      onclick="showPhrase()"
-    >
-      Show Recovery Phrase
-    </button>
-
-
-    <div
-      id="phraseBox"
-      class="tgn-secret"
-      style="display:none"
-    ></div>
-
-
-    <button
-      class="tgn-secondary"
-      style="
-        color:#ff6570;
-        border-color:
-          rgba(239,68,68,.15);
-      "
-      onclick="resetWallet()"
-    >
-      Reset Wallet
-    </button>
-
-  `;
-
-
-  document.getElementById(
-    "modal"
-  ).style.display =
-    "flex";
-
-}
-
-
-function showPhrase() {
-
-  const box =
-    document.getElementById(
-      "phraseBox"
-    );
-
-
-  if (
-    !box ||
-    !walletData
-  ) return;
-
-
-  box.style.display =
-    "block";
-
-
-  box.innerText =
-    walletData.mnemonic ||
-    "Recovery phrase unavailable";
-
-}
-
-
-function resetWallet() {
-
-  if (
-    !confirm(
-      "Reset this wallet? Make sure you have your recovery phrase first."
-    )
-  ) return;
-
-
-  localStorage.removeItem(
-    "TGN_TON_WALLET"
-  );
-
-  localStorage.removeItem(
-    "TGN_USER_TXS"
-  );
-
-
-  location.reload();
-
-}
-
-
-/* =========================================================
-   MODAL
-   ========================================================= */
-
-function closeModal() {
-
-  const modal =
-    document.getElementById(
-      "modal"
-    );
-
-  if (modal) {
-
-    modal.style.display =
-      "none";
-
-  }
-
-}
-
-
-/* =========================================================
-   START APP
+   START
    ========================================================= */
 
 window.onload = function() {
 
-  try {
+    try {
 
-    /*
-      TonWeb connection
-    */
-
-    tonweb =
-      new TonWeb(
-        new TonWeb.HttpProvider(
-          "https://toncenter.com/api/v2/jsonRPC",
-          {
-            apiKey:
-              API_KEY
-          }
-        )
-      );
+        tonweb =
+            new TonWeb(
+                new TonWeb.HttpProvider(
+                    "https://toncenter.com/api/v2/jsonRPC",
+                    {
+                        apiKey:
+                            API_KEY
+                    }
+                )
+            );
 
 
-    if (walletData) {
+        if (walletData) {
 
-      switchNav(
-        "home"
-      );
+            switchNav("home");
 
-      refreshBalance();
+            refreshBalance();
 
-    }
+        }
 
-    else {
+        else {
 
-      renderWelcome();
+            renderWelcome();
+
+        }
 
     }
 
-  }
+    catch (error) {
 
-  catch (error) {
+        console.error(
+            "Startup error:",
+            error
+        );
 
-    console.error(
-      "Startup error:",
-      error
-    );
+        renderWelcome();
 
-    renderWelcome();
-
-  }
+    }
 
 };
