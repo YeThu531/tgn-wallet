@@ -33,7 +33,6 @@ function showToast(msg) {
   }
 }
 
-// User Real Transactions Storage
 function getUserTransactions() {
   let txs = JSON.parse(localStorage.getItem("TGN_USER_TXS")) || [
     { id: 1, type: "received", title: "Received", subtitle: "From: EQD5...3p8K", amount: "+2.50 GRAM", usd: "$1.79 USD", date: "May 10, 2025", time: "5:07 PM", rawAddr: "EQD5123456789abcdefABCDEF0123456789abcdefAB" },
@@ -64,7 +63,7 @@ function switchNav(tab) {
 
 function renderWelcome() {
   document.getElementById("content").innerHTML = `
-    <div class="hero-card" style="text-align:center; margin-top:40px;">
+    <div class="hero-card" style="text-align:center; margin-top:20px;">
       <div class="hero-icon">💎</div>
       <div class="hero-header" style="font-size:18px; font-weight:700; color:#fff;">TGN Wallet</div>
       <div class="hero-subbalance" style="margin-top:10px;">Secure Decentralized Web3 Wallet</div>
@@ -147,7 +146,7 @@ function renderMain() {
   const shortAddr = walletData.address.substring(0, 6) + "..." + walletData.address.substring(walletData.address.length - 4);
   
   document.getElementById("content").innerHTML = `
-    <div class="hero-card">
+    <div class="hero-card" style="margin-top:0;">
       <div class="hero-header">My Wallet</div>
       <div class="hero-balance" id="balance">0.00 GRAM</div>
       <div class="hero-subbalance" id="usdBalance">$0.00 USD</div>
@@ -199,7 +198,7 @@ function renderActivityPage(filter = 'all') {
   const filteredTx = filter === 'all' ? transactions : transactions.filter(tx => tx.type === filter);
   
   document.getElementById("content").innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; margin-top:0;">
       <h2 style="font-size:20px; font-weight:700; color:#fff; margin:0;">Activity & History</h2>
       <div style="font-size:12px; color:#38bdf8; cursor:pointer;" onclick="refreshActivity()">Refresh 🔄</div>
     </div>
@@ -244,16 +243,15 @@ function renderActivityPage(filter = 'all') {
   `;
 }
 
-// Profile Page (Using SVG Icons and real Telegram data)
+// Profile Page
 function renderProfilePage() {
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
   const userName = tgUser ? (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '')) : "Telegram User";
   const userHandle = tgUser?.username ? ('@' + tgUser.username) : "@telegram_user";
   const userId = tgUser?.id ? tgUser.id : "784920193";
-  const userYear = tgUser?.id ? "2021" : "2023"; // Account year estimate based on Telegram ID or active state
+  const userYear = tgUser?.id ? "2021" : "2023";
   const shortWallet = walletData ? (walletData.address.substring(0, 6) + "..." + walletData.address.substring(walletData.address.length - 4)) : "Not Connected";
 
-  // SVG Icons matching professional UI
   const iconUser = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
   const iconShield = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
   const iconBell = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
@@ -262,8 +260,8 @@ function renderProfilePage() {
   const iconChevron = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
 
   document.getElementById("content").innerHTML = `
-    <h2 style="font-size:20px; font-weight:700; color:#fff; margin-bottom:4px;">Profile</h2>
-    <div class="section-box" style="display:flex; align-items:center; gap:16px; background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));">
+    <h2 style="font-size:20px; font-weight:700; color:#fff; margin-bottom:12px; margin-top:0;">Profile</h2>
+    <div class="section-box" style="display:flex; align-items:center; gap:16px; background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); margin-top:0;">
       <div style="width:64px; height:64px; border-radius:50%; background:#3b82f6; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; color:#fff;">
         ${userName.charAt(0)}
       </div>
@@ -390,7 +388,7 @@ function renderWalletPage() { openSettings(); }
 
 function renderSendPage() {
   document.getElementById("content").innerHTML = `
-    <div style="display:flex; align-items:center; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; margin-bottom:16px; margin-top:0;">
       <button onclick="switchNav('home')" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
       <h2 style="margin:0 auto; font-size:18px; color:#fff;">Send / Withdraw GRAM</h2>
     </div>
@@ -405,7 +403,7 @@ function renderSendPage() {
 function renderReceivePage() {
   if(!walletData) return;
   document.getElementById("content").innerHTML = `
-    <div style="display:flex; align-items:center; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; margin-bottom:16px; margin-top:0;">
       <button onclick="switchNav('home')" style="background:none; border:none; color:#38bdf8; font-size:16px; cursor:pointer;">← Back</button>
       <h2 style="margin:0 auto; font-size:18px; color:#fff;">Receive / Deposit GRAM</h2>
     </div>
