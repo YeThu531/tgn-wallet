@@ -1,75 +1,85 @@
-/*
- TGN WALLET - APP.JS
+/* =========================================================
+   TGN WALLET
+   Telegram Mini App
+   Firebase + TON Wallet + Airdrop + Referral
+   ========================================================= */
 
- FEATURES
- - TON balance
- - Wallet Create
- - Wallet Import
- - Wallet address
- - Activity
- - Send UI
- - Airdrop
- - Daily Check-in
- - Airdrop Tasks
- - Airdrop Points
- - Airdrop History
- - Telegram Profile
 
- SECURITY
- - Seed phrase is NEVER saved.
- - Private key is NEVER saved.
- - Only wallet address + public key are stored locally.
- - Real transaction signing is NOT enabled here.
-*/
+/* =========================================================
+   CONFIG
+   ========================================================= */
 
 const CONFIG = {
 
-  API_KEY: "",
+  FIREBASE: {
+    apiKey:
+      "AIzaSyAc-8EzwZcJvhouuk9Vkx6Ngj_hgjRMiKg",
 
+    authDomain:
+      "tgn-wallet.firebaseapp.com",
+
+    projectId:
+      "tgn-wallet",
+
+    storageBucket:
+      "tgn-wallet.firebasestorage.app",
+
+    messagingSenderId:
+      "347838161609",
+
+    appId:
+      "1:347838161609:web:27b90e794b383d0ddb2318",
+
+    measurementId:
+      "G-250N1M7FB4"
+  },
+
+  /*
+    IMPORTANT:
+    Do NOT put TON Center secret API key here.
+
+    Use your Cloudflare Worker as the backend/proxy.
+  */
   API_BASE:
-    "https://toncenter.com/api/v2",
+    "https://u20052.workers.dev",
 
   WALLET_STORAGE:
     "TGN_TON_WALLET",
 
-  AIRDROP_STORAGE:
-    "TGN_AIRDROP_DATA"
+  TX_STORAGE:
+    "TGN_USER_TXS"
 
 };
 
 
+/* =========================================================
+   GLOBALS
+   ========================================================= */
+
 const tg =
-  window.Telegram?.WebApp;
+  window.Telegram?.WebApp || null;
 
+let db = null;
 
-let activeTab =
-  "home";
+let firebaseReady = false;
 
+let tonweb = null;
+
+let activeTab = "home";
 
 let walletData =
-  safeWallet();
+  loadWallet();
 
+let tonBalance = 0;
 
-let tonBalance =
-  0;
+let transactions = [];
 
-
-let transactions =
-  [];
-
-
-let jettons =
-  [];
-
-
-let airdropData =
-  loadAirdrop();
-
+let userData = null;
 
 
 /* =========================================================
-   TELEGRAM
-========================================================= */
+   TELEGRAM INIT
+   ========================================================= */
 
 if (tg) {
 
@@ -92,12 +102,102 @@ if (tg) {
 }
 
 
+/* =========================================================
+   FIREBASE INIT
+   ========================================================= */
+
+async function initFirebase() {
+
+  if (firebaseReady)
+    return true;
+
+  try {
+
+    const firebase =
+      await import(
+        "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js"
+      );
+
+    const firestore =
+      await import(
+        "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
+      );
+
+    const app =
+      firebase.initializeApp(
+        CONFIG.FIREBASE
+      );
+
+    db =
+      firestore.getFirestore(app);
+
+    firebaseReady = true;
+
+    console.log(
+      "Firebase connected ✓"
+    );
+
+    return true;
+
+  } catch (error) {
+
+    console.error(
+      "Firebase initialization failed:",
+      error
+    );
+
+    firebaseReady = false;
+
+    return false;
+
+  }
+
+}
+
 
 /* =========================================================
-   WALLET STORAGE
-========================================================= */
+   TON WEB INIT
+   ========================================================= */
 
-function safeWallet() {
+function initTonWeb() {
+
+  try {
+
+    if (
+      typeof TonWeb !==
+      "undefined"
+    ) {
+
+      tonweb =
+        new TonWeb(
+          new TonWeb.HttpProvider(
+            "https://toncenter.com/api/v2/jsonRPC"
+          )
+        );
+
+      return true;
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "TON Web init error:",
+      error
+    );
+
+  }
+
+  return false;
+
+}
+
+
+/* =========================================================
+   STORAGE
+   ========================================================= */
+
+function loadWallet() {
 
   try {
 
@@ -106,27 +206,33 @@ function safeWallet() {
         CONFIG.WALLET_STORAGE
       );
 
-    const data =
-      raw
-        ? JSON.parse(raw)
-        : null;
+    if (!raw)
+      return null;
 
-    return
+    const data =
+      JSON.parse(raw);
+
+    if (
       data &&
       data.address
-        ? data
-        : null;
+    ) {
+
+      return data;
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Wallet storage error:",
+      error
+    );
 
   }
 
-  catch (_) {
-
-    return null;
-
-  }
+  return null;
 
 }
-
 
 
 function saveWallet(data) {
@@ -141,306 +247,202 @@ function saveWallet(data) {
       JSON.stringify(data)
     );
 
-  }
+  } catch (error) {
 
-  catch (_) {}
-
-}
-
-
-
-/* =========================================================
-   AIRDROP STORAGE
-========================================================= */
-
-function loadAirdrop() {
-
-  try {
-
-    const raw =
-      localStorage.getItem(
-        CONFIG.AIRDROP_STORAGE
-      );
-
-    const data =
-      raw
-        ? JSON.parse(raw)
-        : null;
-
-
-    if (
-      data &&
-      typeof data === "object"
-    ) {
-
-      return data;
-
-    }
-
-
-  }
-
-  catch (_) {}
-
-
-  return {
-
-    points: 0,
-
-    rewards: 0,
-
-    checkin: null,
-
-    completed: [],
-
-    referrals: 0
-
-  };
-
-}
-
-
-
-function saveAirdrop() {
-
-  try {
-
-    localStorage.setItem(
-      CONFIG.AIRDROP_STORAGE,
-      JSON.stringify(
-        airdropData
-      )
+    console.error(
+      "Wallet save error:",
+      error
     );
 
   }
 
-  catch (_) {}
-
 }
 
 
+function clearWallet() {
 
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
+  walletData = null;
 
-function esc(value) {
-
-  return String(
-    value ?? ""
-  )
-
-  .replace(
-    /[&<>"']/g,
-
-    function (m) {
-
-      return {
-
-        "&":
-          "&amp;",
-
-        "<":
-          "&lt;",
-
-        ">":
-          "&gt;",
-
-        '"':
-          "&quot;",
-
-        "'":
-          "&#039;"
-
-      }[m];
-
-    }
-
+  localStorage.removeItem(
+    CONFIG.WALLET_STORAGE
   );
 
 }
-
 
 
 /* =========================================================
    TELEGRAM USER
-========================================================= */
+   ========================================================= */
 
-function user() {
+function getTelegramUser() {
 
   return (
     tg?.initDataUnsafe?.user ||
-    {}
+    null
   );
 
 }
 
 
-
-function userName() {
+function getUserId() {
 
   const u =
-    user();
+    getTelegramUser();
 
-  return [
-
-    u.first_name,
-
-    u.last_name
-
-  ]
-
-  .filter(Boolean)
-
-  .join(" ")
-
-  || "Telegram User";
+  return u?.id
+    ? String(u.id)
+    : null;
 
 }
 
 
+function getUserName() {
 
-function username() {
+  const u =
+    getTelegramUser();
 
-  return user().username
+  if (!u)
+    return "Telegram User";
 
-    ? "@" +
-      user().username
+  return [
+    u.first_name,
+    u.last_name
+  ]
+    .filter(Boolean)
+    .join(" ")
+    || "Telegram User";
 
+}
+
+
+function getUsername() {
+
+  const u =
+    getTelegramUser();
+
+  return u?.username
+    ? "@" + u.username
     : "No username";
 
 }
 
 
+function getUserPhoto() {
 
-function userId() {
-
-  return user().id
-
-    ? String(
-        user().id
-      )
-
-    : "Unavailable";
+  return (
+    getTelegramUser()
+      ?.photo_url ||
+    ""
+  );
 
 }
-
 
 
 /* =========================================================
-   ADDRESS
-========================================================= */
+   HTML ESCAPE
+   ========================================================= */
 
-function shortAddress(
-  address
-) {
+function escapeHtml(value) {
 
-  if (!address)
-    return "Wallet not connected";
+  return String(
+    value ?? ""
+  ).replace(
+    /[&<>"']/g,
+    function (char) {
 
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char];
 
-  return address.length > 18
-
-    ? address.slice(0, 9)
-      + "..."
-      + address.slice(-7)
-
-    : address;
+    }
+  );
 
 }
-
 
 
 /* =========================================================
    TOAST
-========================================================= */
+   ========================================================= */
 
-function showToast(
-  message
-) {
+function showToast(message) {
 
-  const el =
+  const toast =
     document.getElementById(
       "toast"
     );
 
+  if (!toast) {
 
-  if (!el)
+    alert(message);
+
     return;
 
+  }
 
-  el.textContent =
+  toast.textContent =
     message;
 
-
-  el.classList.add(
+  toast.classList.add(
     "show"
   );
-
 
   clearTimeout(
     window.__toastTimer
   );
 
-
   window.__toastTimer =
     setTimeout(
+      function () {
 
-      () =>
-        el.classList.remove(
+        toast.classList.remove(
           "show"
-        ),
+        );
 
-      2200
-
+      },
+      2000
     );
 
 }
 
 
-
 /* =========================================================
    MODAL
-========================================================= */
+   ========================================================= */
 
 function openModal(
   title,
   body
 ) {
 
+  const modal =
+    document.getElementById(
+      "modal"
+    );
+
   const titleEl =
     document.getElementById(
       "mTitle"
     );
-
 
   const bodyEl =
     document.getElementById(
       "mBody"
     );
 
-
-  const modal =
-    document.getElementById(
-      "modal"
-    );
-
-
-  if (
-    !titleEl ||
-    !bodyEl ||
-    !modal
-  )
+  if (!modal)
     return;
 
+  if (titleEl)
+    titleEl.textContent =
+      title;
 
-  titleEl.textContent =
-    title;
-
-
-  bodyEl.innerHTML =
-    body;
-
+  if (bodyEl)
+    bodyEl.innerHTML =
+      body;
 
   modal.classList.add(
     "show"
@@ -449,13 +451,10 @@ function openModal(
 }
 
 
-
 function closeModal() {
 
   document
-    .getElementById(
-      "modal"
-    )
+    .getElementById("modal")
     ?.classList.remove(
       "show"
     );
@@ -463,14 +462,13 @@ function closeModal() {
 }
 
 
-
 /* =========================================================
    ICONS
-========================================================= */
+   ========================================================= */
 
-function icon(name) {
+function initIcons() {
 
-  const paths = {
+  const icons = {
 
     home: `
       <path d="M3 10.5L12 3l9 7.5"></path>
@@ -478,23 +476,16 @@ function icon(name) {
       <path d="M9 21v-7h6v7"></path>
     `,
 
-
     activity: `
-      <line x1="8" y1="6" x2="21" y2="6"></line>
-      <line x1="8" y1="12" x2="21" y2="12"></line>
-      <line x1="8" y1="18" x2="21" y2="18"></line>
-
-      <circle cx="3.5" cy="6" r="1"></circle>
-      <circle cx="3.5" cy="12" r="1"></circle>
-      <circle cx="3.5" cy="18" r="1"></circle>
+      <path d="M4 19V5"></path>
+      <path d="M4 19h16"></path>
+      <path d="M7 16l3-4 3 2 5-7"></path>
     `,
-
 
     send: `
       <path d="M22 2L11 13"></path>
       <path d="M22 2l-7 20-4-9-9-4z"></path>
     `,
-
 
     wallet: `
       <path d="M20 7H5a3 3 0 0 1 0-6h13v4"></path>
@@ -503,13 +494,12 @@ function icon(name) {
       <path d="M16 13h5v4h-5a2 2 0 1 1 0-4z"></path>
     `,
 
-
     airdrop: `
-      <path d="M12 3c4.5 0 8 3.1 8 7 0 3.1-2.1 5.8-5.2 6.7L12 21l-2.8-4.3C6.1 15.8 4 13.1 4 10c0-3.9 3.5-7 8-7z"></path>
-      <path d="M8.5 10.5h7"></path>
-      <path d="M12 7v7"></path>
+      <path d="M12 3v12"></path>
+      <path d="M7 10l5 5 5-5"></path>
+      <path d="M5 21h14"></path>
+      <path d="M7 6h10"></path>
     `,
-
 
     profile: `
       <circle cx="12" cy="7" r="4"></circle>
@@ -519,436 +509,46 @@ function icon(name) {
   };
 
 
-  return `
-
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-
-      ${
-        paths[name] || ""
-      }
-
-    </svg>
-
-  `;
-
-}
-
-
-
-/* =========================================================
-   EXTRA CSS
-========================================================= */
-
-function injectExtraStyles() {
-
-  if (
-    document.getElementById(
-      "tgn-extra-styles"
-    )
-  )
-    return;
-
-
-  const style =
-    document.createElement(
-      "style"
-    );
-
-
-  style.id =
-    "tgn-extra-styles";
-
-
-  style.textContent = `
-
-    .wallet-choice-grid{
-      display:grid;
-      gap:10px;
-    }
-
-    .airdrop-banner{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      padding:16px;
-      cursor:pointer;
-    }
-
-    .airdrop-summary{
-      padding:18px;
-      background:
-        linear-gradient(
-          135deg,
-          #111936,
-          #21134d
-        );
-      border:
-        1px solid
-        rgba(
-          132,
-          76,
-          255,
-          .55
-        );
-    }
-
-    .airdrop-stats{
-      display:flex;
-      gap:10px;
-      margin-top:18px;
-      padding-top:14px;
-      border-top:
-        1px solid
-        rgba(
-          255,
-          255,
-          255,
-          .08
-        );
-    }
-
-    .airdrop-stats > div{
-      flex:1;
-      text-align:center;
-    }
-
-    .airdrop-stats b{
-      display:block;
-      color:#a875ff;
-      font-size:18px;
-    }
-
-    .airdrop-stats small{
-      display:block;
-      color:#8196b5;
-      margin-top:3px;
-    }
-
-    .task-row{
-      display:flex;
-      align-items:center;
-      gap:11px;
-      padding:13px 0;
-      border-bottom:
-        1px solid
-        rgba(
-          255,
-          255,
-          255,
-          .06
-        );
-    }
-
-    .task-row:last-child{
-      border-bottom:0;
-    }
-
-    .task-icon{
-      width:42px;
-      height:42px;
-      border-radius:13px;
-      display:grid;
-      place-items:center;
-      background:
-        rgba(
-          117,
-          67,
-          255,
-          .14
-        );
-      font-size:22px;
-      flex:none;
-    }
-
-    .task-main{
-      flex:1;
-      min-width:0;
-    }
-
-    .task-main b{
-      display:block;
-      color:#f5f7ff;
-      font-size:14px;
-    }
-
-    .task-main span{
-      display:block;
-      color:#8196b5;
-      font-size:11px;
-      line-height:1.5;
-      margin-top:3px;
-    }
-
-    .task-main strong{
-      color:#a875ff;
-    }
-
-    .task-btn{
-      border:0;
-      border-radius:10px;
-      padding:9px 13px;
-      background:
-        linear-gradient(
-          135deg,
-          #5e25d6,
-          #7f3cff
-        );
-      color:#fff;
-      font-weight:700;
-    }
-
-    .task-btn:disabled{
-      opacity:.5;
-      background:#24314a;
-    }
-
-    .status-pill{
-      font-size:10px;
-      color:#50e39b;
-      background:
-        rgba(
-          46,
-          204,
-          113,
-          .12
-        );
-      border-radius:20px;
-      padding:5px 8px;
-    }
-
-    .airdrop-task-list{
-      display:flex;
-      flex-direction:column;
-    }
-
-    #nav-airdrop .nav-svg{
-      color:#a875ff;
-    }
-
-    #nav-airdrop.active{
-      color:#a875ff;
-    }
-
-    #seedInput{
-      width:100%;
-      min-height:110px;
-      resize:none;
-      box-sizing:border-box;
-      font-family:inherit;
-      line-height:1.6;
-    }
-
-  `;
-
-
-  document.head.appendChild(
-    style
-  );
-
-}
-
-
-
-/* =========================================================
-   AIRDROP NAV
-========================================================= */
-
-function ensureAirdropNav() {
-
-  let nav =
-    document.querySelector(
-      ".bottom-nav, .nav, .navbar, .navigation"
-    );
-
-
-  const send =
-    document.getElementById(
-      "nav-send"
-    );
-
-
-  if (
-    !nav &&
-    send
-  ) {
-
-    nav =
-      send.parentElement;
-
-  }
-
-
-  if (
-    !nav ||
-    document.getElementById(
-      "nav-airdrop"
-    )
-  )
-    return;
-
-
-  const item =
-    document.createElement(
-      "button"
-    );
-
-
-  item.id =
-    "nav-airdrop";
-
-
-  item.className =
-    "nav-item";
-
-
-  item.innerHTML = `
-
-    <span
-      class="nav-svg"
-      data-icon="airdrop"
-    >
-      ${icon("airdrop")}
-    </span>
-
-    <span>
-      Airdrop
-    </span>
-
-  `;
-
-
-  item.onclick =
-    () =>
-      switchNav(
-        "airdrop"
-      );
-
-
-  if (
-    send?.nextSibling
-  ) {
-
-    nav.insertBefore(
-      item,
-      send.nextSibling
-    );
-
-  }
-
-  else {
-
-    nav.appendChild(
-      item
-    );
-
-  }
-
-}
-
-
-
-/* =========================================================
-   NAV ICON INIT
-========================================================= */
-
-function initNavIcons() {
-
   document
     .querySelectorAll(
-      ".nav-svg"
+      ".nav-svg[data-icon]"
     )
     .forEach(
-      function (el) {
+      function (element) {
 
         const name =
-          el.dataset.icon;
+          element.dataset.icon;
 
+        const body =
+          icons[name];
 
-        if (name)
-          el.innerHTML =
-            icon(name);
-
-      }
-    );
-
-
-  ensureAirdropNav();
-
-
-  document
-    .querySelectorAll(
-      ".nav-item"
-    )
-    .forEach(
-      function (item) {
-
-        if (
-          item.dataset.navBound ===
-          "1"
-        )
+        if (!body)
           return;
 
-
-        const id =
-          item.id || "";
-
-
-        const tab =
-          id.replace(
-            /^nav-/,
-            ""
-          );
-
-
-        if (
-          [
-            "home",
-            "activity",
-            "send",
-            "wallet",
-            "airdrop",
-            "profile"
-          ].includes(tab)
-        ) {
-
-          item.dataset.navBound =
-            "1";
-
-
-          item.addEventListener(
-            "click",
-            function () {
-
-              switchNav(
-                tab
-              );
-
-            }
-          );
-
-        }
+        element.innerHTML = `
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            ${body}
+          </svg>
+        `;
 
       }
     );
 
 }
-
 
 
 /* =========================================================
    NAVIGATION
-========================================================= */
+   ========================================================= */
 
-function switchNav(
-  tab
-) {
+function switchNav(tab) {
 
   activeTab =
     tab;
@@ -978,35 +578,28 @@ function switchNav(
     );
 
 
-  if (
-    tab === "home"
-  )
+  if (tab === "home")
     renderHome();
-
 
   else if (
     tab === "activity"
   )
     renderActivity();
 
-
   else if (
     tab === "send"
   )
     renderSend();
-
 
   else if (
     tab === "wallet"
   )
     renderWallet();
 
-
   else if (
     tab === "airdrop"
   )
     renderAirdrop();
-
 
   else if (
     tab === "profile"
@@ -1016,10 +609,9 @@ function switchNav(
 }
 
 
-
 /* =========================================================
    HOME
-========================================================= */
+   ========================================================= */
 
 function renderHome() {
 
@@ -1028,40 +620,112 @@ function renderHome() {
     "";
 
 
+  if (!walletData) {
+
+    renderWelcome();
+
+    return;
+
+  }
+
+
   document.getElementById(
     "content"
   ).innerHTML = `
 
-    <section class="card hero">
+    <div class="tgn-page-title">
 
-      <div class="hero-label">
-        My Wallet
+      <div>
+
+        <h2>
+          TGN Wallet
+        </h2>
+
+        <div
+          style="
+            color:#7187a5;
+            font-size:11px;
+            margin-top:3px;
+          "
+        >
+          TON Mainnet
+        </div>
+
+      </div>
+
+      <div
+        style="
+          color:#22c58b;
+          font-size:10px;
+          font-weight:700;
+        "
+      >
+        ● Online
+      </div>
+
+    </div>
+
+
+    <div
+      class="tgn-card"
+      style="
+        padding:22px;
+        margin-bottom:12px;
+        position:relative;
+        overflow:hidden;
+      "
+    >
+
+      <div
+        style="
+          color:#8096b4;
+          font-size:11px;
+        "
+      >
+        Total Balance
       </div>
 
 
       <div
-        class="hero-balance"
-        id="heroBalance"
+        id="homeBalance"
+        style="
+          color:#f5f9ff;
+          font-size:38px;
+          font-weight:850;
+          margin-top:6px;
+        "
       >
-        ${tonBalance.toFixed(2)}
-        TON
+        ${tonBalance.toFixed(4)} TON
       </div>
 
 
-      <div class="hero-usd">
-        $0.00 USD
+      <div
+        style="
+          color:#7187a5;
+          font-size:11px;
+          margin-top:3px;
+        "
+      >
+        TON Mainnet
       </div>
 
 
-      <div class="hero-logo">
-        💎
-      </div>
-
-
-      <div class="action-row">
+      <div
+        style="
+          display:flex;
+          gap:9px;
+          margin-top:20px;
+        "
+      >
 
         <button
-          class="action-btn primary"
+          class="tgn-primary"
+          style="
+            flex:1;
+            padding:13px;
+            border:0;
+            border-radius:14px;
+          "
           onclick="showDeposit()"
         >
           Deposit
@@ -1069,42 +733,65 @@ function renderHome() {
 
 
         <button
-          class="action-btn"
+          class="btn secondary"
+          style="
+            flex:1;
+            padding:13px;
+            border-radius:14px;
+          "
           onclick="switchNav('send')"
         >
-          Withdraw
+          Send
         </button>
 
       </div>
 
-    </section>
+    </div>
 
 
-    <section class="card section">
+    <div
+      class="tgn-card"
+      style="
+        padding:16px;
+        margin-bottom:12px;
+      "
+    >
 
-      <div class="section-head">
-        <span>
-          Wallet Address
-        </span>
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+          margin-bottom:7px;
+        "
+      >
+        WALLET ADDRESS
       </div>
 
 
-      <div class="address-row">
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          gap:9px;
+        "
+      >
 
-        <span class="dot"></span>
-
-
-        <div class="address-text">
-          ${esc(
-            shortAddress(
-              address
-            )
+        <div
+          style="
+            flex:1;
+            color:#edf5ff;
+            font-size:11px;
+            word-break:break-all;
+          "
+        >
+          ${escapeHtml(
+            shortAddress(address)
           )}
         </div>
 
 
         <button
-          class="copy-pill"
+          class="copy-id"
           onclick="copyAddress()"
         >
           Copy
@@ -1112,155 +799,244 @@ function renderHome() {
 
       </div>
 
-
-      ${
-        address
-          ? ""
-          : `
-
-            <button
-              class="btn primary"
-              style="
-                margin-top:12px;
-                width:100%
-              "
-              onclick="openWalletSetup()"
-            >
-              Create / Import Wallet
-            </button>
-
-          `
-      }
-
-    </section>
+    </div>
 
 
-    <section class="card section">
+    <div
+      class="tgn-card"
+      style="
+        padding:16px;
+      "
+    >
 
-      <div class="section-head">
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+        "
+      >
 
-        <span>
-          Tokens
-        </span>
+        <div
+          style="
+            color:#edf5ff;
+            font-size:14px;
+            font-weight:800;
+          "
+        >
+          Assets
+        </div>
 
 
         <button
-          class="refresh"
-          onclick="refreshWallet()"
+          class="copy-id"
+          onclick="refreshBalance()"
         >
-          Refresh ↻
+          Refresh
         </button>
 
       </div>
 
 
       <div
-        id="tokenList"
-        class="token-list"
-      >
-
-        ${renderTonToken()}
-
-        ${renderJettons()}
-
-      </div>
-
-    </section>
-
-
-    <section
-      class="card airdrop-banner"
-      onclick="switchNav('airdrop')"
-    >
-
-      <div
         style="
-          font-size:30px
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          padding-top:17px;
         "
       >
-        🎁
-      </div>
+
+        <div
+          style="
+            display:flex;
+            align-items:center;
+            gap:10px;
+          "
+        >
+
+          <div
+            style="
+              width:42px;
+              height:42px;
+              border-radius:14px;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              background:rgba(42,156,255,.10);
+              font-size:22px;
+            "
+          >
+            💎
+          </div>
 
 
-      <div style="flex:1">
+          <div>
 
-        <b>
-          Airdrop Campaign
-        </b>
+            <div
+              style="
+                color:#edf5ff;
+                font-size:14px;
+                font-weight:800;
+              "
+            >
+              TON
+            </div>
+
+            <div
+              style="
+                color:#7187a5;
+                font-size:10px;
+                margin-top:3px;
+              "
+            >
+              Toncoin
+            </div>
+
+          </div>
+
+        </div>
 
 
-        <div class="token-sub">
-          Complete tasks and earn rewards
+        <div
+          style="
+            text-align:right;
+          "
+        >
+
+          <div
+            style="
+              color:#edf5ff;
+              font-size:13px;
+              font-weight:800;
+            "
+            id="assetBalance"
+          >
+            ${tonBalance.toFixed(4)}
+          </div>
+
+          <div
+            style="
+              color:#7187a5;
+              font-size:10px;
+              margin-top:3px;
+            "
+          >
+            TON
+          </div>
+
         </div>
 
       </div>
 
-
-      <div
-        style="
-          font-size:28px
-        "
-      >
-        ›
-      </div>
-
-    </section>
+    </div>
 
   `;
 
 
-  if (address)
-    refreshWallet(
-      false
-    );
+  refreshBalance();
 
 }
 
 
-
 /* =========================================================
-   TON TOKEN
-========================================================= */
+   WELCOME / CREATE / IMPORT
+   ========================================================= */
 
-function renderTonToken() {
+function renderWelcome() {
 
-  return `
+  document.getElementById(
+    "content"
+  ).innerHTML = `
 
-    <div class="token-item token-row">
+    <div
+      class="tgn-card"
+      style="
+        padding:28px 20px;
+        text-align:center;
+        margin-top:10px;
+      "
+    >
 
-      <div class="token-left">
-
-        <div class="token-logo">
-          💎
-        </div>
-
-
-        <div>
-
-          <div class="token-name">
-            TON
-          </div>
-
-
-          <div class="token-sub">
-            Toncoin • Mainnet
-          </div>
-
-        </div>
-
+      <div
+        style="
+          width:76px;
+          height:76px;
+          margin:0 auto 16px;
+          border-radius:24px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:rgba(42,156,255,.10);
+          font-size:40px;
+        "
+      >
+        💎
       </div>
 
 
-      <div class="token-amount">
+      <h2
+        style="
+          color:#fff;
+          margin:0;
+          font-size:24px;
+        "
+      >
+        TGN Wallet
+      </h2>
 
-        ${tonBalance.toFixed(4)}
-        TON
+
+      <p
+        style="
+          color:#7187a5;
+          font-size:12px;
+          line-height:1.6;
+          margin:9px 0 22px;
+        "
+      >
+        Create a new TON wallet
+        or import an existing wallet.
+      </p>
 
 
-        <div class="token-usd">
-          $0.00
-        </div>
+      <button
+        class="tgn-primary"
+        style="
+          width:100%;
+          padding:14px;
+          border:0;
+          border-radius:15px;
+          margin-bottom:10px;
+        "
+        onclick="createWallet()"
+      >
+        ✨ Create Wallet
+      </button>
 
+
+      <button
+        class="btn secondary"
+        style="
+          width:100%;
+          padding:14px;
+          border-radius:15px;
+        "
+        onclick="showImportWallet()"
+      >
+        🔐 Import Seed Phrase
+      </button>
+
+
+      <div
+        style="
+          color:#5f7593;
+          font-size:10px;
+          line-height:1.6;
+          margin-top:18px;
+        "
+      >
+        Your recovery phrase is never
+        uploaded to Firebase.
       </div>
 
     </div>
@@ -1270,120 +1046,225 @@ function renderTonToken() {
 }
 
 
-
 /* =========================================================
-   JETTON
-========================================================= */
+   CREATE WALLET
+   ========================================================= */
 
-function renderJettons() {
+async function createWallet() {
 
-  if (
-    !jettons.length
-  ) {
+  try {
 
-    return `
+    if (
+      typeof TonWeb ===
+      "undefined"
+    ) {
 
-      <div
-        class="empty"
-        style="
-          padding:22px 8px
-        "
-      >
+      showToast(
+        "TON library not loaded"
+      );
 
-        <div class="empty-text">
+      return;
 
-          TON-network Jetton balances
-          will appear here when a secure
-          Jetton backend is connected.
+    }
 
-        </div>
 
-      </div>
+    const utils =
+      TonWeb.utils;
 
-    `;
+
+    /*
+      TONWeb mnemonic generator.
+    */
+
+    let mnemonic = null;
+
+    if (
+      utils?.mnemonic?.generateMnemonic
+    ) {
+
+      mnemonic =
+        await utils.mnemonic.generateMnemonic();
+
+    }
+
+
+    if (!mnemonic) {
+
+      showToast(
+        "Wallet generator unavailable"
+      );
+
+      return;
+
+    }
+
+
+    const keyPair =
+      await utils.mnemonicToKeyPair(
+        mnemonic
+      );
+
+
+    const WalletClass =
+      tonweb.wallet.all.v4R2;
+
+
+    const wallet =
+      new WalletClass(
+        tonweb.provider,
+        {
+          publicKey:
+            keyPair.publicKey
+        }
+      );
+
+
+    const address =
+      await wallet.getAddress();
+
+
+    const addressString =
+      address.toString(
+        true,
+        true,
+        true
+      );
+
+
+    saveWallet({
+
+      address:
+        addressString,
+
+      publicKey:
+        bytesToHex(
+          keyPair.publicKey
+        ),
+
+      /*
+        Seed phrase is kept ONLY
+        in localStorage.
+
+        It is NOT sent to Firebase.
+      */
+      mnemonic:
+        mnemonic,
+
+      createdAt:
+        Date.now()
+
+    });
+
+
+    await saveWalletToFirebase();
+
+
+    showNewWalletPhrase(
+      mnemonic,
+      addressString
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Create wallet error:",
+      error
+    );
+
+    showToast(
+      "Create wallet failed"
+    );
 
   }
-
-
-  return jettons
-    .map(
-      function (j) {
-
-        return `
-
-          <div class="token-item token-row">
-
-            <div class="token-left">
-
-              <div class="token-logo">
-                🪙
-              </div>
-
-
-              <div>
-
-                <div class="token-name">
-                  ${esc(
-                    j.symbol ||
-                    "JETTON"
-                  )}
-                </div>
-
-
-                <div class="token-sub">
-                  ${esc(
-                    j.name ||
-                    "TON Jetton"
-                  )}
-                </div>
-
-              </div>
-
-            </div>
-
-
-            <div class="token-amount">
-
-              ${esc(
-                j.amount ||
-                "0"
-              )}
-
-
-              <div class="token-usd">
-                $0.00
-              </div>
-
-            </div>
-
-          </div>
-
-        `;
-
-      }
-    )
-    .join("");
 
 }
 
 
-
 /* =========================================================
-   BALANCE
-========================================================= */
+   IMPORT WALLET
+   ========================================================= */
 
-async function refreshWallet(
-  show = true
-) {
+function showImportWallet() {
+
+  openModal(
+    "Import Wallet",
+    `
+
+      <p
+        style="
+          color:#7187a5;
+          font-size:11px;
+          line-height:1.6;
+        "
+      >
+        Enter your 24-word recovery phrase.
+        It will not be sent to Firebase.
+      </p>
+
+
+      <textarea
+        id="seedPhrase"
+        class="text-input"
+        rows="5"
+        placeholder="word1 word2 word3 ..."
+        style="
+          width:100%;
+          resize:none;
+          margin-top:10px;
+        "
+      ></textarea>
+
+
+      <button
+        class="tgn-primary"
+        style="
+          width:100%;
+          border:0;
+          padding:13px;
+          border-radius:14px;
+          margin-top:10px;
+        "
+        onclick="importWallet()"
+      >
+        Import Wallet
+      </button>
+
+    `
+  );
+
+}
+
+
+async function importWallet() {
+
+  const input =
+    document.getElementById(
+      "seedPhrase"
+    );
+
+  if (!input)
+    return;
+
+
+  const phrase =
+    input.value
+      .trim()
+      .replace(/\s+/g, " ");
+
+
+  const words =
+    phrase.split(" ");
+
 
   if (
-    !walletData?.address
+    words.length !== 24 &&
+    words.length !== 12
   ) {
 
-    if (show)
-      showToast(
-        "Wallet address not available"
-      );
+    showToast(
+      "Enter a valid seed phrase"
+    );
 
     return;
 
@@ -1392,193 +1273,198 @@ async function refreshWallet(
 
   try {
 
-    const url =
-      new URL(
-        CONFIG.API_BASE +
-        "/getAddressBalance"
-      );
+    const keyPair =
+      await TonWeb.utils
+        .mnemonicToKeyPair(
+          words
+        );
 
 
-    url.searchParams.set(
-      "address",
-      walletData.address
-    );
+    const WalletClass =
+      tonweb.wallet.all.v4R2;
 
 
-    if (
-      CONFIG.API_KEY
-    ) {
-
-      url.searchParams.set(
-        "api_key",
-        CONFIG.API_KEY
-      );
-
-    }
-
-
-    const response =
-      await fetch(
-        url.toString(),
+    const wallet =
+      new WalletClass(
+        tonweb.provider,
         {
-          headers:
-            CONFIG.API_KEY
-              ? {
-                  "X-API-Key":
-                    CONFIG.API_KEY
-                }
-              : {}
+          publicKey:
+            keyPair.publicKey
         }
       );
 
 
-    const data =
-      await response.json();
+    const address =
+      await wallet.getAddress();
 
 
-    if (!data.ok)
-      throw new Error(
-        data.error ||
-        data.description ||
-        "API error"
+    const addressString =
+      address.toString(
+        true,
+        true,
+        true
       );
 
 
-    const nano =
-      Number(
-        data.result
-      );
+    saveWallet({
+
+      address:
+        addressString,
+
+      publicKey:
+        bytesToHex(
+          keyPair.publicKey
+        ),
+
+      mnemonic:
+        words,
+
+      importedAt:
+        Date.now()
+
+    });
 
 
-    tonBalance =
-      Number.isFinite(
-        nano
-      ) &&
-      nano >= 0
-
-        ? nano / 1e9
-
-        : 0;
+    await saveWalletToFirebase();
 
 
-    const hero =
-      document.getElementById(
-        "heroBalance"
-      );
+    closeModal();
+
+    showToast(
+      "Wallet imported ✓"
+    );
+
+    renderHome();
 
 
-    if (hero) {
-
-      hero.textContent =
-        tonBalance.toFixed(
-          2
-        ) +
-        " TON";
-
-    }
-
-
-    const list =
-      document.getElementById(
-        "tokenList"
-      );
-
-
-    if (list) {
-
-      list.innerHTML =
-        renderTonToken() +
-        renderJettons();
-
-    }
-
-
-    if (show)
-      showToast(
-        "Balance refreshed"
-      );
-
-  }
-
-  catch (error) {
+  } catch (error) {
 
     console.error(
+      "Import wallet error:",
       error
     );
 
-
-    if (show)
-      showToast(
-        "API not connected"
-      );
+    showToast(
+      "Invalid seed phrase"
+    );
 
   }
 
 }
 
 
-
 /* =========================================================
-   DEPOSIT
-========================================================= */
+   NEW WALLET PHRASE MODAL
+   ========================================================= */
 
-function showDeposit() {
+function showNewWalletPhrase(
+  mnemonic,
+  address
+) {
 
-  if (
-    !walletData?.address
-  ) {
-
-    openWalletSetup();
-
-    return;
-
-  }
+  const words =
+    Array.isArray(mnemonic)
+      ? mnemonic
+      : String(mnemonic)
+          .trim()
+          .split(/\s+/);
 
 
   openModal(
-    "Deposit",
-
+    "Wallet Created",
     `
 
-      <p>
-        Send TON to this wallet address.
-      </p>
+      <div
+        class="security-warning"
+      >
+        ⚠️ Write down these words.
+        Never share your recovery phrase.
+      </div>
 
 
       <div
-        class="address-row"
         style="
-          margin-top:12px
+          color:#7187a5;
+          font-size:10px;
+          margin-bottom:6px;
+        "
+      >
+        WALLET ADDRESS
+      </div>
+
+
+      <div
+        style="
+          color:#edf5ff;
+          font-size:10px;
+          word-break:break-all;
+          padding:10px;
+          border-radius:12px;
+          background:rgba(255,255,255,.035);
+          margin-bottom:14px;
+        "
+      >
+        ${escapeHtml(address)}
+      </div>
+
+
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+          margin-bottom:6px;
+        "
+      >
+        RECOVERY PHRASE
+      </div>
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(3,1fr);
+          gap:6px;
         "
       >
 
-        <div class="address-text">
-          ${esc(
-            walletData.address
-          )}
-        </div>
+        ${words.map(
+          function(word, index) {
 
+            return `
+              <div
+                style="
+                  padding:8px 5px;
+                  border-radius:9px;
+                  background:rgba(255,255,255,.035);
+                  color:#edf5ff;
+                  font-size:10px;
+                  text-align:center;
+                "
+              >
+                ${index + 1}.
+                ${escapeHtml(word)}
+              </div>
+            `;
 
-        <button
-          class="copy-pill"
-          onclick="copyAddress()"
-        >
-          Copy
-        </button>
+          }
+        ).join("")}
 
       </div>
 
 
-      <p
+      <button
+        class="tgn-primary"
         style="
-          color:#8196b5;
-          font-size:11px;
-          margin-top:12px
+          width:100%;
+          border:0;
+          padding:13px;
+          border-radius:14px;
+          margin-top:14px;
         "
+        onclick="closeModal();renderHome();"
       >
-        Only send assets on
-        TON Mainnet to this address.
-      </p>
+        I Saved My Phrase
+      </button>
 
     `
   );
@@ -1586,10 +1472,51 @@ function showDeposit() {
 }
 
 
+/* =========================================================
+   WALLET HELPERS
+   ========================================================= */
+
+function bytesToHex(
+  bytes
+) {
+
+  return Array.from(
+    bytes
+  )
+    .map(
+      b =>
+        b.toString(16)
+          .padStart(2, "0")
+    )
+    .join("");
+
+}
+
+
+function shortAddress(
+  address
+) {
+
+  if (!address)
+    return "No wallet";
+
+  if (
+    address.length <= 20
+  )
+    return address;
+
+  return (
+    address.slice(0, 9) +
+    "..." +
+    address.slice(-7)
+  );
+
+}
+
 
 /* =========================================================
    COPY
-========================================================= */
+   ========================================================= */
 
 async function copyAddress() {
 
@@ -1614,14 +1541,11 @@ async function copyAddress() {
         walletData.address
       );
 
-
     showToast(
-      "Wallet address copied ✓"
+      "Address copied ✓"
     );
 
-  }
-
-  catch (_) {
+  } catch (_) {
 
     showToast(
       "Copy failed"
@@ -1632,606 +1556,431 @@ async function copyAddress() {
 }
 
 
-
 /* =========================================================
-   WALLET SETUP
-========================================================= */
+   DEPOSIT
+   ========================================================= */
 
-function openWalletSetup() {
-
-  openModal(
-    "Set Up Wallet",
-
-    `
-
-      <div
-        class="wallet-choice-grid"
-      >
-
-        <button
-          class="btn primary"
-          onclick="showCreateWallet()"
-        >
-          ✨ Create New Wallet
-        </button>
-
-
-        <button
-          class="btn secondary"
-          onclick="showImportWallet()"
-        >
-          🔐 Import Seed Phrase
-        </button>
-
-      </div>
-
-
-      <div
-        class="warning"
-        style="
-          margin-top:14px
-        "
-      >
-
-        Seed phrases are extremely
-        sensitive. Never share them
-        with anyone.
-
-      </div>
-
-    `
-  );
-
-}
-
-
-
-/* =========================================================
-   CREATE WALLET SCREEN
-========================================================= */
-
-function showCreateWallet() {
-
-  openModal(
-    "Create New Wallet",
-
-    `
-
-      <p>
-        Generate a new TON wallet.
-      </p>
-
-
-      <div class="warning">
-
-        ⚠️ Your recovery phrase must be
-        written down and kept offline.
-
-        Do not send it to anyone.
-
-      </div>
-
-
-      <button
-        class="btn primary"
-        style="
-          width:100%;
-          margin-top:12px
-        "
-        onclick="createWalletNow()"
-      >
-        Generate Wallet
-      </button>
-
-    `
-  );
-
-}
-
-
-
-/* =========================================================
-   IMPORT SCREEN
-========================================================= */
-
-function showImportWallet() {
-
-  openModal(
-    "Import Seed Phrase",
-
-    `
-
-      <p>
-        Enter your existing TON
-        seed phrase.
-      </p>
-
-
-      <textarea
-        id="seedInput"
-        class="text-input"
-        rows="4"
-        autocomplete="off"
-        autocapitalize="none"
-        spellcheck="false"
-        placeholder="
-word1 word2 word3 ... word24
-"
-      ></textarea>
-
-
-      <div
-        class="warning"
-        style="
-          margin-top:10px
-        "
-      >
-
-        🔐 The phrase is used only
-        to derive the wallet address.
-
-        It is NOT saved by this app.
-
-      </div>
-
-
-      <button
-        class="btn primary"
-        style="
-          width:100%;
-          margin-top:12px
-        "
-        onclick="importWalletNow()"
-      >
-        Import Wallet
-      </button>
-
-    `
-  );
-
-}
-
-
-
-/* =========================================================
-   TON MODULES
-========================================================= */
-
-async function tonModules() {
-
-  const crypto =
-    await import(
-      "https://esm.sh/@ton/crypto"
-    );
-
-
-  const ton =
-    await import(
-      "https://esm.sh/@ton/ton"
-    );
-
-
-  return {
-    crypto,
-    ton
-  };
-
-}
-
-
-
-/* =========================================================
-   CREATE WALLET
-========================================================= */
-
-async function createWalletNow() {
-
-  showToast(
-    "Generating wallet…"
-  );
-
-
-  try {
-
-    const {
-      crypto,
-      ton
-    } =
-      await tonModules();
-
-
-    const mnemonic =
-      await crypto.mnemonicNew(
-        24
-      );
-
-
-    const keyPair =
-      await crypto.mnemonicToPrivateKey(
-        mnemonic
-      );
-
-
-    const wallet =
-      ton.WalletContractV4.create({
-
-        workchain: 0,
-
-        publicKey:
-          keyPair.publicKey,
-
-        walletId:
-          0x29a9a317
-
-      });
-
-
-    const address =
-      wallet.address.toString({
-
-        bounceable:
-          true,
-
-        urlSafe:
-          true
-
-      });
-
-
-    saveWallet({
-
-      address:
-
-        address,
-
-      publicKey:
-
-        bufferToHex(
-          keyPair.publicKey
-        ),
-
-      imported:
-        false,
-
-      createdAt:
-        Date.now()
-
-    });
-
-
-    /*
-      IMPORTANT:
-      mnemonic is NOT stored.
-    */
-
-
-    closeModal();
-
-
-    renderWallet();
-
-
-    openModal(
-      "Wallet Created ✓",
-
-      `
-
-        <p>
-          Your new TON wallet has been
-          created successfully.
-        </p>
-
-
-        <div
-          class="address-row"
-          style="
-            margin-top:12px
-          "
-        >
-
-          <div class="address-text">
-            ${esc(address)}
-          </div>
-
-
-          <button
-            class="copy-pill"
-            onclick="copyAddress()"
-          >
-            Copy
-          </button>
-
-        </div>
-
-
-        <div
-          class="warning"
-          style="
-            margin-top:14px
-          "
-        >
-
-          ⚠️ Recovery phrase is NOT
-          stored by this app.
-
-          If you need the recovery phrase,
-          create/import using a secure
-          wallet implementation.
-
-        </div>
-
-
-        <button
-          class="btn primary"
-          style="
-            width:100%;
-            margin-top:12px
-          "
-          onclick="closeModal()"
-        >
-          Continue
-        </button>
-
-      `
-    );
-
-
-  }
-
-  catch (error) {
-
-    console.error(
-      error
-    );
-
-
-    showToast(
-      "Wallet generation failed"
-    );
-
-  }
-
-}
-
-
-
-/* =========================================================
-   IMPORT WALLET
-========================================================= */
-
-async function importWalletNow() {
-
-  const input =
-    document.getElementById(
-      "seedInput"
-    );
-
-
-  const phrase =
-    input?.value
-      .trim()
-      .replace(
-        /\s+/g,
-        " "
-      );
-
-
-  if (!phrase) {
-
-    showToast(
-      "Enter seed phrase"
-    );
-
-    return;
-
-  }
-
-
-  const words =
-    phrase.split(
-      " "
-    );
-
+function showDeposit() {
 
   if (
-    ![12, 24].includes(
-      words.length
-    )
+    !walletData?.address
   ) {
 
-    showToast(
-      "Use a valid 12 or 24 word phrase"
-    );
+    renderWelcome();
 
     return;
 
   }
 
 
-  showToast(
-    "Importing wallet…"
+  openModal(
+    "Deposit TON",
+    `
+
+      <p
+        style="
+          color:#7187a5;
+          font-size:11px;
+          line-height:1.6;
+        "
+      >
+        Send TON only to this address.
+      </p>
+
+
+      <div
+        style="
+          margin-top:12px;
+          padding:13px;
+          border-radius:13px;
+          background:rgba(255,255,255,.035);
+          color:#edf5ff;
+          font-size:10px;
+          word-break:break-all;
+        "
+      >
+        ${escapeHtml(
+          walletData.address
+        )}
+      </div>
+
+
+      <button
+        class="tgn-primary"
+        style="
+          width:100%;
+          border:0;
+          padding:13px;
+          border-radius:14px;
+          margin-top:10px;
+        "
+        onclick="copyAddress();"
+      >
+        Copy Address
+      </button>
+
+    `
   );
+
+}
+
+
+/* =========================================================
+   BALANCE
+   ========================================================= */
+
+async function refreshBalance() {
+
+  if (
+    !walletData?.address
+  )
+    return;
 
 
   try {
 
-    const {
-      crypto,
-      ton
-    } =
-      await tonModules();
+    /*
+      Try Worker first.
 
+      Worker needs:
+      GET /api/balance?address=...
+    */
 
-    const valid =
-      await crypto.mnemonicValidate(
-        words
+    const url =
+      CONFIG.API_BASE +
+      "/api/balance?address=" +
+      encodeURIComponent(
+        walletData.address
       );
 
 
-    if (!valid) {
-
-      showToast(
-        "Invalid TON seed phrase"
+    const response =
+      await fetch(
+        url
       );
 
-      return;
+
+    if (!response.ok)
+      throw new Error(
+        "Worker balance endpoint unavailable"
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      data.ok &&
+      Number.isFinite(
+        Number(data.balance)
+      )
+    ) {
+
+      tonBalance =
+        Number(
+          data.balance
+        );
+
+    } else {
+
+      throw new Error(
+        "Invalid balance response"
+      );
 
     }
 
 
-    const keyPair =
-      await crypto.mnemonicToPrivateKey(
-        words
-      );
+  } catch (error) {
 
-
-    const wallet =
-      ton.WalletContractV4.create({
-
-        workchain: 0,
-
-        publicKey:
-          keyPair.publicKey,
-
-        walletId:
-          0x29a9a317
-
-      });
-
-
-    const address =
-      wallet.address.toString({
-
-        bounceable:
-          true,
-
-        urlSafe:
-          true
-
-      });
-
-
-    saveWallet({
-
-      address:
-        address,
-
-      publicKey:
-        bufferToHex(
-          keyPair.publicKey
-        ),
-
-      imported:
-        true,
-
-      createdAt:
-        Date.now()
-
-    });
-
+    console.warn(
+      "Balance:",
+      error.message
+    );
 
     /*
-      NEVER save phrase.
+      Don't fake a balance.
     */
-
-
-    input.value =
-      "";
-
-
-    closeModal();
-
-
-    renderWallet();
-
-
-    showToast(
-      "Wallet imported ✓"
-    );
 
   }
 
-  catch (error) {
 
-    console.error(
-      error
+  updateBalanceUI();
+
+}
+
+
+function updateBalanceUI() {
+
+  const home =
+    document.getElementById(
+      "homeBalance"
+    );
+
+  const asset =
+    document.getElementById(
+      "assetBalance"
     );
 
 
-    showToast(
-      "Import failed"
-    );
+  if (home) {
+
+    home.textContent =
+      tonBalance.toFixed(4) +
+      " TON";
+
+  }
+
+
+  if (asset) {
+
+    asset.textContent =
+      tonBalance.toFixed(4);
 
   }
 
 }
-
 
 
 /* =========================================================
-   BUFFER -> HEX
-========================================================= */
+   SAVE WALLET TO FIREBASE
+   ========================================================= */
 
-function bufferToHex(
-  buffer
-) {
+async function saveWalletToFirebase() {
+
+  if (
+    !firebaseReady ||
+    !db ||
+    !walletData?.address
+  )
+    return;
+
+
+  const telegramId =
+    getUserId();
+
+
+  if (!telegramId)
+    return;
+
 
   try {
 
-    return Array
-      .from(
-        new Uint8Array(
-          buffer
-        )
-      )
-      .map(
-        b =>
-          b.toString(
-            16
-          ).padStart(
-            2,
-            "0"
-          )
-      )
-      .join("");
+    const {
+      doc,
+      setDoc,
+      serverTimestamp
+    } =
+      await import(
+        "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
+      );
 
-  }
 
-  catch (_) {
+    await setDoc(
+      doc(
+        db,
+        "users",
+        telegramId
+      ),
+      {
+        telegramUserId:
+          telegramId,
 
-    return "";
+        walletAddress:
+          walletData.address,
+
+        updatedAt:
+          serverTimestamp()
+      },
+      {
+        merge:true
+      }
+    );
+
+
+  } catch (error) {
+
+    console.warn(
+      "Firebase wallet sync failed:",
+      error
+    );
 
   }
 
 }
 
+
+/* =========================================================
+   FIREBASE USER
+   ========================================================= */
+
+async function syncUserToFirebase() {
+
+  if (
+    !firebaseReady ||
+    !db
+  )
+    return;
+
+
+  const telegramId =
+    getUserId();
+
+
+  if (!telegramId)
+    return;
+
+
+  try {
+
+    const {
+      doc,
+      getDoc,
+      setDoc,
+      serverTimestamp
+    } =
+      await import(
+        "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
+      );
+
+
+    const ref =
+      doc(
+        db,
+        "users",
+        telegramId
+      );
+
+
+    const snap =
+      await getDoc(ref);
+
+
+    const u =
+      getTelegramUser()
+      || {};
+
+
+    const referralCode =
+      "TGN" +
+      telegramId.slice(-6);
+
+
+    const data = {
+
+      telegramUserId:
+        telegramId,
+
+      username:
+        u.username || "",
+
+      firstName:
+        u.first_name || "",
+
+      lastName:
+        u.last_name || "",
+
+      photoUrl:
+        u.photo_url || "",
+
+      walletAddress:
+        walletData?.address || "",
+
+      referralCode:
+
+        referralCode,
+
+      referredBy:
+        tg?.initDataUnsafe
+          ?.start_param || "",
+
+      updatedAt:
+        serverTimestamp()
+
+    };
+
+
+    if (!snap.exists()) {
+
+      data.points = 0;
+
+      data.airdropBalance = 0;
+
+      data.referralCount = 0;
+
+      data.createdAt =
+        serverTimestamp();
+
+    }
+
+
+    await setDoc(
+      ref,
+      data,
+      {
+        merge:true
+      }
+    );
+
+
+    const updated =
+      await getDoc(ref);
+
+
+    userData =
+      updated.exists()
+        ? updated.data()
+        : null;
+
+
+  } catch (error) {
+
+    console.warn(
+      "Firebase user sync failed:",
+      error
+    );
+
+  }
+
+}
 
 
 /* =========================================================
    WALLET PAGE
-========================================================= */
+   ========================================================= */
 
 function renderWallet() {
 
-  const address =
-    walletData?.address ||
-    "";
+  if (
+    !walletData
+  ) {
+
+    renderWelcome();
+
+    return;
+
+  }
 
 
   document.getElementById(
     "content"
   ).innerHTML = `
 
-    <div class="page-head">
+    <div class="tgn-page-title">
 
       <div>
 
-        <h1 class="page-title">
+        <h2>
           Wallet
-        </h1>
+        </h2>
 
-
-        <div class="page-subtitle">
+        <div
+          style="
+            color:#7187a5;
+            font-size:11px;
+            margin-top:3px;
+          "
+        >
           TON Mainnet
         </div>
 
@@ -2240,443 +1989,173 @@ function renderWallet() {
     </div>
 
 
-    <section class="card section">
+    <div
+      class="tgn-card"
+      style="
+        padding:18px;
+        margin-bottom:12px;
+      "
+    >
 
-      <div class="section-head">
-        Wallet
-      </div>
-
-
-      ${
-        address
-
-        ? `
-
-          <div class="address-row">
-
-            <div class="address-text">
-              ${esc(address)}
-            </div>
-
-
-            <button
-              class="copy-pill"
-              onclick="copyAddress()"
-            >
-              Copy
-            </button>
-
-          </div>
-
-
-          <button
-            class="btn secondary"
-            style="
-              width:100%;
-              margin-top:12px
-            "
-            onclick="openWalletSetup()"
-          >
-            Create / Import Another
-          </button>
-
-        `
-
-        : `
-
-          <div
-            class="empty-text"
-            style="
-              margin-bottom:12px
-            "
-          >
-            No wallet is configured.
-          </div>
-
-
-          <button
-            class="btn primary"
-            style="
-              width:100%
-            "
-            onclick="showCreateWallet()"
-          >
-            ✨ Create New Wallet
-          </button>
-
-
-          <button
-            class="btn secondary"
-            style="
-              width:100%;
-              margin-top:10px
-            "
-            onclick="showImportWallet()"
-          >
-            🔐 Import Seed Phrase
-          </button>
-
-        `
-      }
-
-    </section>
-
-
-    <section class="card section">
-
-      <div class="section-head">
-        Current Balance
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+        "
+      >
+        WALLET ADDRESS
       </div>
 
 
       <div
-        class="hero-balance"
         style="
-          font-size:40px;
-          margin:8px 0
+          color:#edf5ff;
+          font-size:11px;
+          line-height:1.7;
+          word-break:break-all;
+          margin-top:8px;
         "
       >
-        ${tonBalance.toFixed(2)}
-        TON
-      </div>
-
-
-      <div class="token-sub">
-        TON Mainnet
-      </div>
-
-    </section>
-
-
-    <section class="card section">
-
-      <div class="section-head">
-        Security
-      </div>
-
-
-      <div class="warning">
-
-        This frontend does not store
-        your seed phrase or private key.
-
-        Real sending/signing should use
-        a secure signer or TON Connect.
-
-      </div>
-
-    </section>
-
-  `;
-
-}
-
-
-
-/* =========================================================
-   ACTIVITY
-========================================================= */
-
-function renderActivity() {
-
-  document.getElementById(
-    "content"
-  ).innerHTML = `
-
-    <div class="page-head">
-
-      <div>
-
-        <h1 class="page-title">
-          Activity
-        </h1>
-
-
-        <div class="page-subtitle">
-          Real wallet transactions only
-        </div>
-
+        ${escapeHtml(
+          walletData.address
+        )}
       </div>
 
 
       <button
-        class="refresh"
-        onclick="loadTransactions()"
+        class="tgn-primary"
+        style="
+          width:100%;
+          border:0;
+          padding:12px;
+          border-radius:13px;
+          margin-top:12px;
+        "
+        onclick="copyAddress()"
       >
-        Refresh ↻
+        Copy Address
       </button>
 
     </div>
 
 
-    <div class="filter-row">
-
-      <button class="filter active">
-        All
-      </button>
-
-
-      <button class="filter">
-        Received
-      </button>
-
-
-      <button class="filter">
-        Sent
-      </button>
-
-
-      <button class="filter">
-        Jettons
-      </button>
-
-    </div>
-
-
-    <div id="activityList"></div>
-
-  `;
-
-
-  loadTransactions();
-
-}
-
-
-
-async function loadTransactions() {
-
-  const box =
-    document.getElementById(
-      "activityList"
-    );
-
-
-  if (!box)
-    return;
-
-
-  if (
-    !walletData?.address
-  ) {
-
-    box.innerHTML =
-      emptyActivity();
-
-    return;
-
-  }
-
-
-  try {
-
-    const url =
-      new URL(
-        CONFIG.API_BASE +
-        "/getTransactions"
-      );
-
-
-    url.searchParams.set(
-      "address",
-      walletData.address
-    );
-
-
-    url.searchParams.set(
-      "limit",
-      "20"
-    );
-
-
-    const response =
-      await fetch(
-        url.toString()
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if (!data.ok)
-      throw new Error(
-        data.error ||
-        "API error"
-      );
-
-
-    transactions =
-      Array.isArray(
-        data.result
-      )
-        ? data.result
-        : [];
-
-
-    if (
-      !transactions.length
-    ) {
-
-      box.innerHTML =
-        emptyActivity();
-
-      return;
-
-    }
-
-
-    box.innerHTML =
-      transactions
-        .map(
-          function (
-            tx,
-            i
-          ) {
-
-            return `
-
-              <div class="card tx">
-
-                <div class="tx-icon">
-                  ↗
-                </div>
-
-
-                <div class="tx-main">
-
-                  <div class="tx-title">
-                    Transaction
-                    ${i + 1}
-                  </div>
-
-
-                  <div class="tx-sub">
-
-                    ${
-                      tx.utime
-
-                        ? new Date(
-                            tx.utime *
-                            1000
-                          ).toLocaleString()
-
-                        : "On-chain"
-
-                    }
-
-                  </div>
-
-                </div>
-
-
-                <div class="tx-amount">
-
-                  ${
-                    tx.hash
-
-                      ? esc(
-                          String(
-                            tx.hash
-                          ).slice(
-                            0,
-                            6
-                          ) +
-                          "…"
-                        )
-
-                      : "View"
-                  }
-
-                </div>
-
-              </div>
-
-            `;
-
-          }
-        )
-        .join("");
-
-  }
-
-  catch (error) {
-
-    console.error(
-      error
-    );
-
-
-    box.innerHTML =
-      emptyActivity(
-        "Secure API/backend connection is required for history."
-      );
-
-  }
-
-}
-
-
-
-function emptyActivity(
-  message =
-    "No transactions yet."
-) {
-
-  return `
-
-    <div class="card empty">
-
-      <div class="empty-icon">
-        ◷
+    <div
+      class="tgn-card"
+      style="
+        padding:20px;
+        margin-bottom:12px;
+      "
+    >
+
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+        "
+      >
+        BALANCE
       </div>
 
 
-      <div class="empty-title">
-        No Activity
-      </div>
-
-
-      <div class="empty-text">
-        ${esc(message)}
+      <div
+        style="
+          color:#f5f9ff;
+          font-size:34px;
+          font-weight:850;
+          margin-top:5px;
+        "
+      >
+        ${tonBalance.toFixed(4)}
+        TON
       </div>
 
     </div>
+
+
+    <button
+      class="btn secondary"
+      style="
+        width:100%;
+        padding:13px;
+        border-radius:14px;
+      "
+      onclick="showWalletSecurity()"
+    >
+      🔐 Wallet Security
+    </button>
 
   `;
 
 }
 
+
+function showWalletSecurity() {
+
+  openModal(
+    "Wallet Security",
+    `
+
+      <div
+        class="security-warning"
+      >
+        Never share your recovery phrase
+        or private key with anyone.
+      </div>
+
+
+      <p
+        style="
+          color:#7187a5;
+          font-size:11px;
+          line-height:1.7;
+        "
+      >
+        TGN Wallet does not send your
+        seed phrase to Firebase.
+      </p>
+
+    `
+  );
+
+}
 
 
 /* =========================================================
    SEND
-========================================================= */
+   ========================================================= */
 
 function renderSend() {
+
+  if (
+    !walletData
+  ) {
+
+    renderWelcome();
+
+    return;
+
+  }
+
 
   document.getElementById(
     "content"
   ).innerHTML = `
 
-    <button
-      class="btn secondary back-btn"
-      onclick="switchNav('home')"
-    >
-      ← Back
-    </button>
-
-
-    <div class="page-head">
+    <div class="tgn-page-title">
 
       <div>
 
-        <h1 class="page-title">
+        <h2>
           Send
-        </h1>
+        </h2>
 
-
-        <div class="page-subtitle">
+        <div
+          style="
+            color:#7187a5;
+            font-size:11px;
+            margin-top:3px;
+          "
+        >
           TON transfer
         </div>
 
@@ -2685,28 +2164,43 @@ function renderSend() {
     </div>
 
 
-    <section class="card form-card">
+    <div
+      class="tgn-card"
+      style="
+        padding:18px;
+      "
+    >
 
-      <h2 class="form-title">
-        Send TON
-      </h2>
-
-
-      <label class="input-label">
-        Recipient Address
+      <label
+        style="
+          display:block;
+          color:#7187a5;
+          font-size:10px;
+          margin-bottom:7px;
+        "
+      >
+        RECIPIENT ADDRESS
       </label>
 
 
       <input
-        id="sendTo"
+        id="sendAddress"
         class="text-input"
-        placeholder="UQ… / EQ…"
+        type="text"
+        placeholder="UQ... / EQ..."
         autocomplete="off"
       >
 
 
-      <label class="input-label">
-        Amount
+      <label
+        style="
+          display:block;
+          color:#7187a5;
+          font-size:10px;
+          margin:15px 0 7px;
+        "
+      >
+        AMOUNT
       </label>
 
 
@@ -2721,41 +2215,45 @@ function renderSend() {
 
 
       <button
-        class="btn primary"
+        class="tgn-primary"
+        style="
+          width:100%;
+          border:0;
+          padding:13px;
+          border-radius:14px;
+          margin-top:14px;
+        "
         onclick="prepareSend()"
       >
-        Confirm Withdrawal
+        Confirm Send
       </button>
 
 
-      <p
+      <div
         style="
-          color:#7188a7;
-          font-size:11px;
+          color:#5f7593;
+          font-size:10px;
           line-height:1.6;
-          margin:12px 0 0
+          margin-top:12px;
         "
       >
+        Real blockchain broadcasting should
+        be performed by a secure signer or
+        TON Connect.
+      </div>
 
-        Real blockchain broadcasting
-        is not enabled in this public
-        frontend.
-
-      </p>
-
-    </section>
+    </div>
 
   `;
 
 }
 
 
-
 function prepareSend() {
 
   const to =
     document.getElementById(
-      "sendTo"
+      "sendAddress"
     )?.value.trim();
 
 
@@ -2779,14 +2277,26 @@ function prepareSend() {
 
 
   if (
-    !Number.isFinite(
-      amount
-    ) ||
+    !Number.isFinite(amount) ||
     amount <= 0
   ) {
 
     showToast(
-      "Enter a valid amount"
+      "Enter valid amount"
+    );
+
+    return;
+
+  }
+
+
+  if (
+    amount > tonBalance &&
+    tonBalance > 0
+  ) {
+
+    showToast(
+      "Insufficient balance"
     );
 
     return;
@@ -2795,40 +2305,60 @@ function prepareSend() {
 
 
   openModal(
-    "Transfer Ready",
-
+    "Confirm Transfer",
     `
 
-      <p>
-        <b>Recipient</b>
-      </p>
-
-
-      <p
+      <div
         style="
-          word-break:break-all
+          color:#7187a5;
+          font-size:10px;
         "
       >
-        ${esc(to)}
-      </p>
+        RECIPIENT
+      </div>
+
+      <div
+        style="
+          color:#edf5ff;
+          font-size:11px;
+          word-break:break-all;
+          margin-top:5px;
+        "
+      >
+        ${escapeHtml(to)}
+      </div>
 
 
-      <p>
-        <b>Amount</b>
-      </p>
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+          margin-top:14px;
+        "
+      >
+        AMOUNT
+      </div>
 
 
-      <p>
+      <div
+        style="
+          color:#edf5ff;
+          font-size:25px;
+          font-weight:850;
+          margin-top:4px;
+        "
+      >
         ${amount.toFixed(4)}
         TON
-      </p>
+      </div>
 
 
-      <div class="warning">
-
-        Real blockchain broadcasting
-        is not enabled yet.
-
+      <div
+        class="security-warning"
+        style="margin-top:14px"
+      >
+        Broadcasting is not performed
+        from this public frontend.
       </div>
 
     `
@@ -2837,449 +2367,198 @@ function prepareSend() {
 }
 
 
-
 /* =========================================================
-   AIRDROP TASKS
-========================================================= */
+   ACTIVITY
+   ========================================================= */
 
-const A_TASKS = [
-
-  {
-    id:
-      "daily",
-
-    icon:
-      "📅",
-
-    title:
-      "Daily Check-in",
-
-    sub:
-      "Check-in daily and earn points",
-
-    points:
-      20
-
-  },
-
-
-  {
-    id:
-      "channel",
-
-    icon:
-      "✈️",
-
-    title:
-      "Join our Telegram Channel",
-
-    sub:
-      "Join and stay updated",
-
-    points:
-      50
-
-  },
-
-
-  {
-    id:
-      "twitter",
-
-    icon:
-      "𝕏",
-
-    title:
-      "Follow us on Twitter",
-
-    sub:
-      "Follow and like our pinned post",
-
-    points:
-      30
-
-  },
-
-
-  {
-    id:
-      "group",
-
-    icon:
-      "👥",
-
-    title:
-      "Join our Telegram Group",
-
-    sub:
-      "Be active in our community",
-
-    points:
-      40
-
-  },
-
-
-  {
-    id:
-      "referral",
-
-    icon:
-      "🎁",
-
-    title:
-      "Invite 3 Friends",
-
-    sub:
-      "Invite friends using your referral link",
-
-    points:
-      100
-
-  }
-
-];
-
-
-
-/* =========================================================
-   AIRDROP PAGE
-========================================================= */
-
-function renderAirdrop() {
-
-  const completed =
-    airdropData.completed.length;
-
-
-  const today =
-    new Date()
-      .toISOString()
-      .slice(
-        0,
-        10
-      );
-
-
-  const canCheck =
-    airdropData.checkin !==
-    today;
-
+function renderActivity() {
 
   document.getElementById(
     "content"
   ).innerHTML = `
 
-    <div class="page-head">
+    <div class="tgn-page-title">
 
       <div>
 
-        <h1 class="page-title">
-          🎁 Airdrop
-        </h1>
-
-
-        <div class="page-subtitle">
-          Complete tasks and earn rewards
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <section class="card airdrop-summary">
-
-      <div>
-
-        <div class="token-sub">
-          Total Rewards
-        </div>
-
+        <h2>
+          Activity
+        </h2>
 
         <div
-          class="hero-balance"
           style="
-            font-size:34px
+            color:#7187a5;
+            font-size:11px;
+            margin-top:3px;
           "
         >
-          ${airdropData.rewards.toFixed(2)}
-          TGN
+          Wallet activity
         </div>
-
-
-        <div class="token-sub">
-          ≈ $0.00 USD
-        </div>
-
-      </div>
-
-
-      <div class="airdrop-stats">
-
-        <div>
-
-          <b>
-            ${completed}/${A_TASKS.length}
-          </b>
-
-          <small>
-            Tasks
-          </small>
-
-        </div>
-
-
-        <div>
-
-          <b>
-            ${airdropData.points}
-          </b>
-
-          <small>
-            Points
-          </small>
-
-        </div>
-
-
-        <div>
-
-          <b>
-            ${referralCount()}
-          </b>
-
-          <small>
-            Referrals
-          </small>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <section class="card section">
-
-      <div class="section-head">
-
-        Daily Check-in
-
-        <span class="status-pill">
-
-          ${
-            canCheck
-              ? "Available"
-              : "Completed"
-          }
-
-        </span>
-
-      </div>
-
-
-      <div class="task-row">
-
-        <div class="task-icon">
-          📅
-        </div>
-
-
-        <div class="task-main">
-
-          <b>
-            Daily Check-in
-          </b>
-
-
-          <span>
-
-            Check-in daily and earn points
-
-            <br>
-
-            <strong>
-              +20 Points
-            </strong>
-
-          </span>
-
-        </div>
-
-
-        <button
-          class="task-btn"
-          ${
-            canCheck
-              ? ""
-              : "disabled"
-          }
-          onclick="
-            completeAirdropTask(
-              'daily'
-            )
-          "
-        >
-
-          ${
-            canCheck
-              ? "Check-in"
-              : "Done ✓"
-          }
-
-        </button>
-
-      </div>
-
-    </section>
-
-
-    <section class="card section">
-
-      <div class="section-head">
-
-        Task Center
-
-
-        <button
-          class="refresh"
-          onclick="renderAirdrop()"
-        >
-          View All ›
-        </button>
-
-      </div>
-
-
-      <div
-        class="airdrop-task-list"
-      >
-
-        ${A_TASKS
-          .filter(
-            t =>
-              t.id !==
-              "daily"
-          )
-          .map(
-            taskHtml
-          )
-          .join("")}
-
-      </div>
-
-    </section>
-
-
-    <section class="card section">
-
-      <div class="section-head">
-
-        Airdrop History
-
-
-        <button
-          class="refresh"
-          onclick="openAirdropHistory()"
-        >
-          View ›
-        </button>
-
-      </div>
-
-
-      <div class="token-sub">
-
-        ${
-          completed
-            ? completed +
-              " task reward(s) earned"
-            : "No rewards yet"
-        }
-
-      </div>
-
-    </section>
-
-  `;
-
-}
-
-
-
-/* =========================================================
-   TASK HTML
-========================================================= */
-
-function taskHtml(
-  task
-) {
-
-  const done =
-    airdropData.completed
-      .includes(
-        task.id
-      );
-
-
-  return `
-
-    <div class="task-row">
-
-      <div class="task-icon">
-        ${task.icon}
-      </div>
-
-
-      <div class="task-main">
-
-        <b>
-          ${esc(
-            task.title
-          )}
-        </b>
-
-
-        <span>
-
-          ${esc(
-            task.sub
-          )}
-
-          <br>
-
-          <strong>
-            +${task.points}
-            Points
-          </strong>
-
-        </span>
 
       </div>
 
 
       <button
-        class="task-btn"
-        ${
-          done
-            ? "disabled"
-            : ""
-        }
-        onclick="
-          completeAirdropTask(
-            '${task.id}'
-          )
+        class="copy-id"
+        onclick="loadTransactions()"
+      >
+        Refresh
+      </button>
+
+    </div>
+
+
+    <div
+      id="activityList"
+    ></div>
+
+  `;
+
+
+  loadTransactions();
+
+}
+
+
+async function loadTransactions() {
+
+  const box =
+    document.getElementById(
+      "activityList"
+    );
+
+  if (!box)
+    return;
+
+
+  const local =
+    getLocalTransactions();
+
+
+  if (local.length) {
+
+    box.innerHTML =
+      local
+        .map(
+          function (tx) {
+
+            return `
+
+              <div
+                class="tgn-card"
+                style="
+                  padding:15px;
+                  margin-bottom:9px;
+                  display:flex;
+                  gap:12px;
+                  align-items:center;
+                "
+              >
+
+                <div
+                  style="
+                    width:42px;
+                    height:42px;
+                    border-radius:14px;
+                    background:rgba(42,156,255,.10);
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    color:#3ca8ff;
+                  "
+                >
+                  ↗
+                </div>
+
+
+                <div
+                  style="
+                    flex:1;
+                  "
+                >
+
+                  <div
+                    style="
+                      color:#edf5ff;
+                      font-size:13px;
+                      font-weight:800;
+                    "
+                  >
+                    ${escapeHtml(
+                      tx.type ||
+                      "Transaction"
+                    )}
+                  </div>
+
+                  <div
+                    style="
+                      color:#7187a5;
+                      font-size:10px;
+                      margin-top:3px;
+                    "
+                  >
+                    ${escapeHtml(
+                      tx.date ||
+                      ""
+                    )}
+                  </div>
+
+                </div>
+
+
+                <div
+                  style="
+                    color:#edf5ff;
+                    font-size:11px;
+                    font-weight:800;
+                  "
+                >
+                  ${escapeHtml(
+                    tx.amount ||
+                    ""
+                  )}
+                </div>
+
+              </div>
+
+            `;
+
+          }
+        )
+        .join("");
+
+    return;
+
+  }
+
+
+  box.innerHTML = `
+
+    <div class="tgn-empty">
+
+      <div class="tgn-empty-icon">
+        ◷
+      </div>
+
+      <div
+        style="
+          color:#edf5ff;
+          font-size:17px;
+          font-weight:800;
         "
       >
+        No Activity
+      </div>
 
-        ${
-          done
-            ? "✓"
-            : "Go"
-        }
-
-      </button>
+      <div
+        style="
+          color:#7187a5;
+          font-size:11px;
+          margin-top:6px;
+        "
+      >
+        Transactions will appear here.
+      </div>
 
     </div>
 
@@ -3288,61 +2567,619 @@ function taskHtml(
 }
 
 
+function getLocalTransactions() {
 
-/* =========================================================
-   REFERRALS
-========================================================= */
+  try {
 
-function referralCount() {
+    const data =
+      JSON.parse(
+        localStorage.getItem(
+          CONFIG.TX_STORAGE
+        )
+      );
 
-  return Number(
-    airdropData.referrals ||
-    0
-  );
+    return Array.isArray(data)
+      ? data
+      : [];
+
+  } catch (_) {
+
+    return [];
+
+  }
 
 }
 
 
+/* =========================================================
+   AIRDROP
+   ========================================================= */
+
+async function renderAirdrop() {
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="tgn-page-title">
+
+      <div>
+
+        <h2>
+          Airdrop
+        </h2>
+
+        <div
+          style="
+            color:#3ca8ff;
+            font-size:11px;
+            margin-top:3px;
+          "
+        >
+          TGN Rewards
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="tgn-card"
+      style="
+        padding:20px;
+        margin-bottom:12px;
+      "
+    >
+
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+        "
+      >
+        AIRDROP POINTS
+      </div>
+
+
+      <div
+        id="airdropPoints"
+        style="
+          color:#f5f9ff;
+          font-size:34px;
+          font-weight:850;
+          margin-top:4px;
+        "
+      >
+        0
+      </div>
+
+
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+          margin-top:4px;
+        "
+      >
+        Complete tasks and invite friends.
+      </div>
+
+    </div>
+
+
+    <div
+      class="tgn-card"
+      style="
+        padding:17px;
+        margin-bottom:12px;
+      "
+    >
+
+      <div
+        style="
+          color:#edf5ff;
+          font-size:14px;
+          font-weight:800;
+        "
+      >
+        Invite Friends
+      </div>
+
+
+      <div
+        style="
+          color:#7187a5;
+          font-size:10px;
+          line-height:1.6;
+          margin-top:5px;
+        "
+      >
+        Invite friends with your referral
+        link and earn TGN points.
+      </div>
+
+
+      <button
+        class="tgn-primary"
+        style="
+          width:100%;
+          border:0;
+          padding:12px;
+          border-radius:13px;
+          margin-top:12px;
+        "
+        onclick="shareReferral()"
+      >
+        👥 Invite Friends
+      </button>
+
+    </div>
+
+
+    <div
+      id="airdropTasks"
+    ></div>
+
+  `;
+
+
+  await loadAirdropData();
+
+}
+
+
+async function loadAirdropData() {
+
+  const points =
+    document.getElementById(
+      "airdropPoints"
+    );
+
+  const tasks =
+    document.getElementById(
+      "airdropTasks"
+    );
+
+
+  if (
+    !firebaseReady ||
+    !db
+  ) {
+
+    if (points)
+      points.textContent = "0";
+
+    if (tasks)
+      tasks.innerHTML = `
+        <div class="tgn-empty">
+          <div class="tgn-empty-icon">
+            🎁
+          </div>
+
+          <div
+            style="
+              color:#edf5ff;
+              font-size:17px;
+              font-weight:800;
+            "
+          >
+            Firebase not ready
+          </div>
+
+          <p
+            style="
+              color:#7187a5;
+              font-size:11px;
+            "
+          >
+            Connect Firebase first.
+          </p>
+        </div>
+      `;
+
+    return;
+
+  }
+
+
+  try {
+
+    const {
+      doc,
+      getDoc,
+      collection,
+      getDocs,
+      query,
+      where
+    } =
+      await import(
+        "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
+      );
+
+
+    const uid =
+      getUserId();
+
+
+    if (uid) {
+
+      const userSnap =
+        await getDoc(
+          doc(
+            db,
+            "users",
+            uid
+          )
+        );
+
+
+      if (
+        userSnap.exists()
+      ) {
+
+        const data =
+          userSnap.data();
+
+        if (points) {
+
+          points.textContent =
+            Number(
+              data.points || 0
+            ).toLocaleString();
+
+        }
+
+      }
+
+    }
+
+
+    const q =
+      query(
+        collection(
+          db,
+          "airdropTasks"
+        ),
+        where(
+          "active",
+          "==",
+          true
+        )
+      );
+
+
+    const snapshot =
+      await getDocs(q);
+
+
+    const taskList =
+      snapshot.docs.map(
+        function (docSnap) {
+
+          return {
+            id:
+              docSnap.id,
+
+            ...docSnap.data()
+          };
+
+        }
+      );
+
+
+    window.__TGN_AIRDROP_TASKS =
+      Object.fromEntries(
+        taskList.map(
+          task => [
+            task.id,
+            task
+          ]
+        )
+      );
+
+
+    if (
+      !taskList.length
+    ) {
+
+      if (tasks)
+        tasks.innerHTML = `
+          <div class="tgn-empty">
+
+            <div class="tgn-empty-icon">
+              🎁
+            </div>
+
+            <div
+              style="
+                color:#edf5ff;
+                font-size:17px;
+                font-weight:800;
+              "
+            >
+              No Airdrop Tasks
+            </div>
+
+            <p
+              style="
+                color:#7187a5;
+                font-size:11px;
+              "
+            >
+              Tasks will appear here
+              when published.
+            </p>
+
+          </div>
+        `;
+
+      return;
+
+    }
+
+
+    if (tasks) {
+
+      tasks.innerHTML =
+        taskList
+          .map(
+            function (task) {
+
+              return `
+
+                <div
+                  class="tgn-card"
+                  style="
+                    padding:15px;
+                    margin-bottom:9px;
+                  "
+                >
+
+                  <div
+                    style="
+                      display:flex;
+                      align-items:center;
+                      gap:12px;
+                    "
+                  >
+
+                    <div
+                      style="
+                        width:44px;
+                        height:44px;
+                        border-radius:14px;
+                        background:rgba(42,156,255,.10);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        font-size:21px;
+                      "
+                    >
+                      🎁
+                    </div>
+
+
+                    <div
+                      style="
+                        flex:1;
+                      "
+                    >
+
+                      <div
+                        style="
+                          color:#edf5ff;
+                          font-size:14px;
+                          font-weight:800;
+                        "
+                      >
+                        ${escapeHtml(
+                          task.title ||
+                          "Airdrop Task"
+                        )}
+                      </div>
+
+
+                      <div
+                        style="
+                          color:#7187a5;
+                          font-size:10px;
+                          margin-top:4px;
+                        "
+                      >
+                        +${Number(
+                          task.reward ||
+                          0
+                        )}
+                        points
+                      </div>
+
+                    </div>
+
+
+                    <button
+                      class="tgn-primary"
+                      style="
+                        padding:9px 12px;
+                        border:0;
+                        border-radius:11px;
+                        font-size:11px;
+                      "
+                      onclick="
+                        claimAirdropTask(
+                          '${escapeHtml(task.id)}'
+                        )
+                      "
+                    >
+                      Claim
+                    </button>
+
+                  </div>
+
+
+                  <div
+                    style="
+                      color:#8196b5;
+                      font-size:11px;
+                      line-height:1.5;
+                      margin-top:9px;
+                    "
+                  >
+                    ${escapeHtml(
+                      task.description ||
+                      ""
+                    )}
+                  </div>
+
+                </div>
+
+              `;
+
+            }
+          )
+          .join("");
+
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      "Airdrop error:",
+      error
+    );
+
+
+    if (tasks) {
+
+      tasks.innerHTML = `
+        <div class="tgn-empty">
+
+          <div class="tgn-empty-icon">
+            ⚠️
+          </div>
+
+          <div
+            style="
+              color:#edf5ff;
+              font-size:17px;
+              font-weight:800;
+            "
+          >
+            Airdrop unavailable
+          </div>
+
+          <p
+            style="
+              color:#7187a5;
+              font-size:11px;
+            "
+          >
+            Check Firestore rules.
+          </p>
+
+        </div>
+      `;
+
+    }
+
+  }
+
+}
+
 
 /* =========================================================
-   COMPLETE AIRDROP
-========================================================= */
+   CLAIM AIRDROP
+   ========================================================= */
 
-function completeAirdropTask(
-  id
+async function claimAirdropTask(
+  taskId
 ) {
 
   const task =
-    A_TASKS.find(
-      x =>
-        x.id === id
-    );
+    window.__TGN_AIRDROP_TASKS
+      ?.[
+        taskId
+      ];
 
 
   if (!task)
     return;
 
 
+  const uid =
+    getUserId();
+
+
+  if (!uid) {
+
+    showToast(
+      "Open inside Telegram"
+    );
+
+    return;
+
+  }
+
+
   if (
-    id === "daily"
+    !firebaseReady ||
+    !db
   ) {
 
-    const today =
-      new Date()
-        .toISOString()
-        .slice(
-          0,
-          10
-        );
+    showToast(
+      "Firebase unavailable"
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const {
+      doc,
+      getDoc,
+      runTransaction,
+      serverTimestamp
+    } =
+      await import(
+        "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
+      );
+
+
+    const userRef =
+      doc(
+        db,
+        "users",
+        uid
+      );
+
+
+    const claimRef =
+      doc(
+        db,
+        "userTasks",
+        uid +
+        "_" +
+        taskId
+      );
+
+
+    const previous =
+      await getDoc(
+        claimRef
+      );
 
 
     if (
-      airdropData.checkin ===
-      today
+      previous.exists() &&
+      previous.data().completed
     ) {
 
       showToast(
-        "Already checked in today"
+        "Already claimed"
       );
 
       return;
@@ -3350,18 +3187,159 @@ function completeAirdropTask(
     }
 
 
-    airdropData.checkin =
-      today;
+    const reward =
+      Number(
+        task.reward || 0
+      );
+
+
+    if (
+      !Number.isFinite(
+        reward
+      ) ||
+      reward <= 0
+    ) {
+
+      showToast(
+        "Invalid reward"
+      );
+
+      return;
+
+    }
+
+
+    await runTransaction(
+      db,
+      async function (
+        transaction
+      ) {
+
+        const userSnap =
+          await transaction.get(
+            userRef
+          );
+
+
+        const current =
+          userSnap.exists()
+            ? userSnap.data()
+            : {};
+
+
+        transaction.set(
+          userRef,
+          {
+
+            points:
+              Number(
+                current.points ||
+                0
+              ) +
+              reward,
+
+            airdropBalance:
+              Number(
+                current.airdropBalance ||
+                0
+              ) +
+              reward,
+
+            updatedAt:
+              serverTimestamp()
+
+          },
+          {
+            merge:true
+          }
+        );
+
+
+        transaction.set(
+          claimRef,
+          {
+
+            userId:
+              uid,
+
+            taskId:
+              taskId,
+
+            reward:
+              reward,
+
+            completed:
+              true,
+
+            completedAt:
+              serverTimestamp()
+
+          },
+          {
+            merge:true
+          }
+        );
+
+      }
+    );
+
+
+    showToast(
+      "+" +
+      reward +
+      " points ✓"
+    );
+
+
+    renderAirdrop();
+
+
+  } catch (error) {
+
+    console.error(
+      "Claim error:",
+      error
+    );
+
+    showToast(
+      "Claim failed. Check Firestore rules."
+    );
 
   }
 
-  else if (
-    airdropData.completed
-      .includes(id)
-  ) {
+}
+
+
+/* =========================================================
+   REFERRAL
+   ========================================================= */
+
+function getReferralCode() {
+
+  const uid =
+    getUserId();
+
+  if (!uid)
+    return "";
+
+  return (
+    "TGN" +
+    uid.slice(-6)
+  );
+
+}
+
+
+async function shareReferral() {
+
+  const code =
+    getReferralCode();
+
+
+  if (!code) {
 
     showToast(
-      "Task already completed"
+      "Open inside Telegram"
     );
 
     return;
@@ -3369,164 +3347,145 @@ function completeAirdropTask(
   }
 
 
-  if (
-    !airdropData.completed
-      .includes(id)
-  ) {
+  /*
+    Change YOUR_BOT_USERNAME
+    to your actual Telegram bot username.
+  */
 
-    airdropData.completed.push(
-      id
+  const link =
+    "https://t.me/YOUR_BOT_USERNAME?start=" +
+    encodeURIComponent(
+      code
+    );
+
+
+  const text =
+    "Join TGN Wallet and earn Airdrop rewards 🎁";
+
+
+  try {
+
+    if (
+      tg &&
+      typeof tg.openTelegramLink ===
+      "function"
+    ) {
+
+      tg.openTelegramLink(
+        "https://t.me/share/url?url=" +
+        encodeURIComponent(
+          link
+        ) +
+        "&text=" +
+        encodeURIComponent(
+          text
+        )
+      );
+
+      return;
+
+    }
+
+  } catch (_) {}
+
+
+  try {
+
+    await navigator
+      .clipboard
+      .writeText(
+        link
+      );
+
+    showToast(
+      "Referral link copied ✓"
+    );
+
+  } catch (_) {
+
+    showToast(
+      link
     );
 
   }
 
-
-  airdropData.points +=
-    task.points;
-
-
-  /*
-    Demo reward calculation.
-    Real TGN reward must be verified
-    by your backend before crediting.
-  */
-
-  airdropData.rewards +=
-    task.points / 10;
-
-
-  saveAirdrop();
-
-
-  renderAirdrop();
-
-
-  showToast(
-    "Reward added +" +
-    task.points +
-    " points ✓"
-  );
-
 }
-
-
-
-/* =========================================================
-   AIRDROP HISTORY
-========================================================= */
-
-function openAirdropHistory() {
-
-  const rows =
-    airdropData.completed
-
-      .map(
-        id => {
-
-          const task =
-            A_TASKS.find(
-              x =>
-                x.id === id
-            );
-
-
-          if (!task)
-            return "";
-
-
-          return `
-
-            <div class="info-row">
-
-              <span class="info-label">
-
-                ${esc(
-                  task.title
-                )}
-
-              </span>
-
-
-              <span class="info-value">
-
-                +${task.points}
-                Points
-
-              </span>
-
-            </div>
-
-          `;
-
-        }
-      )
-
-      .join("");
-
-
-  openModal(
-
-    "Airdrop History",
-
-    rows ||
-
-    `
-
-      <div class="empty-text">
-        No rewards yet.
-      </div>
-
-    `
-
-  );
-
-}
-
 
 
 /* =========================================================
    PROFILE
-========================================================= */
+   ========================================================= */
 
 function renderProfile() {
 
   const u =
-    user();
+    getTelegramUser();
 
 
   const photo =
-    u.photo_url ||
-    "";
+    getUserPhoto();
+
+
+  const initial =
+    getUserName()
+      .charAt(0)
+      .toUpperCase();
 
 
   const avatar =
     photo
 
       ? `
-
         <img
-          class="profile-avatar"
-          src="${esc(photo)}"
-          alt="Telegram profile"
+          src="${escapeHtml(photo)}"
+          style="
+            width:70px;
+            height:70px;
+            object-fit:cover;
+            border-radius:22px;
+            display:block;
+          "
+          onerror="
+            this.style.display='none';
+            this.nextElementSibling.style.display='flex';
+          "
         >
 
+        <div
+          style="
+            display:none;
+            width:70px;
+            height:70px;
+            border-radius:22px;
+            align-items:center;
+            justify-content:center;
+            background:linear-gradient(145deg,#299cff,#176de7);
+            color:#fff;
+            font-size:27px;
+            font-weight:800;
+          "
+        >
+          ${escapeHtml(initial)}
+        </div>
       `
 
       : `
-
-        <div class="avatar-fallback">
-
-          ${esc(
-            (
-              u.first_name ||
-              "T"
-            )
-            .charAt(0)
-            .toUpperCase()
-          )}
-
+        <div
+          style="
+            width:70px;
+            height:70px;
+            border-radius:22px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:linear-gradient(145deg,#299cff,#176de7);
+            color:#fff;
+            font-size:27px;
+            font-weight:800;
+          "
+        >
+          ${escapeHtml(initial)}
         </div>
-
       `;
 
 
@@ -3534,11 +3493,11 @@ function renderProfile() {
     "content"
   ).innerHTML = `
 
-    <div class="page-head">
+    <div class="tgn-page-title">
 
-      <h1 class="page-title">
+      <h2>
         Profile
-      </h1>
+      </h2>
 
     </div>
 
@@ -3547,12 +3506,9 @@ function renderProfile() {
 
       <div class="profile-main">
 
-        <div
-          class="profile-avatar-wrap"
-        >
+        <div class="profile-avatar-wrap">
 
           ${avatar}
-
 
           <span
             class="profile-online"
@@ -3564,23 +3520,24 @@ function renderProfile() {
         <div>
 
           <div class="profile-name">
-            ${esc(
-              userName()
+            ${escapeHtml(
+              getUserName()
             )}
           </div>
 
 
           <div class="profile-username">
-            ${esc(
-              username()
+            ${escapeHtml(
+              getUsername()
             )}
           </div>
 
 
           <div class="profile-id">
             Telegram ID:
-            ${esc(
-              userId()
+            ${escapeHtml(
+              getUserId() ||
+              "Unavailable"
             )}
           </div>
 
@@ -3593,11 +3550,15 @@ function renderProfile() {
 
         <div class="profile-stat">
 
-          <div class="profile-stat-value">
+          <div
+            class="profile-stat-value"
+          >
             Telegram
           </div>
 
-          <div class="profile-stat-label">
+          <div
+            class="profile-stat-label"
+          >
             Account
           </div>
 
@@ -3606,11 +3567,15 @@ function renderProfile() {
 
         <div class="profile-stat">
 
-          <div class="profile-stat-value">
+          <div
+            class="profile-stat-value"
+          >
             TON
           </div>
 
-          <div class="profile-stat-label">
+          <div
+            class="profile-stat-label"
+          >
             Network
           </div>
 
@@ -3619,16 +3584,16 @@ function renderProfile() {
 
         <div class="profile-stat">
 
-          <div class="profile-stat-value">
-            ${
-              photo
-                ? "✓"
-                : "—"
-            }
+          <div
+            class="profile-stat-value"
+          >
+            ${walletData ? "✓" : "—"}
           </div>
 
-          <div class="profile-stat-label">
-            Photo
+          <div
+            class="profile-stat-label"
+          >
+            Wallet
           </div>
 
         </div>
@@ -3638,19 +3603,42 @@ function renderProfile() {
     </section>
 
 
-    <section class="card profile-menu">
+    <section class="tgn-card profile-menu">
 
       <button
         class="profile-menu-item"
-        onclick="openPersonal()"
+        onclick="showPersonalInfo()"
       >
 
-        <span>
-          ♙
-          Personal Information
+        <span class="profile-menu-left">
+
+          <span
+            class="profile-menu-icon"
+          >
+            ♙
+          </span>
+
+          <span>
+
+            <div
+              class="profile-menu-title"
+            >
+              Personal Information
+            </div>
+
+            <div
+              class="profile-menu-sub"
+            >
+              Name, Telegram ID & account
+            </div>
+
+          </span>
+
         </span>
 
-        <span>
+        <span
+          class="profile-menu-arrow"
+        >
           ›
         </span>
 
@@ -3659,15 +3647,38 @@ function renderProfile() {
 
       <button
         class="profile-menu-item"
-        onclick="openSecurity()"
+        onclick="showReferralInfo()"
       >
 
-        <span>
-          ◉
-          Security
+        <span class="profile-menu-left">
+
+          <span
+            class="profile-menu-icon"
+          >
+            👥
+          </span>
+
+          <span>
+
+            <div
+              class="profile-menu-title"
+            >
+              Invite & Referral
+            </div>
+
+            <div
+              class="profile-menu-sub"
+            >
+              Invite friends and earn points
+            </div>
+
+          </span>
+
         </span>
 
-        <span>
+        <span
+          class="profile-menu-arrow"
+        >
           ›
         </span>
 
@@ -3676,15 +3687,78 @@ function renderProfile() {
 
       <button
         class="profile-menu-item"
-        onclick="openHelp()"
+        onclick="showWalletSecurity()"
       >
 
-        <span>
-          ?
-          Help & Support
+        <span class="profile-menu-left">
+
+          <span
+            class="profile-menu-icon"
+          >
+            ◉
+          </span>
+
+          <span>
+
+            <div
+              class="profile-menu-title"
+            >
+              Security
+            </div>
+
+            <div
+              class="profile-menu-sub"
+            >
+              Protect your wallet
+            </div>
+
+          </span>
+
         </span>
 
-        <span>
+        <span
+          class="profile-menu-arrow"
+        >
+          ›
+        </span>
+
+      </button>
+
+
+      <button
+        class="profile-menu-item"
+        onclick="showHelp()"
+      >
+
+        <span class="profile-menu-left">
+
+          <span
+            class="profile-menu-icon"
+          >
+            ?
+          </span>
+
+          <span>
+
+            <div
+              class="profile-menu-title"
+            >
+              Help & Support
+            </div>
+
+            <div
+              class="profile-menu-sub"
+            >
+              TGN Wallet information
+            </div>
+
+          </span>
+
+        </span>
+
+        <span
+          class="profile-menu-arrow"
+        >
           ›
         </span>
 
@@ -3696,16 +3770,113 @@ function renderProfile() {
         onclick="logoutWallet()"
       >
 
-        <span>
-          ↪
-          Log Out
+        <span class="profile-menu-left">
+
+          <span
+            class="profile-menu-icon"
+          >
+            ↪
+          </span>
+
+          <span>
+
+            <div
+              class="profile-menu-title"
+            >
+              Log Out
+            </div>
+
+            <div
+              class="profile-menu-sub"
+            >
+              Remove local wallet
+            </div>
+
+          </span>
+
         </span>
 
-        <span>
+        <span
+          class="profile-menu-arrow"
+        >
           ›
         </span>
 
       </button>
+
+    </section>
+
+
+    <section
+      class="tgn-card info-card"
+      style="margin-top:13px;"
+    >
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Name
+        </span>
+
+        <span class="info-value">
+          ${escapeHtml(
+            getUserName()
+          )}
+        </span>
+
+      </div>
+
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Username
+        </span>
+
+        <span class="info-value">
+          ${escapeHtml(
+            getUsername()
+          )}
+        </span>
+
+      </div>
+
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Telegram ID
+        </span>
+
+        <span class="info-value">
+          ${escapeHtml(
+            getUserId() ||
+            "Unavailable"
+          )}
+        </span>
+
+      </div>
+
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Wallet
+        </span>
+
+        <span class="info-value">
+          ${
+            walletData
+              ? escapeHtml(
+                  shortAddress(
+                    walletData.address
+                  )
+                )
+              : "Not created"
+          }
+        </span>
+
+      </div>
 
     </section>
 
@@ -3714,17 +3885,14 @@ function renderProfile() {
 }
 
 
-
 /* =========================================================
    PROFILE MODALS
-========================================================= */
+   ========================================================= */
 
-function openPersonal() {
+function showPersonalInfo() {
 
   openModal(
-
     "Personal Information",
-
     `
 
       <div class="info-card">
@@ -3735,10 +3903,9 @@ function openPersonal() {
             Name
           </span>
 
-
           <span class="info-value">
-            ${esc(
-              userName()
+            ${escapeHtml(
+              getUserName()
             )}
           </span>
 
@@ -3751,10 +3918,9 @@ function openPersonal() {
             Username
           </span>
 
-
           <span class="info-value">
-            ${esc(
-              username()
+            ${escapeHtml(
+              getUsername()
             )}
           </span>
 
@@ -3767,10 +3933,10 @@ function openPersonal() {
             Telegram ID
           </span>
 
-
           <span class="info-value">
-            ${esc(
-              userId()
+            ${escapeHtml(
+              getUserId() ||
+              "Unavailable"
             )}
           </span>
 
@@ -3779,159 +3945,184 @@ function openPersonal() {
       </div>
 
     `
-
   );
 
 }
 
 
+function showReferralInfo() {
 
-function openSecurity() {
+  const code =
+    getReferralCode();
+
 
   openModal(
-
-    "Security",
-
+    "Invite & Referral",
     `
 
-      <div class="warning">
+      <p
+        style="
+          color:#7187a5;
+          font-size:11px;
+          line-height:1.6;
+        "
+      >
+        Your referral code:
+      </p>
 
-        Never share a seed phrase
-        or private key.
 
-        This app does not store
-        your seed phrase or private key.
-
+      <div
+        style="
+          padding:13px;
+          border-radius:13px;
+          background:rgba(255,255,255,.035);
+          color:#3ca8ff;
+          text-align:center;
+          font-size:18px;
+          font-weight:800;
+        "
+      >
+        ${escapeHtml(code)}
       </div>
 
 
-      <p>
-
-        Real sending/signing should
-        use TON Connect or a properly
-        secured signer.
-
-      </p>
+      <button
+        class="tgn-primary"
+        style="
+          width:100%;
+          border:0;
+          padding:13px;
+          border-radius:14px;
+          margin-top:12px;
+        "
+        onclick="shareReferral()"
+      >
+        Invite Friends
+      </button>
 
     `
-
   );
 
 }
 
 
-
-function openHelp() {
+function showHelp() {
 
   openModal(
-
     "Help & Support",
-
     `
 
-      <p>
-        <b>
-          TGN Wallet
-        </b>
+      <p
+        style="
+          color:#edf5ff;
+          font-size:15px;
+          font-weight:800;
+        "
+      >
+        TGN Wallet
       </p>
 
 
-      <p>
-
-        TON Mainnet wallet interface
-        with balance, activity, wallet
-        setup and airdrop UI.
-
+      <p
+        style="
+          color:#7187a5;
+          font-size:11px;
+          line-height:1.7;
+        "
+      >
+        TON wallet interface with
+        Airdrop and Referral features.
       </p>
 
     `
-
   );
 
 }
-
 
 
 /* =========================================================
    LOGOUT
-========================================================= */
+   ========================================================= */
 
 function logoutWallet() {
 
   openModal(
-
     "Log Out",
-
     `
 
-      <p>
-
-        This removes the locally stored
-        wallet address from this device.
-
+      <p
+        style="
+          color:#7187a5;
+          font-size:11px;
+          line-height:1.6;
+        "
+      >
+        This removes the wallet data
+        stored locally on this device.
       </p>
 
 
+      <div
+        class="security-warning"
+      >
+        Make sure your recovery phrase
+        is safely backed up before logging out.
+      </div>
+
+
       <button
-        class="btn primary"
+        class="tgn-primary"
+        style="
+          width:100%;
+          border:0;
+          padding:13px;
+          border-radius:14px;
+        "
         onclick="
-          localStorage.removeItem(
-            CONFIG.WALLET_STORAGE
-          );
-
-          walletData = null;
-
+          clearWallet();
           closeModal();
-
           switchNav('home');
-
-          showToast(
-            'Wallet session removed'
-          );
+          showToast('Wallet removed');
         "
       >
-
         Confirm Log Out
-
       </button>
 
     `
-
   );
 
 }
 
 
-
 /* =========================================================
-   START
-========================================================= */
+   STARTUP
+   ========================================================= */
 
-function boot() {
+async function boot() {
 
-  injectExtraStyles();
+  initIcons();
 
-  initNavIcons();
+  initTonWeb();
 
   renderHome();
 
 
-  document
-    .getElementById(
-      "nav-home"
-    )
-    ?.classList.add(
-      "active"
-    );
+  /*
+    Firebase is initialized separately
+    so the UI doesn't freeze if Firebase
+    has a problem.
+  */
+
+  await initFirebase();
+
+  await syncUserToFirebase();
 
 
-  if (
-    walletData
-  ) {
+  if (walletData) {
 
-    refreshWallet(
-      false
-    );
+    await saveWalletToFirebase();
+
+    await refreshBalance();
 
   }
 
