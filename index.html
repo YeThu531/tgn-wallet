@@ -5,220 +5,103 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    content="width=device-width, initial-scale=1.0,
+             maximum-scale=1.0, user-scalable=no"
   >
 
   <meta name="theme-color" content="#07101f">
 
   <title>TGN Wallet</title>
 
-  <!-- Telegram Web App -->
+  <!-- Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <!-- TON Web -->
   <script src="https://cdn.jsdelivr.net/npm/tonweb@0.0.60/dist/tonweb.js"></script>
 
-  <!-- Main Design -->
+  <!-- ORIGINAL DESIGN -->
   <link rel="stylesheet" href="style.css">
-
-  <style>
-    /*
-      ==========================================
-      BOTTOM NAVIGATION
-      Original 6-icon design
-      ==========================================
-    */
-
-    .bottom-nav {
-      grid-template-columns: repeat(6, 1fr) !important;
-    }
-
-    .nav-svg {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-    }
-
-    .nav-svg svg {
-      width: 22px;
-      height: 22px;
-    }
-
-    /*
-      Prevent buttons from becoming unclickable
-    */
-    .bottom-nav,
-    .bottom-nav button,
-    .nav-item {
-      pointer-events: auto;
-    }
-
-    .nav-item {
-      position: relative;
-      z-index: 10;
-    }
-
-    .send-fab {
-      position: relative;
-      z-index: 11;
-    }
-  </style>
 </head>
 
 <body>
 
   <div class="app-shell">
 
-    <!-- ==========================================
-         MAIN CONTENT
-         ========================================== -->
     <main id="content" class="content">
       Loading…
     </main>
 
+    <!-- ORIGINAL NAVIGATION -->
+    <nav class="bottom-nav" aria-label="Main navigation">
 
-    <!-- ==========================================
-         BOTTOM NAVIGATION
-         ========================================== -->
-    <nav
-      class="bottom-nav"
-      aria-label="Main navigation"
-    >
-
-      <!-- HOME -->
       <button
         class="nav-item active"
         id="nav-home"
         type="button"
         onclick="switchNav('home')"
       >
-        <span
-          class="nav-svg"
-          data-icon="home"
-        ></span>
-
+        <span class="nav-svg" data-icon="home"></span>
         <span>Home</span>
       </button>
 
-
-      <!-- ACTIVITY -->
       <button
         class="nav-item"
         id="nav-activity"
         type="button"
         onclick="switchNav('activity')"
       >
-        <span
-          class="nav-svg"
-          data-icon="activity"
-        ></span>
-
+        <span class="nav-svg" data-icon="activity"></span>
         <span>Activity</span>
       </button>
 
-
-      <!-- SEND -->
       <button
         class="nav-item nav-send"
         id="nav-send"
         type="button"
         onclick="switchNav('send')"
       >
-
         <span class="send-fab">
-
           <span
             class="nav-svg send-icon"
             data-icon="send"
           ></span>
-
         </span>
 
         <span>Send</span>
-
       </button>
 
-
-      <!-- WALLET -->
       <button
         class="nav-item"
         id="nav-wallet"
         type="button"
         onclick="switchNav('wallet')"
       >
-
-        <span
-          class="nav-svg"
-          data-icon="wallet"
-        ></span>
-
+        <span class="nav-svg" data-icon="wallet"></span>
         <span>Wallet</span>
-
       </button>
 
-
-      <!-- AIRDROP -->
-      <button
-        class="nav-item"
-        id="nav-airdrop"
-        type="button"
-        onclick="switchNav('airdrop')"
-      >
-
-        <span
-          class="nav-svg"
-          data-icon="airdrop"
-        ></span>
-
-        <span>Airdrop</span>
-
-      </button>
-
-
-      <!-- PROFILE -->
       <button
         class="nav-item"
         id="nav-profile"
         type="button"
         onclick="switchNav('profile')"
       >
-
-        <span
-          class="nav-svg"
-          data-icon="profile"
-        ></span>
-
+        <span class="nav-svg" data-icon="profile"></span>
         <span>Profile</span>
-
       </button>
 
     </nav>
 
   </div>
 
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
 
-  <!-- ==========================================
-       TOAST
-       ========================================== -->
-  <div
-    id="toast"
-    class="toast"
-  ></div>
-
-
-  <!-- ==========================================
-       MODAL
-       ========================================== -->
+  <!-- MODAL -->
   <div
     id="modal"
     class="modal"
-    onclick="
-      if(event.target === this) {
-        closeModal();
-      }
-    "
+    onclick="if(event.target === this) closeModal()"
   >
 
     <div class="modal-card">
@@ -247,14 +130,8 @@
 
   </div>
 
-
-  <!-- ==========================================
-       APP JAVASCRIPT
-       ========================================== -->
-  <script
-    type="module"
-    src="app.js"
-  ></script>
+  <!-- APP -->
+  <script src="app.js"></script>
 
 </body>
 </html>
