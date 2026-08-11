@@ -2,14 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+
   <meta name="theme-color" content="#07101f">
+
   <title>TGN Wallet</title>
 
+  <!-- Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- TON Web -->
   <script src="https://cdn.jsdelivr.net/npm/tonweb@0.0.60/dist/tonweb.js"></script>
 
+  <!-- Your existing design -->
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    .bottom-nav {
+      grid-template-columns: repeat(6, 1fr) !important;
+    }
+
+    .nav-svg {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:24px;
+      height:24px;
+    }
+
+    .nav-svg svg {
+      width:22px;
+      height:22px;
+    }
+  </style>
 </head>
 
 <body>
@@ -22,75 +51,132 @@
 
     <nav class="bottom-nav" aria-label="Main navigation">
 
-      <button class="nav-item active"
-              id="nav-home"
-              type="button"
-              onclick="switchNav('home')">
+      <!-- HOME -->
+      <button
+        class="nav-item active"
+        id="nav-home"
+        type="button"
+        onclick="switchNav('home')"
+      >
         <span class="nav-svg" data-icon="home"></span>
         <span>Home</span>
       </button>
 
-      <button class="nav-item"
-              id="nav-activity"
-              type="button"
-              onclick="switchNav('activity')">
+      <!-- ACTIVITY -->
+      <button
+        class="nav-item"
+        id="nav-activity"
+        type="button"
+        onclick="switchNav('activity')"
+      >
         <span class="nav-svg" data-icon="activity"></span>
         <span>Activity</span>
       </button>
 
-      <button class="nav-item nav-send"
-              id="nav-send"
-              type="button"
-              onclick="switchNav('send')">
+      <!-- SEND -->
+      <button
+        class="nav-item nav-send"
+        id="nav-send"
+        type="button"
+        onclick="switchNav('send')"
+      >
         <span class="send-fab">
-          <span class="nav-svg send-icon" data-icon="send"></span>
+          <span
+            class="nav-svg send-icon"
+            data-icon="send"
+          ></span>
         </span>
+
         <span>Send</span>
       </button>
 
-      <button class="nav-item"
-              id="nav-wallet"
-              type="button"
-              onclick="switchNav('wallet')">
+      <!-- WALLET -->
+      <button
+        class="nav-item"
+        id="nav-wallet"
+        type="button"
+        onclick="switchNav('wallet')"
+      >
         <span class="nav-svg" data-icon="wallet"></span>
         <span>Wallet</span>
       </button>
 
-      <button class="nav-item"
-              id="nav-profile"
-              type="button"
-              onclick="switchNav('profile')">
+      <!-- AIRDROP -->
+      <button
+        class="nav-item"
+        id="nav-airdrop"
+        type="button"
+        onclick="switchNav('airdrop')"
+      >
+        <span class="nav-svg" data-icon="airdrop"></span>
+        <span>Airdrop</span>
+      </button>
+
+      <!-- PROFILE -->
+      <button
+        class="nav-item"
+        id="nav-profile"
+        type="button"
+        onclick="switchNav('profile')"
+      >
         <span class="nav-svg" data-icon="profile"></span>
         <span>Profile</span>
       </button>
 
     </nav>
+
   </div>
 
-  <div id="toast" class="toast"></div>
 
-  <div id="modal"
-       class="modal"
-       onclick="if(event.target===this) closeModal()">
+  <!-- TOAST -->
+  <div
+    id="toast"
+    class="toast"
+  ></div>
+
+
+  <!-- MODAL -->
+  <div
+    id="modal"
+    class="modal"
+    onclick="
+      if(event.target === this)
+      closeModal()
+    "
+  >
 
     <div class="modal-card">
 
-      <div class="modal-title" id="mTitle">
+      <div
+        class="modal-title"
+        id="mTitle"
+      >
         TGN Wallet
       </div>
 
-      <div id="mBody" class="modal-body"></div>
+      <div
+        id="mBody"
+        class="modal-body"
+      ></div>
 
-      <button class="btn secondary"
-              type="button"
-              onclick="closeModal()">
+      <button
+        class="btn secondary"
+        type="button"
+        onclick="closeModal()"
+      >
         Close
       </button>
 
     </div>
+
   </div>
 
-  <script src="app.js"></script>
+
+  <!-- IMPORTANT: module because Firebase uses import() -->
+  <script
+    type="module"
+    src="app.js"
+  ></script>
 
 </body>
 </html>
