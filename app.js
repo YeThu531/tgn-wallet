@@ -3353,7 +3353,7 @@ async function shareReferral() {
   */
 
   const link =
-    "https://t.me/YOUR_BOT_USERNAME?start=" +
+    "https://t.me/TglXWattetBot?start=" +
     encodeURIComponent(
       code
     );
