@@ -1,8077 +1,1854 @@
-/* =========================================================
-   TGN WALLET - APP.JS
-   PART 1
-   Main App / Telegram / Config / State
-   ========================================================= */
+/*
+ TGN WALLET
+ Clean Frontend Version
 
-import {
-    initFirebase,
-    getDB,
-    getUser,
-    saveUser,
-    getAirdropTasks,
-    claimAirdropTask as firebaseClaimAirdropTask
-} from "./firebase.js";
-
-
-/* =========================================================
-   CONFIG
-   ========================================================= */
+ IMPORTANT:
+ - Do NOT put a real TON Center API key here.
+ - Public GitHub frontend should not contain secret API keys.
+ - Use a secure backend/proxy for production API requests.
+*/
 
 const CONFIG = {
 
-    // Cloudflare Worker
-    API_BASE:
-        "https://u20052.workers.dev",
+  API_KEY: "",
 
-    // Local wallet storage
-    WALLET_STORAGE:
-        "TGN_TON_WALLET",
+  API_BASE:
+    "https://toncenter.com/api/v2",
 
-    // Transaction storage
-    TX_STORAGE:
-        "TGN_USER_TXS",
+  V3_BASE:
+    "https://toncenter.com/api/v3",
 
-    // Referral storage
-    REFERRAL_STORAGE:
-        "TGN_REFERRAL_CODE",
-
-    // Theme
-    THEME_STORAGE:
-        "TGN_THEME"
-
+  WALLET_STORAGE:
+    "TGN_TON_WALLET"
 };
 
 
-/* =========================================================
-   TELEGRAM WEB APP
-   ========================================================= */
-
 const tg =
-    window.Telegram?.WebApp || null;
+  window.Telegram?.WebApp;
 
-if (tg) {
+let activeTab = "home";
 
-    try {
-        tg.ready();
-        tg.expand();
-    } catch (error) {
-        console.warn(
-            "Telegram WebApp init failed:",
-            error
-        );
-    }
-
-}
-
-
-/* =========================================================
-   FIREBASE STATE
-   ========================================================= */
-
-let db = null;
-
-let firebaseReady = false;
-
-let userData = null;
-
-
-/* =========================================================
-   TON STATE
-   ========================================================= */
-
-let tonweb = null;
-
-let tonConnectUI = null;
-
-let connectedWallet = null;
-
-let walletData = null;
+let walletData =
+  safeWallet();
 
 let tonBalance = 0;
 
-
-/* =========================================================
-   APP STATE
-   ========================================================= */
-
-let currentPage = "home";
-
-let currentNav = "home";
-
 let transactions = [];
 
-let airdropTasks = [];
-
-let airdropLoading = false;
-
-let profileData = null;
+let jettons = [];
 
 
-/* =========================================================
-   TELEGRAM USER
-   ========================================================= */
+/* Telegram */
 
-function getTelegramUser() {
+if (tg) {
 
-    return (
-        tg?.initDataUnsafe?.user ||
-        null
+  tg.ready();
+
+  tg.expand();
+
+  try {
+
+    tg.setHeaderColor("#07101f");
+
+    tg.setBackgroundColor("#050a16");
+
+  } catch (_) {}
+
+}
+
+
+/* Wallet Storage */
+
+function safeWallet() {
+
+  try {
+
+    const raw =
+      localStorage.getItem(
+        CONFIG.WALLET_STORAGE
+      );
+
+    const data =
+      raw ? JSON.parse(raw) : null;
+
+    return
+      data && data.address
+        ? data
+        : null;
+
+  } catch (_) {
+
+    return null;
+
+  }
+
+}
+
+
+/* Escape HTML */
+
+function esc(value) {
+
+  return String(value ?? "")
+    .replace(/[&<>"']/g, function (m) {
+
+      return {
+
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+
+      }[m];
+
+    });
+
+}
+
+
+/* Telegram User */
+
+function user() {
+
+  return (
+    tg?.initDataUnsafe?.user ||
+    {}
+  );
+
+}
+
+
+function userName() {
+
+  const u = user();
+
+  return [
+
+    u.first_name,
+    u.last_name
+
+  ]
+    .filter(Boolean)
+    .join(" ")
+    || "Telegram User";
+
+}
+
+
+function username() {
+
+  return user().username
+    ? "@" + user().username
+    : "No username";
+
+}
+
+
+function userId() {
+
+  return user().id
+    ? String(user().id)
+    : "Unavailable";
+
+}
+
+
+/* Telegram Profile Photo */
+
+function avatarHtml() {
+
+  const u = user();
+
+  const photo =
+    u.photo_url || "";
+
+  const initial =
+    (u.first_name || "T")
+      .charAt(0)
+      .toUpperCase();
+
+  if (photo) {
+
+    return `
+      <img
+        class="profile-avatar"
+        src="${esc(photo)}"
+        alt="Telegram profile"
+        onerror="
+          this.outerHTML =
+          '<div class=&quot;avatar-fallback&quot;>${initial}</div>'
+        "
+      >
+    `;
+
+  }
+
+  return `
+    <div class="avatar-fallback">
+      ${esc(initial)}
+    </div>
+  `;
+
+}
+
+
+/* Address */
+
+function shortAddress(address) {
+
+  if (!address)
+    return "Wallet not connected";
+
+  return address.length > 18
+    ? address.slice(0, 9)
+      + "..."
+      + address.slice(-7)
+    : address;
+
+}
+
+
+/* Toast */
+
+function showToast(message) {
+
+  const el =
+    document.getElementById("toast");
+
+  if (!el)
+    return;
+
+  el.textContent =
+    message;
+
+  el.classList.add("show");
+
+  clearTimeout(
+    window.__toastTimer
+  );
+
+  window.__toastTimer =
+    setTimeout(
+      () =>
+        el.classList.remove("show"),
+      1800
     );
 
 }
 
 
-function getUserId() {
+/* Modal */
 
-    const user =
-        getTelegramUser();
+function openModal(title, body) {
 
-    if (!user?.id) {
-        return "";
-    }
+  document.getElementById(
+    "mTitle"
+  ).textContent = title;
 
-    return String(user.id);
+  document.getElementById(
+    "mBody"
+  ).innerHTML = body;
 
-}
-
-
-function getUsername() {
-
-    const user =
-        getTelegramUser();
-
-    return user?.username || "";
+  document.getElementById(
+    "modal"
+  ).classList.add("show");
 
 }
 
 
-function getFirstName() {
+function closeModal() {
 
-    const user =
-        getTelegramUser();
-
-    return user?.first_name || "User";
-
-}
-
-
-function getLastName() {
-
-    const user =
-        getTelegramUser();
-
-    return user?.last_name || "";
+  document.getElementById(
+    "modal"
+  ).classList.remove("show");
 
 }
 
 
-function getPhotoUrl() {
+/* Icons */
 
-    const user =
-        getTelegramUser();
+function icon(name) {
 
-    return user?.photo_url || "";
+  const paths = {
 
-}
+    home: `
+      <path d="M3 10.5L12 3l9 7.5"></path>
+      <path d="M5 9.5V21h14V9.5"></path>
+      <path d="M9 21v-7h6v7"></path>
+    `,
 
+    activity: `
+      <line x1="8" y1="6" x2="21" y2="6"></line>
+      <line x1="8" y1="12" x2="21" y2="12"></line>
+      <line x1="8" y1="18" x2="21" y2="18"></line>
 
-/* =========================================================
-   REFERRAL
-   ========================================================= */
+      <circle cx="3.5" cy="6" r="1"></circle>
+      <circle cx="3.5" cy="12" r="1"></circle>
+      <circle cx="3.5" cy="18" r="1"></circle>
+    `,
 
-function getStartParam() {
+    send: `
+      <path d="M22 2L11 13"></path>
+      <path d="M22 2l-7 20-4-9-9-4z"></path>
+    `,
 
-    return (
-        tg?.initDataUnsafe?.start_param ||
-        ""
-    );
+    wallet: `
+      <path d="M20 7H5a3 3 0 0 1 0-6h13v4"></path>
+      <path d="M5 1v6"></path>
+      <path d="M20 7v14H5a3 3 0 0 1-3-3V4"></path>
+      <path d="M16 13h5v4h-5a2 2 0 1 1 0-4z"></path>
+    `,
 
-}
+    profile: `
+      <circle cx="12" cy="7" r="4"></circle>
+      <path d="M4 21v-1a7 7 0 0 1 14 0v1"></path>
+    `
 
+  };
 
-function getReferralCode() {
-
-    let code =
-        localStorage.getItem(
-            CONFIG.REFERRAL_STORAGE
-        );
-
-    if (!code) {
-
-        code =
-            getStartParam();
-
-        if (code) {
-
-            localStorage.setItem(
-                CONFIG.REFERRAL_STORAGE,
-                code
-            );
-
-        }
-
-    }
-
-    return code || "";
-
-}
-
-
-/* =========================================================
-   LOCAL STORAGE
-   ========================================================= */
-
-function loadLocalWallet() {
-
-    try {
-
-        const raw =
-            localStorage.getItem(
-                CONFIG.WALLET_STORAGE
-            );
-
-        if (!raw) {
-            return null;
-        }
-
-        return JSON.parse(raw);
-
-    } catch (error) {
-
-        console.warn(
-            "Wallet storage read failed:",
-            error
-        );
-
-        return null;
-    }
+  return `
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      ${paths[name] || ""}
+    </svg>
+  `;
 
 }
 
 
-function saveLocalWallet(wallet) {
+document
+  .querySelectorAll(".nav-svg")
+  .forEach(function (el) {
 
-    try {
+    el.innerHTML =
+      icon(el.dataset.icon);
 
-        localStorage.setItem(
-            CONFIG.WALLET_STORAGE,
-            JSON.stringify(wallet)
-        );
+  });
 
-        return true;
 
-    } catch (error) {
+/* Navigation */
 
-        console.error(
-            "Wallet storage save failed:",
-            error
-        );
+function switchNav(tab) {
 
-        return false;
-    }
+  activeTab =
+    tab;
 
-}
+  document
+    .querySelectorAll(".nav-item")
+    .forEach(function (item) {
 
+      item.classList.remove(
+        "active"
+      );
 
-function clearLocalWallet() {
+    });
 
-    try {
-
-        localStorage.removeItem(
-            CONFIG.WALLET_STORAGE
-        );
-
-        walletData = null;
-
-        connectedWallet = null;
-
-        tonBalance = 0;
-
-        return true;
-
-    } catch (error) {
-
-        console.error(
-            "Wallet storage clear failed:",
-            error
-        );
-
-        return false;
-    }
-
-}
-
-
-/* =========================================================
-   TRANSACTIONS
-   ========================================================= */
-
-function loadTransactions() {
-
-    try {
-
-        const raw =
-            localStorage.getItem(
-                CONFIG.TX_STORAGE
-            );
-
-        if (!raw) {
-            transactions = [];
-            return [];
-        }
-
-        const data =
-            JSON.parse(raw);
-
-        transactions =
-            Array.isArray(data)
-                ? data
-                : [];
-
-        return transactions;
-
-    } catch (error) {
-
-        console.warn(
-            "Transaction storage read failed:",
-            error
-        );
-
-        transactions = [];
-
-        return [];
-    }
-
-}
-
-
-function saveTransactions() {
-
-    try {
-
-        localStorage.setItem(
-            CONFIG.TX_STORAGE,
-            JSON.stringify(
-                transactions
-            )
-        );
-
-        return true;
-
-    } catch (error) {
-
-        console.warn(
-            "Transaction storage save failed:",
-            error
-        );
-
-        return false;
-    }
-
-}
-
-
-/* =========================================================
-   TRANSACTION HELPER
-   ========================================================= */
-
-function addTransaction(transaction) {
-
-    const item = {
-
-        id:
-            transaction.id ||
-            Date.now().toString(),
-
-        type:
-            transaction.type ||
-            "unknown",
-
-        amount:
-            Number(
-                transaction.amount || 0
-            ),
-
-        address:
-            transaction.address || "",
-
-        status:
-            transaction.status ||
-            "pending",
-
-        timestamp:
-            transaction.timestamp ||
-            Date.now()
-
-    };
-
-    transactions.unshift(item);
-
-    saveTransactions();
-
-    return item;
-
-}
-
-
-/* =========================================================
-   UI HELPERS
-   ========================================================= */
-
-function $(selector) {
-
-    return document.querySelector(
-        selector
-    );
-
-}
-
-
-function $$(selector) {
-
-    return [
-        ...document.querySelectorAll(
-            selector
-        )
-    ];
-
-}
-
-
-function escapeHtml(value) {
-
-    return String(
-        value ?? ""
+  document
+    .getElementById(
+      "nav-" + tab
     )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+    ?.classList.add("active");
+
+
+  if (tab === "home")
+    renderHome();
+
+  else if (tab === "activity")
+    renderActivity();
+
+  else if (tab === "send")
+    renderSend();
+
+  else if (tab === "wallet")
+    renderWallet();
+
+  else if (tab === "profile")
+    renderProfile();
 
 }
 
 
-/* =========================================================
-   NUMBER FORMAT
-   ========================================================= */
+/* HOME */
 
-function formatNumber(
-    value,
-    decimals = 2
-) {
+function renderHome() {
 
-    const number =
-        Number(value || 0);
+  const address =
+    walletData?.address || "";
 
-    if (!Number.isFinite(number)) {
-        return "0";
-    }
+  document.getElementById(
+    "content"
+  ).innerHTML = `
 
-    return number.toLocaleString(
-        "en-US",
-        {
-            minimumFractionDigits:
-                0,
+    <section class="card hero">
 
-            maximumFractionDigits:
-                decimals
-        }
-    );
+      <div class="hero-label">
+        My Wallet
+      </div>
 
-}
+      <div
+        class="hero-balance"
+        id="heroBalance"
+      >
+        ${tonBalance.toFixed(2)} TON
+      </div>
 
+      <div class="hero-usd">
+        $0.00 USD
+      </div>
 
-function formatTON(value) {
+      <div class="hero-logo">
+        💎
+      </div>
 
-    return formatNumber(
-        value,
-        4
-    );
+      <div class="action-row">
 
-}
+        <button
+          class="action-btn primary"
+          onclick="showDeposit()"
+        >
+          Deposit
+        </button>
 
+        <button
+          class="action-btn"
+          onclick="switchNav('send')"
+        >
+          Withdraw
+        </button>
 
-/* =========================================================
-   ADDRESS FORMAT
-   ========================================================= */
+      </div>
 
-function shortAddress(
-    address,
-    start = 6,
-    end = 6
-) {
-
-    if (!address) {
-        return "Not connected";
-    }
-
-    const value =
-        String(address);
-
-    if (
-        value.length <=
-        start + end + 3
-    ) {
-        return value;
-    }
-
-    return (
-        value.slice(
-            0,
-            start
-        ) +
-        "..." +
-        value.slice(
-            -end
-        )
-    );
-
-}
+    </section>
 
 
-/* =========================================================
-   CLIPBOARD
-   ========================================================= */
+    <section class="card section">
 
-async function copyText(
-    text
-) {
+      <div class="section-head">
+        <span>
+          Wallet Address
+        </span>
+      </div>
 
-    if (!text) {
-        return false;
-    }
+      <div class="address-row">
 
-    try {
+        <span class="dot"></span>
 
-        await navigator.clipboard.writeText(
-            String(text)
-        );
+        <div class="address-text">
+          ${esc(shortAddress(address))}
+        </div>
 
-        return true;
+        <button
+          class="copy-pill"
+          onclick="copyAddress()"
+        >
+          Copy
+        </button>
 
-    } catch (error) {
+      </div>
 
-        try {
+    </section>
 
-            const input =
-                document.createElement(
-                    "textarea"
-                );
 
-            input.value =
-                String(text);
+    <section class="card section">
 
-            input.style.position =
-                "fixed";
+      <div class="section-head">
 
-            input.style.opacity =
-                "0";
+        <span>
+          Tokens
+        </span>
 
-            document.body.appendChild(
-                input
-            );
+        <button
+          class="refresh"
+          onclick="refreshWallet()"
+        >
+          Refresh ↻
+        </button>
 
-            input.select();
+      </div>
 
-            document.execCommand(
-                "copy"
-            );
+      <div
+        id="tokenList"
+        class="token-list"
+      >
 
-            input.remove();
+        ${renderTonToken()}
 
-            return true;
+        ${renderJettons()}
 
-        } catch {
-            return false;
-        }
+      </div>
 
-    }
+    </section>
+
+  `;
+
+
+  if (address)
+    refreshWallet(false);
 
 }
 
 
-/* =========================================================
-   TELEGRAM HAPTIC
-   ========================================================= */
+/* TON */
 
-function haptic(
-    type = "light"
-) {
+function renderTonToken() {
 
-    try {
+  return `
 
-        if (
-            tg?.HapticFeedback
-        ) {
+    <div class="token-item token-row">
 
-            if (
-                type ===
-                "success"
-            ) {
+      <div class="token-left">
 
-                tg.HapticFeedback
-                    .notificationOccurred(
-                        "success"
-                    );
+        <div class="token-logo">
+          💎
+        </div>
 
-            } else if (
-                type ===
-                "error"
-            ) {
+        <div>
 
-                tg.HapticFeedback
-                    .notificationOccurred(
-                        "error"
-                    );
+          <div class="token-name">
+            TON
+          </div>
 
-            } else {
+          <div class="token-sub">
+            Toncoin • Mainnet
+          </div>
 
-                tg.HapticFeedback
-                    .impactOccurred(
-                        type
-                    );
+        </div>
 
-            }
+      </div>
 
-        }
 
-    } catch (error) {
+      <div class="token-amount">
 
-        console.warn(
-            "Haptic failed:",
-            error
-        );
+        ${tonBalance.toFixed(4)} TON
 
-    }
+        <div class="token-usd">
+          $0.00
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
 
 }
 
 
-/* =========================================================
-   TELEGRAM ALERT
-   ========================================================= */
+/* Jettons */
 
-function showAlert(
-    message
-) {
+function renderJettons() {
 
-    if (
-        tg?.showAlert
-    ) {
+  if (!jettons.length) {
 
-        tg.showAlert(
-            String(message)
-        );
+    return `
 
-        return;
-    }
+      <div
+        class="empty"
+        style="padding:22px 8px"
+      >
 
-    window.alert(
-        String(message)
-    );
+        <div class="empty-text">
 
-}
+          TON-network Jetton balances
+          will appear here when a secure
+          blockchain indexer/backend is connected.
 
+        </div>
 
-/* =========================================================
-   TELEGRAM CONFIRM
-   ========================================================= */
+      </div>
 
-function showConfirm(
-    message,
-    callback
-) {
+    `;
 
-    if (
-        tg?.showConfirm
-    ) {
-
-        tg.showConfirm(
-            String(message),
-            callback
-        );
-
-        return;
-    }
-
-    callback(
-        window.confirm(
-            String(message)
-        )
-    );
-
-}
+  }
 
 
-/* =========================================================
-   LOADING
-   ========================================================= */
+  return jettons
+    .map(function (j) {
 
-function setLoading(
-    element,
-    loading,
-    text = "Loading..."
-) {
+      return `
 
-    if (!element) {
-        return;
-    }
+        <div class="token-item token-row">
 
-    if (loading) {
+          <div class="token-left">
 
-        element.dataset.originalText =
-            element.innerHTML;
+            <div class="token-logo">
+              🪙
+            </div>
 
-        element.disabled =
-            true;
+            <div>
 
-        element.innerHTML =
-            `<i class="fas fa-spinner fa-spin"></i> ${escapeHtml(text)}`;
+              <div class="token-name">
+                ${esc(j.symbol || "JETTON")}
+              </div>
 
-    } else {
+              <div class="token-sub">
+                ${esc(j.name || "TON Jetton")}
+              </div>
 
-        element.disabled =
-            false;
+            </div>
 
-        if (
-            element.dataset.originalText
-        ) {
+          </div>
 
-            element.innerHTML =
-                element.dataset.originalText;
+          <div class="token-amount">
 
-        }
+            ${esc(j.amount || "0")}
 
-    }
+            <div class="token-usd">
+              $0.00
+            </div>
+
+          </div>
+
+        </div>
+
+      `;
+
+    })
+    .join("");
 
 }
 
 
-/* =========================================================
-   INITIAL LOCAL STATE
-   ========================================================= */
+/* TON Balance */
 
-function initializeLocalState() {
+async function refreshWallet(show = true) {
 
-    walletData =
-        loadLocalWallet();
+  if (!walletData?.address) {
 
-    loadTransactions();
+    if (show)
+      showToast(
+        "Wallet address not available"
+      );
 
-    getReferralCode();
+    return;
 
-}
+  }
 
 
-/* =========================================================
-   FIREBASE CONNECTION
-   ========================================================= */
-
-async function initializeFirebase() {
-
-    try {
-
-        firebaseReady =
-            await initFirebase();
-
-        if (
-            firebaseReady
-        ) {
-
-            db =
-                getDB();
-
-            console.log(
-                "Firebase ready ✓"
-            );
-
-        } else {
-
-            db = null;
-
-            console.warn(
-                "Firebase unavailable"
-            );
-
-        }
-
-        return firebaseReady;
-
-    } catch (error) {
-
-        console.error(
-            "Firebase startup error:",
-            error
-        );
-
-        firebaseReady =
-            false;
-
-        db = null;
-
-        return false;
-
-    }
-
-}
-
-
-/* =========================================================
-   FIREBASE USER SYNC
-   ========================================================= */
-
-async function syncCurrentUser() {
-
-    if (
-        !firebaseReady
-    ) {
-        return null;
-    }
-
-    const telegramId =
-        getUserId();
-
-    if (!telegramId) {
-        return null;
-    }
-
-    try {
-
-        const existing =
-            await getUser(
-                telegramId
-            );
-
-        const data = {
-
-            telegramId,
-
-            username:
-                getUsername(),
-
-            firstName:
-                getFirstName(),
-
-            lastName:
-                getLastName(),
-
-            photoUrl:
-                getPhotoUrl(),
-
-            walletAddress:
-                walletData?.address ||
-                "",
-
-            referralCode:
-                getReferralCode(),
-
-            referredBy:
-                getStartParam(),
-
-            updatedAt:
-                Date.now()
-
-        };
-
-        await saveUser(
-            telegramId,
-            data
-        );
-
-        userData = {
-
-            ...(existing || {}),
-            ...data
-
-        };
-
-        return userData;
-
-    } catch (error) {
-
-        console.warn(
-            "Firebase user sync failed:",
-            error
-        );
-
-        return null;
-
-    }
-
-}
-
-
-/* =========================================================
-   DOCUMENT READY
-   ========================================================= */
-
-let appStarted = false;
-
-
-async function startApp() {
-
-    if (appStarted) {
-        return;
-    }
-
-    appStarted = true;
-
-    initializeLocalState();
-
-    /*
-     * Firebase is intentionally initialized
-     * after local state so Firebase errors
-     * cannot freeze the UI.
-     */
-
-    await initializeFirebase();
-
-    await syncCurrentUser();
-
-    /*
-     * Part 2 will continue here with:
-     * TON initialization
-     * wallet loading
-     * Create Wallet
-     * Import Seed Phrase
-     * balance
-     * navigation
-     */
-
-    console.log(
-        "TGN Wallet started ✓"
-    );
-
-}
-
-
-/* =========================================================
-   START
-   ========================================================= */
-
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        startApp,
-        {
-            once: true
-        }
-    );
-
-} else {
-
-    startApp();
-
-}
-
-
-/* =========================================================
-   GLOBAL EXPORTS
-   =========================================================
-   Keep these because the existing HTML may use
-   onclick="..." handlers.
-   ========================================================= */
-
-window.tgnWallet = {
-
-    getTelegramUser,
-
-    getUserId,
-
-    getUsername,
-
-    getFirstName,
-
-    getLastName,
-
-    getPhotoUrl,
-
-    getStartParam,
-
-    getReferralCode,
-
-    loadLocalWallet,
-
-    saveLocalWallet,
-
-    clearLocalWallet,
-
-    loadTransactions,
-
-    saveTransactions,
-
-    addTransaction,
-
-    formatNumber,
-
-    formatTON,
-
-    shortAddress,
-
-    copyText,
-
-    haptic,
-
-    showAlert,
-
-    showConfirm,
-
-    setLoading,
-
-    syncCurrentUser
-
-};
-/* =========================================================
-   TGN WALLET - APP.JS
-   PART 2
-   TON / Wallet / Create Wallet / Import Seed
-   ========================================================= */
-
-
-/* =========================================================
-   TON SDK
-   ========================================================= */
-
-async function initTonWeb() {
-
-    try {
-
-        if (tonweb) {
-            return tonweb;
-        }
-
-        const TonWeb =
-            window.TonWeb ||
-            window.tonweb ||
-            null;
-
-        if (TonWeb) {
-
-            tonweb =
-                new TonWeb(
-                    new TonWeb.HttpProvider(
-                        CONFIG.API_BASE
-                    )
-                );
-
-            return tonweb;
-        }
-
-
-        /*
-         * Fallback:
-         * Use TON API through Worker.
-         */
-
-        console.log(
-            "TON Web SDK not found - using Worker API"
-        );
-
-        return null;
-
-    } catch (error) {
-
-        console.error(
-            "TON initialization failed:",
-            error
-        );
-
-        tonweb = null;
-
-        return null;
-    }
-
-}
-
-
-/* =========================================================
-   WORKER REQUEST
-   ========================================================= */
-
-async function workerRequest(
-    endpoint,
-    options = {}
-) {
+  try {
 
     const url =
+      new URL(
         CONFIG.API_BASE +
-        endpoint;
+        "/getAddressBalance"
+      );
 
-    const requestOptions = {
-
-        method:
-            options.method ||
-            "GET",
-
-        headers: {
-            "Content-Type":
-                "application/json",
-
-            ...(options.headers || {})
-        }
-
-    };
+    url.searchParams.set(
+      "address",
+      walletData.address
+    );
 
 
-    if (
-        options.body !== undefined
-    ) {
+    if (CONFIG.API_KEY) {
 
-        requestOptions.body =
-            typeof options.body ===
-            "string"
-
-                ? options.body
-
-                : JSON.stringify(
-                    options.body
-                );
+      url.searchParams.set(
+        "api_key",
+        CONFIG.API_KEY
+      );
 
     }
 
 
     const response =
-        await fetch(
-            url,
-            requestOptions
-        );
-
-
-    const text =
-        await response.text();
-
-
-    let data;
-
-    try {
-
-        data =
-            text
-                ? JSON.parse(text)
-                : {};
-
-    } catch {
-
-        data = {
-            raw: text
-        };
-
-    }
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            data?.error ||
-            data?.message ||
-            `Worker request failed (${response.status})`
-        );
-
-    }
-
-
-    return data;
-
-}
-
-
-/* =========================================================
-   WALLET STORAGE VALIDATION
-   ========================================================= */
-
-function isValidWalletData(
-    wallet
-) {
-
-    if (!wallet) {
-        return false;
-    }
-
-    if (
-        typeof wallet !==
-        "object"
-    ) {
-        return false;
-    }
-
-    if (
-        !wallet.address
-    ) {
-        return false;
-    }
-
-    return true;
-
-}
-
-
-/* =========================================================
-   LOAD WALLET
-   ========================================================= */
-
-function loadWallet() {
-
-    const wallet =
-        loadLocalWallet();
-
-    if (
-        isValidWalletData(
-            wallet
-        )
-    ) {
-
-        walletData =
-            wallet;
-
-        connectedWallet =
-            wallet.address;
-
-        return walletData;
-
-    }
-
-    walletData = null;
-
-    connectedWallet = null;
-
-    return null;
-
-}
-
-
-/* =========================================================
-   SAVE WALLET
-   ========================================================= */
-
-function saveWallet(
-    wallet
-) {
-
-    if (
-        !isValidWalletData(
-            wallet
-        )
-    ) {
-
-        throw new Error(
-            "Invalid wallet data"
-        );
-
-    }
-
-    walletData =
-        wallet;
-
-    connectedWallet =
-        wallet.address;
-
-    saveLocalWallet(
-        wallet
-    );
-
-    return walletData;
-
-}
-
-
-/* =========================================================
-   CREATE WALLET
-   =========================================================
-   IMPORTANT:
-   Seed/private key should NOT be sent
-   to Firebase or Worker.
-   ========================================================= */
-
-async function createWallet() {
-
-    try {
-
-        haptic("medium");
-
-
-        /*
-         * TON SDK wallet generation.
-         *
-         * If the TON SDK is not available,
-         * the UI can still remain functional
-         * and show an appropriate message.
-         */
-
-        if (!tonweb) {
-            await initTonWeb();
+      await fetch(
+        url.toString(),
+        {
+          headers:
+            CONFIG.API_KEY
+              ? {
+                  "X-API-Key":
+                    CONFIG.API_KEY
+                }
+              : {}
         }
+      );
 
 
-        if (!tonweb) {
+    const data =
+      await response.json();
 
-            showAlert(
-                "Wallet engine is not ready. Please try again."
-            );
 
-            return null;
+    if (!data.ok)
+      throw new Error(
+        data.error ||
+        data.description ||
+        "API error"
+      );
 
-        }
 
+    const nano =
+      Number(data.result);
 
-        /*
-         * Generate random mnemonic.
-         */
-
-        const mnemonic =
-            tonweb.utils.nacl
-                ? null
-                : null;
-
-
-        /*
-         * Use TonWeb mnemonic helper
-         * when available.
-         */
-
-        let words = null;
-
-
-        if (
-            tonweb.utils &&
-            tonweb.utils.nacl
-        ) {
-
-            /*
-             * The actual wallet-generation
-             * implementation is completed in
-             * the wallet UI section.
-             */
-
-        }
-
-
-        /*
-         * Do not create an incomplete wallet
-         * silently.
-         */
-
-        if (!words) {
-
-            console.warn(
-                "Wallet mnemonic generator unavailable"
-            );
-
-            showAlert(
-                "Wallet generator is not ready."
-            );
-
-            return null;
-
-        }
-
-
-        return words;
-
-    } catch (error) {
-
-        console.error(
-            "Create wallet error:",
-            error
-        );
-
-        haptic("error");
-
-        showAlert(
-            error.message ||
-            "Unable to create wallet."
-        );
-
-        return null;
-
-    }
-
-}
-
-
-/* =========================================================
-   IMPORT WALLET
-   ========================================================= */
-
-async function importWallet(
-    seedPhrase
-) {
-
-    try {
-
-        haptic("medium");
-
-
-        if (
-            !seedPhrase
-        ) {
-
-            throw new Error(
-                "Please enter your seed phrase."
-            );
-
-        }
-
-
-        /*
-         * Normalize seed phrase.
-         */
-
-        const words =
-            String(seedPhrase)
-                .trim()
-                .toLowerCase()
-                .split(/\s+/)
-                .filter(Boolean);
-
-
-        /*
-         * TON standard mnemonic normally
-         * contains 24 words.
-         */
-
-        if (
-            words.length !== 24
-        ) {
-
-            throw new Error(
-                "Seed phrase must contain 24 words."
-            );
-
-        }
-
-
-        /*
-         * IMPORTANT:
-         * Seed phrase stays locally.
-         *
-         * Never send it to Firebase.
-         * Never send it to Worker.
-         */
-
-
-        /*
-         * Wallet derivation is completed
-         * by the wallet engine in the next
-         * wallet section.
-         */
-
-        console.log(
-            "Import seed phrase received:",
-            words.length,
-            "words"
-        );
-
-
-        return {
-            words
-        };
-
-
-    } catch (error) {
-
-        console.error(
-            "Import wallet error:",
-            error
-        );
-
-        haptic("error");
-
-        showAlert(
-            error.message ||
-            "Unable to import wallet."
-        );
-
-        return null;
-
-    }
-
-}
-
-
-/* =========================================================
-   DELETE LOCAL WALLET
-   ========================================================= */
-
-function deleteWallet() {
-
-    showConfirm(
-        "Are you sure you want to remove this wallet from this device?",
-        confirmed => {
-
-            if (!confirmed) {
-                return;
-            }
-
-            clearLocalWallet();
-
-            haptic("success");
-
-            /*
-             * Re-rendering/navigation is completed
-             * in the UI section.
-             */
-
-            if (
-                typeof renderWelcome ===
-                "function"
-            ) {
-
-                renderWelcome();
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   GET WALLET ADDRESS
-   ========================================================= */
-
-function getWalletAddress() {
-
-    return (
-        walletData?.address ||
-        connectedWallet ||
-        ""
-    );
-
-}
-
-
-/* =========================================================
-   WALLET CONNECTED CHECK
-   ========================================================= */
-
-function hasWallet() {
-
-    return Boolean(
-        getWalletAddress()
-    );
-
-}
-
-
-/* =========================================================
-   BALANCE FORMAT
-   ========================================================= */
-
-function setBalance(
-    balance
-) {
-
-    const value =
-        Number(balance);
 
     tonBalance =
-        Number.isFinite(value)
-            ? value
-            : 0;
+      Number.isFinite(nano) &&
+      nano >= 0
+        ? nano / 1e9
+        : 0;
 
-    return tonBalance;
+
+    const hero =
+      document.getElementById(
+        "heroBalance"
+      );
+
+    if (hero) {
+
+      hero.textContent =
+        tonBalance.toFixed(2) +
+        " TON";
+
+    }
+
+
+    const list =
+      document.getElementById(
+        "tokenList"
+      );
+
+    if (list) {
+
+      list.innerHTML =
+        renderTonToken() +
+        renderJettons();
+
+    }
+
+
+    if (show)
+      showToast(
+        "Balance refreshed"
+      );
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    if (show)
+      showToast(
+        "API not connected"
+      );
+
+  }
 
 }
 
 
-/* =========================================================
-   GET BALANCE FROM WORKER
-   ========================================================= */
+/* Deposit */
 
-async function fetchWalletBalance(
-    address
-) {
+function showDeposit() {
 
-    if (!address) {
+  if (!walletData?.address) {
 
-        setBalance(0);
+    openModal(
+      "Deposit",
+      `
+        <p>
+          Your wallet address is not
+          available yet.
+        </p>
 
-        return 0;
+        <p>
+          Connect or configure the
+          wallet address first.
+        </p>
+      `
+    );
 
-    }
+    return;
 
-
-    try {
-
-        const data =
-            await workerRequest(
-                `/balance?address=${encodeURIComponent(
-                    address
-                )}`
-            );
-
-
-        const balance =
-            Number(
-                data?.balance ??
-                data?.result ??
-                data?.ton ??
-                0
-            );
+  }
 
 
-        setBalance(
-            balance
-        );
+  openModal(
+    "Deposit",
+    `
 
+      <p>
+        Send TON or a TON-network
+        Jetton to this wallet address.
+      </p>
 
-        return tonBalance;
+      <div
+        class="address-row"
+        style="margin-top:12px"
+      >
 
+        <div class="address-text">
+          ${esc(walletData.address)}
+        </div>
 
-    } catch (error) {
+        <button
+          class="copy-pill"
+          onclick="copyAddress()"
+        >
+          Copy
+        </button>
 
-        console.warn(
-            "Balance request failed:",
-            error
-        );
+      </div>
 
-        /*
-         * Do not destroy existing
-         * local balance on network error.
-         */
+      <p
+        style="
+          color:#8196b5;
+          font-size:11px;
+          margin-top:12px
+        "
+      >
+        Only send assets on the
+        TON Mainnet to this address.
+      </p>
 
-        return tonBalance;
-
-    }
+    `
+  );
 
 }
 
 
-/* =========================================================
-   REFRESH BALANCE
-   ========================================================= */
+/* Copy */
 
-async function refreshBalance() {
+async function copyAddress() {
 
-    const address =
-        getWalletAddress();
+  if (!walletData?.address) {
 
-    if (!address) {
+    showToast(
+      "Wallet address unavailable"
+    );
 
-        setBalance(0);
+    return;
 
-        return 0;
-
-    }
+  }
 
 
-    try {
+  try {
 
-        const balance =
-            await fetchWalletBalance(
-                address
-            );
+    await navigator
+      .clipboard
+      .writeText(
+        walletData.address
+      );
 
+    showToast(
+      "Wallet address copied ✓"
+    );
 
-        /*
-         * UI refresh will be handled
-         * by render functions.
-         */
+  }
 
-        if (
-            typeof updateBalanceUI ===
-            "function"
-        ) {
+  catch (_) {
 
-            updateBalanceUI(
-                balance
-            );
+    showToast(
+      "Copy failed"
+    );
 
-        }
-
-
-        return balance;
-
-
-    } catch (error) {
-
-        console.warn(
-            "Refresh balance failed:",
-            error
-        );
-
-        return tonBalance;
-
-    }
+  }
 
 }
 
 
-/* =========================================================
-   SAVE WALLET TO FIREBASE
-   ========================================================= */
-
-async function saveWalletToFirebase() {
-
-    if (
-        !firebaseReady
-    ) {
-        return false;
-    }
-
-    if (
-        !walletData?.address
-    ) {
-        return false;
-    }
-
-
-    const telegramId =
-        getUserId();
-
-    if (!telegramId) {
-        return false;
-    }
-
-
-    try {
-
-        await saveUser(
-            telegramId,
-            {
-
-                walletAddress:
-                    walletData.address,
-
-                updatedAt:
-                    Date.now()
-
-            }
-        );
-
-
-        return true;
-
-
-    } catch (error) {
-
-        console.warn(
-            "Wallet Firebase sync failed:",
-            error
-        );
-
-        return false;
-
-    }
-
-}
-
-
-/* =========================================================
-   LOAD WALLET ON START
-   ========================================================= */
-
-async function initializeWallet() {
-
-    try {
-
-        loadWallet();
-
-        await initTonWeb();
-
-
-        if (
-            walletData?.address
-        ) {
-
-            await refreshBalance();
-
-        }
-
-
-        return walletData;
-
-    } catch (error) {
-
-        console.warn(
-            "Wallet initialization failed:",
-            error
-        );
-
-        return walletData;
-
-    }
-
-}
-
-
-/* =========================================================
-   WALLET STATE EXPORT
-   ========================================================= */
-
-window.tgnWallet = {
-
-    ...(window.tgnWallet || {}),
-
-    createWallet,
-
-    importWallet,
-
-    loadWallet,
-
-    saveWallet,
-
-    deleteWallet,
-
-    getWalletAddress,
-
-    hasWallet,
-
-    refreshBalance,
-
-    fetchWalletBalance,
-
-    saveWalletToFirebase,
-
-    initializeWallet
-
-};
-
-
-/* =========================================================
-   INITIALIZE WALLET
-   ========================================================= */
-
-const originalStartApp =
-    startApp;
-
-
-/*
- * Replace startup with wallet-aware
- * startup while keeping Part 1 logic.
- */
-
-startApp = async function () {
-
-    if (appStarted) {
-        return;
-    }
-
-    appStarted = true;
-
-    initializeLocalState();
-
-    loadWallet();
-
-    await initializeFirebase();
-
-    await syncCurrentUser();
-
-    await initializeWallet();
-
-    console.log(
-        "TGN Wallet initialized ✓"
-    );
-
-};
-/* =========================================================
-   TGN WALLET - APP.JS
-   PART 3
-   Navigation / Home / Wallet / Activity / Profile / Airdrop
-   ========================================================= */
-
-
-/* =========================================================
-   PAGE / NAVIGATION
-   ========================================================= */
-
-function getPageElements() {
-
-    return {
-        home:
-            document.getElementById("homePage") ||
-            document.getElementById("home") ||
-            document.querySelector(
-                '[data-page="home"]'
-            ),
-
-        wallet:
-            document.getElementById("walletPage") ||
-            document.getElementById("wallet") ||
-            document.querySelector(
-                '[data-page="wallet"]'
-            ),
-
-        activity:
-            document.getElementById("activityPage") ||
-            document.getElementById("activity") ||
-            document.querySelector(
-                '[data-page="activity"]'
-            ),
-
-        airdrop:
-            document.getElementById("airdropPage") ||
-            document.getElementById("airdrop") ||
-            document.querySelector(
-                '[data-page="airdrop"]'
-            ),
-
-        profile:
-            document.getElementById("profilePage") ||
-            document.getElementById("profile") ||
-            document.querySelector(
-                '[data-page="profile"]'
-            )
-    };
-
-}
-
-
-/* =========================================================
-   HIDE ALL PAGES
-   ========================================================= */
-
-function hideAllPages() {
-
-    const pages =
-        getPageElements();
-
-    Object.values(pages)
-        .forEach(page => {
-
-            if (!page) {
-                return;
-            }
-
-            page.classList.add(
-                "hidden"
-            );
-
-            page.style.display =
-                "none";
-
-        });
-
-}
-
-
-/* =========================================================
-   SHOW PAGE
-   ========================================================= */
-
-function showPage(
-    pageName
-) {
-
-    const pages =
-        getPageElements();
-
-    hideAllPages();
-
-    const page =
-        pages[pageName];
-
-    if (!page) {
-
-        console.warn(
-            "Page not found:",
-            pageName
-        );
-
-        return false;
-    }
-
-
-    page.classList.remove(
-        "hidden"
-    );
-
-    page.style.display =
-        "";
-
-
-    currentPage =
-        pageName;
-
-    currentNav =
-        pageName;
-
-
-    updateNavigation(
-        pageName
-    );
-
-
-    return true;
-
-}
-
-
-/* =========================================================
-   NAVIGATION BUTTONS
-   ========================================================= */
-
-function updateNavigation(
-    activePage
-) {
-
-    const buttons =
-        document.querySelectorAll(
-            "[data-nav], " +
-            ".nav-item, " +
-            ".bottom-nav-item, " +
-            ".nav-btn"
-        );
-
-
-    buttons.forEach(
-        button => {
-
-            const page =
-                button.dataset.nav ||
-                button.dataset.page ||
-                button.dataset.target;
-
-
-            if (
-                page === activePage
-            ) {
-
-                button.classList.add(
-                    "active"
-                );
-
-                button.setAttribute(
-                    "aria-current",
-                    "page"
-                );
-
-            } else {
-
-                button.classList.remove(
-                    "active"
-                );
-
-                button.removeAttribute(
-                    "aria-current"
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   MAIN NAVIGATION
-   ========================================================= */
-
-function switchNav(
-    pageName
-) {
-
-    if (!pageName) {
-        return;
-    }
-
-
-    pageName =
-        String(
-            pageName
-        )
-        .replace(
-            "#",
-            ""
-        )
-        .toLowerCase();
-
-
-    const aliases = {
-
-        home:
-            "home",
-
-        wallet:
-            "wallet",
-
-        activity:
-            "activity",
-
-        airdrop:
-            "airdrop",
-
-        profile:
-            "profile",
-
-        account:
-            "profile"
-
-    };
-
-
-    pageName =
-        aliases[pageName] ||
-        pageName;
-
-
-    if (
-        ![
-            "home",
-            "wallet",
-            "activity",
-            "airdrop",
-            "profile"
-        ].includes(
-            pageName
-        )
-    ) {
-
-        console.warn(
-            "Unknown navigation:",
-            pageName
-        );
-
-        return;
-    }
-
-
-    haptic(
-        "light"
-    );
-
-
-    showPage(
-        pageName
-    );
-
-
-    if (
-        pageName ===
-        "home"
-    ) {
-
-        renderHome();
-
-    }
-
-
-    if (
-        pageName ===
-        "wallet"
-    ) {
-
-        renderWallet();
-
-    }
-
-
-    if (
-        pageName ===
-        "activity"
-    ) {
-
-        renderActivity();
-
-    }
-
-
-    if (
-        pageName ===
-        "airdrop"
-    ) {
-
-        renderAirdrop();
-
-    }
-
-
-    if (
-        pageName ===
-        "profile"
-    ) {
-
-        renderProfile();
-
-    }
-
-}
-
-
-/* =========================================================
-   HOME
-   ========================================================= */
-
-function renderHome() {
-
-    const balanceElements =
-        document.querySelectorAll(
-            "[data-balance], " +
-            ".balance-value, " +
-            ".ton-balance"
-        );
-
-
-    balanceElements.forEach(
-        element => {
-
-            element.textContent =
-                formatTON(
-                    tonBalance
-                );
-
-        }
-    );
-
-
-    const addressElements =
-        document.querySelectorAll(
-            "[data-wallet-address], " +
-            ".wallet-address"
-        );
-
-
-    addressElements.forEach(
-        element => {
-
-            element.textContent =
-                shortAddress(
-                    getWalletAddress()
-                );
-
-        }
-    );
-
-
-    const nameElements =
-        document.querySelectorAll(
-            "[data-user-name], " +
-            ".user-name"
-        );
-
-
-    nameElements.forEach(
-        element => {
-
-            element.textContent =
-                getFirstName();
-
-        }
-    );
-
-
-    updateBalanceUI(
-        tonBalance
-    );
-
-}
-
-
-/* =========================================================
-   UPDATE BALANCE UI
-   ========================================================= */
-
-function updateBalanceUI(
-    balance
-) {
-
-    const value =
-        formatTON(
-            balance
-        );
-
-
-    const selectors = [
-
-        "#balance",
-
-        "#tonBalance",
-
-        "#walletBalance",
-
-        ".balance",
-
-        ".balance-amount",
-
-        ".ton-balance",
-
-        "[data-balance]"
-
-    ];
-
-
-    selectors.forEach(
-        selector => {
-
-            document
-                .querySelectorAll(
-                    selector
-                )
-                .forEach(
-                    element => {
-
-                        element.textContent =
-                            value;
-
-                    }
-                );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   WALLET PAGE
-   ========================================================= */
-
-function renderWallet() {
-
-    const address =
-        getWalletAddress();
-
-
-    document
-        .querySelectorAll(
-            "[data-wallet-address], " +
-            ".wallet-address"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    address
-                        ? shortAddress(
-                            address,
-                            8,
-                            8
-                        )
-                        : "Create Wallet";
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-balance], " +
-            ".balance-value, " +
-            ".ton-balance"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    formatTON(
-                        tonBalance
-                    );
-
-            }
-        );
-
-
-    const createButtons =
-        document.querySelectorAll(
-            "[data-create-wallet], " +
-            ".create-wallet-btn"
-        );
-
-
-    createButtons.forEach(
-        button => {
-
-            button.style.display =
-                address
-                    ? "none"
-                    : "";
-
-        }
-    );
-
-
-    const walletButtons =
-        document.querySelectorAll(
-            "[data-wallet-action]"
-        );
-
-
-    walletButtons.forEach(
-        button => {
-
-            button.style.display =
-                address
-                    ? ""
-                    : "none";
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   ACTIVITY
-   ========================================================= */
+/* ACTIVITY */
 
 function renderActivity() {
 
-    const containers =
-        document.querySelectorAll(
-            "#activityList, " +
-            ".activity-list, " +
-            "[data-activity-list]"
-        );
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="page-head">
+
+      <div>
+
+        <h1 class="page-title">
+          Activity
+        </h1>
+
+        <div class="page-subtitle">
+          Real wallet transactions only
+        </div>
+
+      </div>
+
+      <button
+        class="refresh"
+        onclick="loadTransactions()"
+      >
+        Refresh ↻
+      </button>
+
+    </div>
 
 
-    containers.forEach(
-        container => {
+    <div class="filter-row">
 
-            if (
-                !transactions.length
-            ) {
+      <button class="filter active">
+        All
+      </button>
 
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-clock"></i>
-                        <div>No activity yet</div>
-                    </div>
-                `;
+      <button class="filter">
+        Received
+      </button>
 
-                return;
-            }
+      <button class="filter">
+        Sent
+      </button>
 
+      <button class="filter">
+        Jettons
+      </button>
 
-            container.innerHTML =
-                transactions
-                    .map(
-                        transaction => {
-
-                            const type =
-                                escapeHtml(
-                                    transaction.type
-                                );
-
-                            const amount =
-                                formatTON(
-                                    transaction.amount
-                                );
-
-                            const status =
-                                escapeHtml(
-                                    transaction.status
-                                );
+    </div>
 
 
-                            return `
-                                <div
-                                    class="activity-item"
-                                    data-tx-id="${escapeHtml(
-                                        transaction.id
-                                    )}"
-                                >
+    <div id="activityList"></div>
 
-                                    <div class="activity-icon">
+  `;
 
-                                        <i class="fas ${
-                                            type === "send"
-                                                ? "fa-arrow-up"
-                                                : type === "receive"
-                                                    ? "fa-arrow-down"
-                                                    : "fa-clock"
-                                        }"></i>
+  loadTransactions();
 
-                                    </div>
+}
 
-                                    <div class="activity-info">
 
-                                        <div class="activity-title">
-                                            ${type}
-                                        </div>
+/* Transactions */
 
-                                        <div class="activity-status">
-                                            ${status}
-                                        </div>
+async function loadTransactions() {
 
-                                    </div>
-
-                                    <div class="activity-amount">
-
-                                        ${amount} TON
-
-                                    </div>
-
-                                </div>
-                            `;
-
-                        }
-                    )
-                    .join("");
-
-        }
+  const box =
+    document.getElementById(
+      "activityList"
     );
 
-}
+  if (!box)
+    return;
 
 
-/* =========================================================
-   AIRDROP
-   ========================================================= */
+  if (!walletData?.address) {
 
-function renderAirdrop() {
+    box.innerHTML =
+      emptyActivity();
 
-    const points =
-        Number(
-            userData?.airdropPoints ||
-            userData?.points ||
-            0
-        );
+    return;
+
+  }
 
 
-    document
-        .querySelectorAll(
-            "[data-airdrop-points], " +
-            "#airdropPoints, " +
-            ".airdrop-points"
-        )
-        .forEach(
-            element => {
+  try {
 
-                element.textContent =
-                    formatNumber(
-                        points,
-                        0
-                    );
-
-            }
-        );
+    const url =
+      new URL(
+        CONFIG.API_BASE +
+        "/getTransactions"
+      );
 
 
-    /*
-     * Existing task container
-     */
-
-    const containers =
-        document.querySelectorAll(
-            "#airdropTasks, " +
-            ".airdrop-tasks, " +
-            "[data-airdrop-tasks]"
-        );
-
-
-    if (
-        !containers.length
-    ) {
-
-        return;
-    }
-
-
-    if (
-        airdropLoading
-    ) {
-
-        containers.forEach(
-            container => {
-
-                container.innerHTML = `
-                    <div class="loading-state">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        Loading tasks...
-                    </div>
-                `;
-
-            }
-        );
-
-        return;
-    }
-
-
-    if (
-        !airdropTasks.length
-    ) {
-
-        containers.forEach(
-            container => {
-
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-gift"></i>
-                        <div>No tasks available</div>
-                    </div>
-                `;
-
-            }
-        );
-
-        return;
-    }
-
-
-    containers.forEach(
-        container => {
-
-            container.innerHTML =
-                airdropTasks
-                    .map(
-                        task => {
-
-                            const id =
-                                escapeHtml(
-                                    task.id
-                                );
-
-                            const title =
-                                escapeHtml(
-                                    task.title ||
-                                    task.name ||
-                                    "Airdrop Task"
-                                );
-
-                            const description =
-                                escapeHtml(
-                                    task.description ||
-                                    ""
-                                );
-
-                            const reward =
-                                Number(
-                                    task.reward ||
-                                    task.points ||
-                                    0
-                                );
-
-
-                            return `
-                                <div
-                                    class="airdrop-task"
-                                    data-task-id="${id}"
-                                >
-
-                                    <div class="airdrop-task-icon">
-                                        <i class="fas fa-gift"></i>
-                                    </div>
-
-                                    <div class="airdrop-task-content">
-
-                                        <div class="airdrop-task-title">
-                                            ${title}
-                                        </div>
-
-                                        <div class="airdrop-task-description">
-                                            ${description}
-                                        </div>
-
-                                        <div class="airdrop-task-reward">
-                                            +${formatNumber(
-                                                reward,
-                                                0
-                                            )} Points
-                                        </div>
-
-                                    </div>
-
-                                    <button
-                                        class="airdrop-claim-btn"
-                                        type="button"
-                                        data-claim-task="${id}"
-                                    >
-                                        Claim
-                                    </button>
-
-                                </div>
-                            `;
-
-                        }
-                    )
-                    .join("");
-
-        }
+    url.searchParams.set(
+      "address",
+      walletData.address
     );
 
-}
+    url.searchParams.set(
+      "limit",
+      "20"
+    );
 
 
-/* =========================================================
-   LOAD AIRDROP TASKS
-   ========================================================= */
+    if (CONFIG.API_KEY) {
 
-async function loadAirdropTasks() {
-
-    if (
-        airdropLoading
-    ) {
-
-        return;
-    }
-
-
-    airdropLoading =
-        true;
-
-
-    renderAirdrop();
-
-
-    try {
-
-        if (
-            !firebaseReady
-        ) {
-
-            await initializeFirebase();
-
-        }
-
-
-        if (
-            !firebaseReady
-        ) {
-
-            airdropTasks = [];
-
-            return;
-
-        }
-
-
-        airdropTasks =
-            await getAirdropTasks();
-
-
-    } catch (error) {
-
-        console.error(
-            "Airdrop task loading failed:",
-            error
-        );
-
-        airdropTasks = [];
-
-    } finally {
-
-        airdropLoading =
-            false;
-
-        renderAirdrop();
+      url.searchParams.set(
+        "api_key",
+        CONFIG.API_KEY
+      );
 
     }
 
+
+    const response =
+      await fetch(
+        url.toString(),
+        {
+          headers:
+            CONFIG.API_KEY
+              ? {
+                  "X-API-Key":
+                    CONFIG.API_KEY
+                }
+              : {}
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!data.ok)
+      throw new Error(
+        data.error ||
+        data.description ||
+        "API error"
+      );
+
+
+    transactions =
+      Array.isArray(data.result)
+        ? data.result
+        : [];
+
+
+    if (!transactions.length) {
+
+      box.innerHTML =
+        emptyActivity();
+
+      return;
+
+    }
+
+
+    box.innerHTML =
+      transactions
+        .map(function (tx, i) {
+
+          return `
+
+            <div class="card tx">
+
+              <div
+                class="tx-icon"
+                style="
+                  background:rgba(22,140,255,.09);
+                  color:#3caaff
+                "
+              >
+                ↗
+              </div>
+
+              <div class="tx-main">
+
+                <div class="tx-title">
+                  Transaction ${i + 1}
+                </div>
+
+                <div class="tx-sub">
+                  ${
+                    tx.utime
+                      ? new Date(
+                          tx.utime * 1000
+                        ).toLocaleString()
+                      : "On-chain"
+                  }
+                </div>
+
+              </div>
+
+              <div class="tx-amount">
+
+                ${
+                  tx.hash
+                    ? esc(
+                        String(
+                          tx.hash
+                        ).slice(0, 6) +
+                        "…"
+                      )
+                    : "View"
+                }
+
+              </div>
+
+            </div>
+
+          `;
+
+        })
+        .join("");
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    box.innerHTML =
+      emptyActivity(
+        "Connect the secure API/backend to show real history."
+      );
+
+  }
+
 }
 
 
-/* =========================================================
-   CLAIM AIRDROP
-   ========================================================= */
-
-async function claimAirdropTask(
-    taskId,
-    button = null
+function emptyActivity(
+  message =
+    "No transactions yet. Fake history has been removed."
 ) {
 
-    if (
-        !taskId
-    ) {
+  return `
 
-        return;
-    }
+    <div class="card empty">
 
+      <div class="empty-icon">
+        ◷
+      </div>
 
-    if (
-        !firebaseReady
-    ) {
+      <div class="empty-title">
+        No Activity
+      </div>
 
-        showAlert(
-            "Airdrop is not connected yet."
-        );
+      <div class="empty-text">
+        ${esc(message)}
+      </div>
 
-        return;
-    }
+    </div>
 
-
-    const telegramId =
-        getUserId();
-
-
-    if (!telegramId) {
-
-        showAlert(
-            "Telegram user not detected."
-        );
-
-        return;
-    }
-
-
-    try {
-
-        if (button) {
-
-            setLoading(
-                button,
-                true,
-                "Claiming..."
-            );
-
-        }
-
-
-        const result =
-            await firebaseClaimAirdropTask(
-                telegramId,
-                taskId
-            );
-
-
-        if (
-            result?.alreadyClaimed
-        ) {
-
-            showAlert(
-                "You already claimed this task."
-            );
-
-            return;
-
-        }
-
-
-        if (
-            !result?.ok
-        ) {
-
-            throw new Error(
-                "Unable to claim task."
-            );
-
-        }
-
-
-        userData =
-            await getUser(
-                telegramId
-            );
-
-
-        haptic(
-            "success"
-        );
-
-
-        showAlert(
-            `Airdrop claimed! +${formatNumber(
-                result.reward || 0,
-                0
-            )} points`
-        );
-
-
-        await loadAirdropTasks();
-
-
-    } catch (error) {
-
-        console.error(
-            "Airdrop claim failed:",
-            error
-        );
-
-        haptic(
-            "error"
-        );
-
-        showAlert(
-            error.message ||
-            "Claim failed."
-        );
-
-    } finally {
-
-        if (button) {
-
-            setLoading(
-                button,
-                false
-            );
-
-        }
-
-    }
+  `;
 
 }
 
 
-/* =========================================================
-   PROFILE
-   ========================================================= */
+/* SEND */
+
+function renderSend() {
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <button
+      class="btn secondary back-btn"
+      onclick="switchNav('home')"
+    >
+      ← Back
+    </button>
+
+
+    <div class="page-head">
+
+      <div>
+
+        <h1 class="page-title">
+          Send
+        </h1>
+
+        <div class="page-subtitle">
+          TON transfer
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <section class="card form-card">
+
+      <h2 class="form-title">
+        Send TON
+      </h2>
+
+
+      <label class="input-label">
+        Recipient Address
+      </label>
+
+      <input
+        id="sendTo"
+        class="text-input"
+        placeholder="UQ… / EQ…"
+        autocomplete="off"
+      >
+
+
+      <label class="input-label">
+        Amount
+      </label>
+
+      <input
+        id="sendAmount"
+        class="text-input"
+        type="number"
+        min="0"
+        step="0.000000001"
+        placeholder="0.00"
+      >
+
+
+      <button
+        class="btn primary"
+        onclick="prepareSend()"
+      >
+        Confirm Withdrawal
+      </button>
+
+
+      <p
+        style="
+          color:#7188a7;
+          font-size:11px;
+          line-height:1.6;
+          margin:12px 0 0
+        "
+      >
+        This screen validates the transfer.
+        Broadcasting a real transfer should
+        be done through TON Connect or a
+        secure backend signer.
+      </p>
+
+    </section>
+
+  `;
+
+}
+
+
+function prepareSend() {
+
+  const to =
+    document.getElementById(
+      "sendTo"
+    )?.value.trim();
+
+
+  const amount =
+    Number(
+      document.getElementById(
+        "sendAmount"
+      )?.value
+    );
+
+
+  if (!to) {
+
+    showToast(
+      "Enter recipient address"
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !Number.isFinite(amount) ||
+    amount <= 0
+  ) {
+
+    showToast(
+      "Enter a valid amount"
+    );
+
+    return;
+
+  }
+
+
+  openModal(
+    "Transfer Ready",
+    `
+
+      <p>
+        <b>Recipient</b>
+      </p>
+
+      <p
+        style="
+          word-break:break-all
+        "
+      >
+        ${esc(to)}
+      </p>
+
+      <p>
+        <b>Amount</b>
+      </p>
+
+      <p>
+        ${amount.toFixed(4)} TON
+      </p>
+
+      <div class="warning">
+
+        Real blockchain broadcasting
+        is intentionally not performed
+        by this public frontend.
+
+      </div>
+
+    `
+  );
+
+}
+
+
+/* WALLET */
+
+function renderWallet() {
+
+  const address =
+    walletData?.address ||
+    "Wallet address unavailable";
+
+
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="page-head">
+
+      <div>
+
+        <h1 class="page-title">
+          Wallet
+        </h1>
+
+        <div class="page-subtitle">
+          TON Mainnet
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <section class="card section">
+
+      <div class="section-head">
+        TON Wallet Address
+      </div>
+
+
+      <div class="address-row">
+
+        <div class="address-text">
+          ${esc(address)}
+        </div>
+
+        <button
+          class="copy-pill"
+          onclick="copyAddress()"
+        >
+          Copy
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <section class="card section">
+
+      <div class="section-head">
+        Current Balance
+      </div>
+
+
+      <div
+        class="hero-balance"
+        style="
+          font-size:40px;
+          margin:8px 0
+        "
+      >
+        ${tonBalance.toFixed(2)} TON
+      </div>
+
+
+      <div class="token-sub">
+        TON Mainnet
+      </div>
+
+    </section>
+
+  `;
+
+}
+
+
+/* PROFILE */
 
 function renderProfile() {
 
-    const user =
-        getTelegramUser();
+  const u =
+    user();
 
 
-    const name =
-        [
-            user?.first_name,
-            user?.last_name
-        ]
-        .filter(Boolean)
-        .join(" ") ||
-        "User";
+  document.getElementById(
+    "content"
+  ).innerHTML = `
+
+    <div class="page-head">
+
+      <h1 class="page-title">
+        Profile
+      </h1>
+
+    </div>
 
 
-    const username =
-        user?.username
-            ? "@" +
-              user.username
-            : "";
+    <section class="profile-hero">
+
+      <div class="profile-main">
+
+        <div class="profile-avatar-wrap">
+
+          ${avatarHtml()}
+
+          <span
+            class="profile-online"
+          ></span>
+
+        </div>
 
 
-    document
-        .querySelectorAll(
-            "[data-profile-name], " +
-            ".profile-name"
-        )
-        .forEach(
-            element => {
+        <div>
 
-                element.textContent =
-                    name;
+          <div class="profile-name">
+            ${esc(userName())}
+          </div>
 
-            }
-        );
+          <div class="profile-username">
+            ${esc(username())}
+          </div>
 
+          <div class="profile-id">
+            Telegram ID:
+            ${esc(userId())}
+          </div>
 
-    document
-        .querySelectorAll(
-            "[data-profile-username], " +
-            ".profile-username"
-        )
-        .forEach(
-            element => {
+        </div>
 
-                element.textContent =
-                    username;
-
-            }
-        );
+      </div>
 
 
-    document
-        .querySelectorAll(
-            "[data-profile-id], " +
-            ".profile-id"
-        )
-        .forEach(
-            element => {
+      <div class="profile-stats">
 
-                element.textContent =
-                    user?.id
-                        ? String(
-                            user.id
-                        )
-                        : "-";
+        <div class="profile-stat">
 
-            }
-        );
+          <div class="profile-stat-value">
+            Telegram
+          </div>
+
+          <div class="profile-stat-label">
+            Account
+          </div>
+
+        </div>
 
 
-    document
-        .querySelectorAll(
-            "[data-profile-wallet], " +
-            ".profile-wallet"
-        )
-        .forEach(
-            element => {
+        <div class="profile-stat">
 
-                element.textContent =
-                    shortAddress(
-                        getWalletAddress(),
-                        8,
-                        8
-                    );
+          <div class="profile-stat-value">
+            TON
+          </div>
 
-            }
-        );
+          <div class="profile-stat-label">
+            Network
+          </div>
+
+        </div>
 
 
-    document
-        .querySelectorAll(
-            "[data-profile-photo], " +
-            ".profile-photo"
-        )
-        .forEach(
-            element => {
+        <div class="profile-stat">
 
-                if (
-                    user?.photo_url
-                ) {
+          <div class="profile-stat-value">
+            ${u.photo_url ? "✓" : "—"}
+          </div>
 
-                    if (
-                        element.tagName ===
-                        "IMG"
-                    ) {
+          <div class="profile-stat-label">
+            Photo
+          </div>
 
-                        element.src =
-                            user.photo_url;
+        </div>
 
-                    } else {
+      </div>
 
-                        element.style.backgroundImage =
-                            `url("${user.photo_url}")`;
+    </section>
 
-                    }
 
-                }
+    <section class="card profile-menu">
 
-            }
-        );
+      <button
+        class="profile-menu-item"
+        onclick="openPersonal()"
+      >
+
+        <span class="profile-menu-left">
+
+          <span class="profile-menu-icon">
+            ♙
+          </span>
+
+          <span>
+
+            <div class="profile-menu-title">
+              Personal Information
+            </div>
+
+            <div class="profile-menu-sub">
+              Name, Telegram ID & account
+            </div>
+
+          </span>
+
+        </span>
+
+        <span class="profile-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+
+      <button
+        class="profile-menu-item"
+        onclick="openSecurity()"
+      >
+
+        <span class="profile-menu-left">
+
+          <span class="profile-menu-icon">
+            ◉
+          </span>
+
+          <span>
+
+            <div class="profile-menu-title">
+              Security
+            </div>
+
+            <div class="profile-menu-sub">
+              Protect your wallet
+            </div>
+
+          </span>
+
+        </span>
+
+        <span class="profile-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+
+      <button
+        class="profile-menu-item"
+        onclick="openHelp()"
+      >
+
+        <span class="profile-menu-left">
+
+          <span class="profile-menu-icon">
+            ?
+          </span>
+
+          <span>
+
+            <div class="profile-menu-title">
+              Help & Support
+            </div>
+
+            <div class="profile-menu-sub">
+              Wallet help & information
+            </div>
+
+          </span>
+
+        </span>
+
+        <span class="profile-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+
+      <button
+        class="profile-menu-item danger"
+        onclick="logoutWallet()"
+      >
+
+        <span class="profile-menu-left">
+
+          <span class="profile-menu-icon">
+            ↪
+          </span>
+
+          <span>
+
+            <div class="profile-menu-title">
+              Log Out
+            </div>
+
+            <div class="profile-menu-sub">
+              Remove local wallet session
+            </div>
+
+          </span>
+
+        </span>
+
+        <span class="profile-menu-arrow">
+          ›
+        </span>
+
+      </button>
+
+    </section>
+
+
+    <section class="card info-card">
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Name
+        </span>
+
+        <span class="info-value">
+          ${esc(userName())}
+        </span>
+
+      </div>
+
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Username
+        </span>
+
+        <span class="info-value">
+          ${esc(username())}
+        </span>
+
+      </div>
+
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Telegram ID
+        </span>
+
+        <span class="info-value">
+          ${esc(userId())}
+        </span>
+
+      </div>
+
+
+      <div class="info-row">
+
+        <span class="info-label">
+          Account Year
+        </span>
+
+        <span class="info-value">
+          Not exposed by Telegram Mini Apps
+        </span>
+
+      </div>
+
+    </section>
+
+  `;
 
 }
 
 
-/* =========================================================
-   LOAD PROFILE
-   ========================================================= */
+/* Personal */
 
-async function loadProfile() {
+function openPersonal() {
 
-    try {
+  openModal(
+    "Personal Information",
+    `
 
-        if (
-            firebaseReady &&
-            getUserId()
-        ) {
+      <div class="info-card">
 
-            userData =
-                await getUser(
-                    getUserId()
-                );
+        <div class="info-row">
 
-        }
+          <span class="info-label">
+            Name
+          </span>
 
-    } catch (error) {
+          <span class="info-value">
+            ${esc(userName())}
+          </span>
 
-        console.warn(
-            "Profile loading failed:",
-            error
-        );
-
-    }
+        </div>
 
 
-    renderProfile();
+        <div class="info-row">
+
+          <span class="info-label">
+            Username
+          </span>
+
+          <span class="info-value">
+            ${esc(username())}
+          </span>
+
+        </div>
+
+
+        <div class="info-row">
+
+          <span class="info-label">
+            Telegram ID
+          </span>
+
+          <span class="info-value">
+            ${esc(userId())}
+          </span>
+
+        </div>
+
+
+        <div class="info-row">
+
+          <span class="info-label">
+            Account Year
+          </span>
+
+          <span class="info-value">
+            Not available from Telegram Mini App user data
+          </span>
+
+        </div>
+
+      </div>
+
+    `
+  );
 
 }
 
 
-/* =========================================================
-   NAVIGATION EVENT DELEGATION
-   ========================================================= */
+/* Security */
 
-document.addEventListener(
-    "click",
-    event => {
+function openSecurity() {
 
-        const nav =
-            event.target.closest(
-                "[data-nav], " +
-                ".nav-item, " +
-                ".bottom-nav-item, " +
-                ".nav-btn"
-            );
+  openModal(
+    "Security",
+    `
 
+      <div class="warning">
 
-        if (nav) {
+        Never share a seed phrase
+        or private key.
 
-            const page =
-                nav.dataset.nav ||
-                nav.dataset.page ||
-                nav.dataset.target;
+        This frontend does not display
+        or store recovery phrases.
+
+      </div>
 
 
-            if (page) {
+      <p>
+        For real sending/signing, use
+        TON Connect or a properly secured
+        backend signer.
+      </p>
 
-                event.preventDefault();
-
-                switchNav(
-                    page
-                );
-
-                return;
-
-            }
-
-        }
-
-
-        /*
-         * Airdrop claim
-         */
-
-        const claimButton =
-            event.target.closest(
-                "[data-claim-task]"
-            );
-
-
-        if (
-            claimButton
-        ) {
-
-            event.preventDefault();
-
-            const taskId =
-                claimButton.dataset.claimTask;
-
-
-            claimAirdropTask(
-                taskId,
-                claimButton
-            );
-
-            return;
-
-        }
-
-
-        /*
-         * Create Wallet
-         */
-
-        const createButton =
-            event.target.closest(
-                "[data-create-wallet], " +
-                ".create-wallet-btn"
-            );
-
-
-        if (
-            createButton
-        ) {
-
-            event.preventDefault();
-
-            createWallet();
-
-            return;
-
-        }
-
-
-        /*
-         * Delete wallet
-         */
-
-        const deleteButton =
-            event.target.closest(
-                "[data-delete-wallet]"
-            );
-
-
-        if (
-            deleteButton
-        ) {
-
-            event.preventDefault();
-
-            deleteWallet();
-
-            return;
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   INITIAL PAGE
-   ========================================================= */
-
-function initializeNavigation() {
-
-    const pages =
-        getPageElements();
-
-
-    /*
-     * Hide pages first.
-     */
-
-    Object.values(pages)
-        .forEach(
-            page => {
-
-                if (!page) {
-                    return;
-                }
-
-                page.classList.add(
-                    "hidden"
-                );
-
-            }
-        );
-
-
-    /*
-     * Show Home.
-     */
-
-    showPage(
-        "home"
-    );
-
-
-    renderHome();
+    `
+  );
 
 }
 
 
-/* =========================================================
-   AIRDROP PAGE HOOK
-   ========================================================= */
+/* Help */
 
-async function openAirdrop() {
+function openHelp() {
 
-    switchNav(
-        "airdrop"
-    );
+  openModal(
+    "Help & Support",
+    `
 
-    await loadAirdropTasks();
+      <p>
+        <b>TGN Wallet</b>
+      </p>
 
-}
+      <p>
+        TON Mainnet wallet interface
+        with real blockchain read-only
+        balance/history support.
+      </p>
 
+      <p
+        style="
+          color:#8196b5;
+          font-size:11px
+        "
+      >
+        Jetton indexing and secure API
+        proxy should be connected on
+        the backend for production.
+      </p>
 
-/* =========================================================
-   PROFILE PAGE HOOK
-   ========================================================= */
-
-async function openProfile() {
-
-    switchNav(
-        "profile"
-    );
-
-    await loadProfile();
-
-}
-
-
-/* =========================================================
-   WALLET PAGE HOOK
-   ========================================================= */
-
-async function openWallet() {
-
-    switchNav(
-        "wallet"
-    );
-
-    renderWallet();
+    `
+  );
 
 }
 
 
-/* =========================================================
-   ACTIVITY PAGE HOOK
-   ========================================================= */
-
-function openActivity() {
-
-    switchNav(
-        "activity"
-    );
-
-    renderActivity();
-
-}
-
-
-/* =========================================================
-   HOME PAGE HOOK
-   ========================================================= */
-
-function openHome() {
-
-    switchNav(
-        "home"
-    );
-
-    renderHome();
-
-}
-
-
-/* =========================================================
-   GLOBAL FUNCTIONS
-   ========================================================= */
-
-window.tgnWallet = {
-
-    ...(window.tgnWallet || {}),
-
-    switchNav,
-
-    showPage,
-
-    renderHome,
-
-    renderWallet,
-
-    renderActivity,
-
-    renderAirdrop,
-
-    renderProfile,
-
-    loadAirdropTasks,
-
-    claimAirdropTask,
-
-    openHome,
-
-    openWallet,
-
-    openActivity,
-
-    openAirdrop,
-
-    openProfile,
-
-    initializeNavigation,
-
-    updateBalanceUI
-
-};
-
-
-/* =========================================================
-   INITIAL NAVIGATION
-   ========================================================= */
-
-try {
-
-    initializeNavigation();
-
-} catch (error) {
-
-    console.warn(
-        "Navigation initialization failed:",
-        error
-    );
-
-}
-/* =========================================================
-   TGN WALLET - APP.JS
-   PART 4
-   Deposit / Send / Withdraw / Transactions
-   ========================================================= */
-
-
-/* =========================================================
-   AMOUNT HELPERS
-   ========================================================= */
-
-function parseAmount(value) {
-
-    const amount =
-        Number(
-            String(value ?? "")
-                .replace(/,/g, "")
-                .trim()
-        );
-
-    if (
-        !Number.isFinite(amount) ||
-        amount <= 0
-    ) {
-        return 0;
-    }
-
-    return amount;
-
-}
-
-
-function validateAmount(
-    amount
-) {
-
-    const value =
-        parseAmount(amount);
-
-    if (
-        value <= 0
-    ) {
-
-        showAlert(
-            "Please enter a valid amount."
-        );
-
-        return false;
-
-    }
-
-
-    if (
-        value > tonBalance
-    ) {
-
-        showAlert(
-            "Insufficient TON balance."
-        );
-
-        return false;
-
-    }
-
-
-    return true;
-
-}
-
-
-/* =========================================================
-   ADDRESS VALIDATION
-   ========================================================= */
-
-function validateTonAddress(
-    address
-) {
-
-    const value =
-        String(
-            address || ""
-        ).trim();
-
-
-    if (!value) {
-
-        showAlert(
-            "Please enter a TON wallet address."
-        );
-
-        return false;
-
-    }
-
-
-    /*
-     * Basic TON address validation.
-     *
-     * Supports:
-     * EQ...
-     * UQ...
-     * 0:...
-     * -1:...
-     */
-
-    const valid =
-        /^(EQ|UQ)[A-Za-z0-9_-]{46,50}$/.test(
-            value
-        ) ||
-        /^-?0:[a-fA-F0-9]{64}$/.test(
-            value
-        );
-
-
-    if (!valid) {
-
-        showAlert(
-            "Invalid TON wallet address."
-        );
-
-        return false;
-
-    }
-
-
-    return true;
-
-}
-
-
-/* =========================================================
-   SEND TON
-   ========================================================= */
-
-async function sendTON(
-    recipient,
-    amount,
-    memo = ""
-) {
-
-    try {
-
-        const address =
-            String(
-                recipient || ""
-            ).trim();
-
-        const value =
-            parseAmount(
-                amount
-            );
-
-
-        if (
-            !hasWallet()
-        ) {
-
-            showAlert(
-                "Please create or import a wallet first."
-            );
-
-            return null;
-
-        }
-
-
-        if (
-            !validateTonAddress(
-                address
-            )
-        ) {
-
-            return null;
-
-        }
-
-
-        if (
-            !validateAmount(
-                value
-            )
-        ) {
-
-            return null;
-
-        }
-
-
-        if (
-            address ===
-            getWalletAddress()
-        ) {
-
-            showAlert(
-                "You cannot send TON to the same wallet."
-            );
-
-            return null;
-
-        }
-
-
-        const confirmed =
-            await new Promise(
-                resolve => {
-
-                    showConfirm(
-                        `Send ${formatTON(
-                            value
-                        )} TON to ${shortAddress(
-                            address,
-                            8,
-                            8
-                        )}?`,
-                        resolve
-                    );
-
-                }
-            );
-
-
-        if (!confirmed) {
-            return null;
-        }
-
-
-        haptic(
-            "medium"
-        );
-
-
-        /*
-         * Create local pending transaction.
-         */
-
-        const tx =
-            addTransaction({
-
-                type:
-                    "send",
-
-                amount:
-                    value,
-
-                address:
-                    address,
-
-                status:
-                    "pending"
-
-            });
-
-
-        /*
-         * Send through Worker.
-         *
-         * IMPORTANT:
-         * Seed/private key is NOT sent.
-         * The Worker should only receive
-         * the information necessary for
-         * the configured transaction flow.
-         */
-
-        let result;
-
-        try {
-
-            result =
-                await workerRequest(
-                    "/send",
-                    {
-
-                        method:
-                            "POST",
-
-                        body: {
-
-                            from:
-                                getWalletAddress(),
-
-                            to:
-                                address,
-
-                            amount:
-                                value,
-
-                            memo:
-                                memo || "",
-
-                            telegramUserId:
-                                getUserId()
-
-                        }
-
-                    }
-                );
-
-        } catch (error) {
-
-            /*
-             * Mark local transaction failed.
-             */
-
-            tx.status =
-                "failed";
-
-            saveTransactions();
-
-            throw error;
-
-        }
-
-
-        /*
-         * Transaction successful.
-         */
-
-        tx.status =
-            "confirmed";
-
-        tx.txHash =
-            result?.txHash ||
-            result?.hash ||
-            result?.transactionHash ||
-            "";
-
-        saveTransactions();
-
-
-        /*
-         * Refresh balance.
-         */
-
-        await refreshBalance();
-
-
-        haptic(
-            "success"
-        );
-
-
-        showAlert(
-            "Transaction sent successfully."
-        );
-
-
-        renderActivity();
-
-
-        return result;
-
-
-    } catch (error) {
-
-        console.error(
-            "Send TON failed:",
-            error
-        );
-
-        haptic(
-            "error"
-        );
-
-        showAlert(
-            error.message ||
-            "Transaction failed."
-        );
-
-        return null;
-
-    }
-
-}
-
-
-/* =========================================================
-   SEND FORM
-   ========================================================= */
-
-function getSendFormValues() {
-
-    const addressInput =
-        document.querySelector(
-            "#sendAddress"
-        ) ||
-        document.querySelector(
-            '[name="sendAddress"]'
-        ) ||
-        document.querySelector(
-            '[name="recipient"]'
-        ) ||
-        document.querySelector(
-            '[data-send-address]'
-        );
-
-
-    const amountInput =
-        document.querySelector(
-            "#sendAmount"
-        ) ||
-        document.querySelector(
-            '[name="sendAmount"]'
-        ) ||
-        document.querySelector(
-            '[name="amount"]'
-        ) ||
-        document.querySelector(
-            '[data-send-amount]'
-        );
-
-
-    const memoInput =
-        document.querySelector(
-            "#sendMemo"
-        ) ||
-        document.querySelector(
-            '[name="sendMemo"]'
-        ) ||
-        document.querySelector(
-            '[name="memo"]'
-        ) ||
-        document.querySelector(
-            '[data-send-memo]'
-        );
-
-
-    return {
-
-        address:
-            addressInput?.value ||
-            "",
-
-        amount:
-            amountInput?.value ||
-            "",
-
-        memo:
-            memoInput?.value ||
-            "",
-
-        addressInput,
-
-        amountInput,
-
-        memoInput
-
-    };
-
-}
-
-
-/* =========================================================
-   SUBMIT SEND FORM
-   ========================================================= */
-
-async function submitSendForm(
-    event = null
-) {
-
-    if (event) {
-
-        event.preventDefault();
-
-    }
-
-
-    const form =
-        getSendFormValues();
-
-
-    if (!form.address) {
-
-        showAlert(
-            "Please enter recipient address."
-        );
-
-        return;
-
-    }
-
-
-    if (!form.amount) {
-
-        showAlert(
-            "Please enter amount."
-        );
-
-        return;
-
-    }
-
-
-    const button =
-        document.querySelector(
-            "#sendButton"
-        ) ||
-        document.querySelector(
-            '[data-send-button]'
-        ) ||
-        document.querySelector(
-            ".send-btn"
-        );
-
-
-    setLoading(
-        button,
-        true,
-        "Sending..."
-    );
-
-
-    try {
-
-        await sendTON(
-            form.address,
-            form.amount,
-            form.memo
-        );
-
-
-    } finally {
-
-        setLoading(
-            button,
-            false
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   MAX SEND AMOUNT
-   ========================================================= */
-
-function setMaxSendAmount() {
-
-    const input =
-        document.querySelector(
-            "#sendAmount"
-        ) ||
-        document.querySelector(
-            '[name="sendAmount"]'
-        ) ||
-        document.querySelector(
-            '[data-send-amount]'
-        );
-
-
-    if (!input) {
-        return;
-    }
-
-
-    /*
-     * Keep a small reserve for
-     * network fees.
-     */
-
-    const feeReserve =
-        0.02;
-
-
-    const max =
-        Math.max(
-            0,
-            tonBalance -
-            feeReserve
-        );
-
-
-    input.value =
-        max > 0
-            ? max.toFixed(4)
-            : "0";
-
-}
-
-
-/* =========================================================
-   DEPOSIT
-   ========================================================= */
-
-function openDeposit() {
-
-    if (
-        !hasWallet()
-    ) {
-
-        showAlert(
-            "Please create or import a wallet first."
-        );
-
-        return;
-
-    }
-
-
-    const address =
-        getWalletAddress();
-
-
-    /*
-     * Fill existing deposit elements.
-     */
-
-    document
-        .querySelectorAll(
-            "[data-deposit-address], " +
-            ".deposit-address"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    address;
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "#depositAddress"
-        )
-        .forEach(
-            element => {
-
-                if (
-                    "value" in element
-                ) {
-
-                    element.value =
-                        address;
-
-                } else {
-
-                    element.textContent =
-                        address;
-
-                }
-
-            }
-        );
-
-
-    /*
-     * Show deposit modal/page
-     * if one exists.
-     */
-
-    const modal =
-        document.querySelector(
-            "#depositModal"
-        ) ||
-        document.querySelector(
-            ".deposit-modal"
-        );
-
-
-    if (modal) {
-
-        modal.classList.add(
-            "active"
-        );
-
-        modal.style.display =
-            "";
-
-    }
-
-
-    haptic(
-        "light"
-    );
-
-}
-
-
-/* =========================================================
-   CLOSE DEPOSIT
-   ========================================================= */
-
-function closeDeposit() {
-
-    const modal =
-        document.querySelector(
-            "#depositModal"
-        ) ||
-        document.querySelector(
-            ".deposit-modal"
-        );
-
-
-    if (!modal) {
-        return;
-    }
-
-
-    modal.classList.remove(
-        "active"
-    );
-
-    modal.style.display =
-        "none";
-
-}
-
-
-/* =========================================================
-   COPY DEPOSIT ADDRESS
-   ========================================================= */
-
-async function copyDepositAddress() {
-
-    const address =
-        getWalletAddress();
-
-
-    if (!address) {
-
-        showAlert(
-            "Wallet address is not available."
-        );
-
-        return false;
-
-    }
-
-
-    const copied =
-        await copyText(
-            address
-        );
-
-
-    if (copied) {
-
-        haptic(
-            "success"
-        );
-
-        showAlert(
-            "Wallet address copied."
-        );
-
-    }
-
-
-    return copied;
-
-}
-
-
-/* =========================================================
-   WITHDRAW
-   ========================================================= */
-
-async function withdrawTON(
-    recipient,
-    amount,
-    memo = ""
-) {
-
-    /*
-     * Withdrawal uses the same
-     * secure transaction endpoint.
-     *
-     * If your Worker has a separate
-     * /withdraw endpoint, it can be
-     * changed there without touching UI.
-     */
-
-    return await sendTON(
-        recipient,
-        amount,
-        memo
-    );
-
-}
-
-
-/* =========================================================
-   OPEN SEND
-   ========================================================= */
-
-function openSend() {
-
-    if (
-        !hasWallet()
-    ) {
-
-        showAlert(
-            "Please create or import a wallet first."
-        );
-
-        return;
-
-    }
-
-
-    const modal =
-        document.querySelector(
-            "#sendModal"
-        ) ||
-        document.querySelector(
-            ".send-modal"
-        );
-
-
-    if (modal) {
-
-        modal.classList.add(
-            "active"
-        );
-
-        modal.style.display =
-            "";
-
-    }
-
-
-    haptic(
-        "light"
-    );
-
-}
-
-
-/* =========================================================
-   CLOSE SEND
-   ========================================================= */
-
-function closeSend() {
-
-    const modal =
-        document.querySelector(
-            "#sendModal"
-        ) ||
-        document.querySelector(
-            ".send-modal"
-        );
-
-
-    if (!modal) {
-        return;
-    }
-
-
-    modal.classList.remove(
-        "active"
-    );
-
-    modal.style.display =
-        "none";
-
-}
-
-
-/* =========================================================
-   CLEAR SEND FORM
-   ========================================================= */
-
-function clearSendForm() {
-
-    const selectors = [
-
-        "#sendAddress",
-
-        "#sendAmount",
-
-        "#sendMemo",
-
-        '[name="sendAddress"]',
-
-        '[name="sendAmount"]',
-
-        '[name="sendMemo"]'
-
-    ];
-
-
-    selectors.forEach(
-        selector => {
-
-            document
-                .querySelectorAll(
-                    selector
-                )
-                .forEach(
-                    input => {
-
-                        input.value =
-                            "";
-
-                    }
-                );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   TRANSACTION STATUS
-   ========================================================= */
-
-function updateTransactionStatus(
-    txId,
-    status,
-    extra = {}
-) {
-
-    const tx =
-        transactions.find(
-            item =>
-                String(
-                    item.id
-                ) ===
-                String(
-                    txId
-                )
-        );
-
-
-    if (!tx) {
-        return false;
-    }
-
-
-    tx.status =
-        status;
-
-
-    Object.assign(
-        tx,
-        extra
-    );
-
-
-    saveTransactions();
-
-    renderActivity();
-
-    return true;
-
-}
-
-
-/* =========================================================
-   TRANSACTION DETAIL
-   ========================================================= */
-
-function getTransaction(
-    txId
-) {
-
-    return (
-        transactions.find(
-            tx =>
-                String(
-                    tx.id
-                ) ===
-                String(
-                    txId
-                )
-        ) ||
-        null
-    );
-
-}
-
-
-/* =========================================================
-   OPEN TRANSACTION DETAIL
-   ========================================================= */
-
-function openTransaction(
-    txId
-) {
-
-    const tx =
-        getTransaction(
-            txId
-        );
-
-
-    if (!tx) {
-
-        showAlert(
-            "Transaction not found."
-        );
-
-        return;
-
-    }
-
-
-    const amount =
-        formatTON(
-            tx.amount
-        );
-
-
-    const status =
-        escapeHtml(
-            tx.status
-        );
-
-
-    const address =
-        shortAddress(
-            tx.address,
-            10,
-            10
-        );
-
-
-    const message =
-        `Type: ${tx.type}\n` +
-        `Amount: ${amount} TON\n` +
-        `Status: ${status}\n` +
-        `Address: ${address}`;
-
-
-    showAlert(
-        message
-    );
-
-}
-
-
-/* =========================================================
-   ACTIVITY CLICK
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const item =
-            event.target.closest(
-                "[data-tx-id]"
-            );
-
-
-        if (!item) {
-            return;
-        }
-
-
-        const id =
-            item.dataset.txId;
-
-
-        if (id) {
-
-            openTransaction(
-                id
-            );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   SEND BUTTON EVENTS
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const sendButton =
-            event.target.closest(
-                "[data-send], " +
-                "#sendButton, " +
-                ".send-btn"
-            );
-
-
-        if (
-            !sendButton
-        ) {
-            return;
-        }
-
-
-        /*
-         * Avoid catching buttons that
-         * belong to another component.
-         */
-
-        if (
-            sendButton.dataset.action ===
-            "open"
-        ) {
-
-            openSend();
-
-            return;
-
-        }
-
-
-        submitSendForm(
-            event
-        );
-
-    }
-);
-
-
-/* =========================================================
-   DEPOSIT BUTTON EVENTS
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const button =
-            event.target.closest(
-                "[data-deposit], " +
-                "#depositButton, " +
-                ".deposit-btn"
-            );
-
-
-        if (!button) {
-            return;
-        }
-
-
-        event.preventDefault();
-
-        openDeposit();
-
-    }
-);
-
-
-/* =========================================================
-   COPY BUTTON EVENTS
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    async event => {
-
-        const button =
-            event.target.closest(
-                "[data-copy-address], " +
-                ".copy-address-btn"
-            );
-
-
-        if (!button) {
-            return;
-        }
-
-
-        event.preventDefault();
-
-
-        const address =
-            button.dataset.address ||
-            getWalletAddress();
-
-
-        const copied =
-            await copyText(
-                address
-            );
-
-
-        if (copied) {
-
-            haptic(
-                "success"
-            );
-
-            const old =
-                button.innerHTML;
-
-
-            button.innerHTML =
-                '<i class="fas fa-check"></i>';
-
-
-            setTimeout(
-                () => {
-
-                    button.innerHTML =
-                        old;
-
-                },
-                1200
-            );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   MAX BUTTON
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const button =
-            event.target.closest(
-                "[data-max], " +
-                ".max-btn"
-            );
-
-
-        if (!button) {
-            return;
-        }
-
-
-        event.preventDefault();
-
-        setMaxSendAmount();
-
-    }
-);
-
-
-/* =========================================================
-   MODAL CLOSE
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const close =
-            event.target.closest(
-                "[data-close-modal], " +
-                ".modal-close"
-            );
-
-
-        if (!close) {
-            return;
-        }
-
-
-        const modal =
-            close.closest(
-                ".modal"
-            );
-
-
-        if (modal) {
-
-            modal.classList.remove(
-                "active"
-            );
-
-            modal.style.display =
-                "none";
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   ESCAPE KEY
-   ========================================================= */
-
-document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key !==
-            "Escape"
-        ) {
-            return;
-        }
-
-
-        document
-            .querySelectorAll(
-                ".modal.active, " +
-                ".modal[style*='display']"
-            )
-            .forEach(
-                modal => {
-
-                    modal.classList.remove(
-                        "active"
-                    );
-
-                    modal.style.display =
-                        "none";
-
-                }
-            );
-
-    }
-);
-
-
-/* =========================================================
-   GLOBAL EXPORT
-   ========================================================= */
-
-window.tgnWallet = {
-
-    ...(window.tgnWallet || {}),
-
-    parseAmount,
-
-    validateAmount,
-
-    validateTonAddress,
-
-    sendTON,
-
-    submitSendForm,
-
-    setMaxSendAmount,
-
-    openDeposit,
-
-    closeDeposit,
-
-    copyDepositAddress,
-
-    withdrawTON,
-
-    openSend,
-
-    closeSend,
-
-    clearSendForm,
-
-    updateTransactionStatus,
-
-    getTransaction,
-
-    openTransaction
-
-};
-
-
-/* =========================================================
-   PART 4 READY
-   ========================================================= */
-
-console.log(
-    "TGN Wallet Part 4 loaded ✓"
-);
-/* =========================================================
-   TGN WALLET - APP.JS
-   PART 5
-   Referral / Invite / Airdrop / Profile / Final Wiring
-   ========================================================= */
-
-
-/* =========================================================
-   BOT USERNAME
-   ========================================================= */
-
-const TELEGRAM_BOT_USERNAME =
-    "TglXWattetBot";
-
-
-/* =========================================================
-   REFERRAL LINK
-   ========================================================= */
-
-function getReferralLink() {
-
-    const userId =
-        getUserId();
-
-
-    if (!userId) {
-
-        return (
-            "https://t.me/" +
-            TELEGRAM_BOT_USERNAME
-        );
-
-    }
-
-
-    return (
-        "https://t.me/" +
-        TELEGRAM_BOT_USERNAME +
-        "?start=" +
-        encodeURIComponent(
-            userId
-        )
-    );
-
-}
-
-
-/* =========================================================
-   UPDATE REFERRAL UI
-   ========================================================= */
-
-function renderReferral() {
-
-    const link =
-        getReferralLink();
-
-
-    document
-        .querySelectorAll(
-            "[data-referral-link], " +
-            "#referralLink, " +
-            ".referral-link"
-        )
-        .forEach(
-            element => {
-
-                if (
-                    "value" in element
-                ) {
-
-                    element.value =
-                        link;
-
-                } else {
-
-                    element.textContent =
-                        link;
-
-                }
-
-            }
-        );
-
-
-    const referralCount =
-        Number(
-            userData?.referralCount ||
-            userData?.referrals ||
-            0
-        );
-
-
-    const referralPoints =
-        Number(
-            userData?.referralPoints ||
-            0
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-referral-count], " +
-            "#referralCount, " +
-            ".referral-count"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    formatNumber(
-                        referralCount,
-                        0
-                    );
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-referral-points], " +
-            "#referralPoints, " +
-            ".referral-points"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    formatNumber(
-                        referralPoints,
-                        0
-                    );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   COPY REFERRAL LINK
-   ========================================================= */
-
-async function copyReferralLink() {
-
-    const link =
-        getReferralLink();
-
-
-    const copied =
-        await copyText(
-            link
-        );
-
-
-    if (copied) {
-
-        haptic(
-            "success"
-        );
-
-        showAlert(
-            "Referral link copied!"
-        );
-
-    }
-
-
-    return copied;
-
-}
-
-
-/* =========================================================
-   TELEGRAM SHARE
-   ========================================================= */
-
-function shareReferralLink() {
-
-    const link =
-        getReferralLink();
-
-
-    const text =
-        "Join TGN Wallet and earn Airdrop rewards!";
-
-
-    const shareUrl =
-        "https://t.me/share/url" +
-        "?url=" +
-        encodeURIComponent(
-            link
-        ) +
-        "&text=" +
-        encodeURIComponent(
-            text
-        );
-
-
-    try {
-
-        if (
-            tg?.openTelegramLink
-        ) {
-
-            tg.openTelegramLink(
-                shareUrl
-            );
-
-        } else {
-
-            window.open(
-                shareUrl,
-                "_blank"
-            );
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "Telegram share failed:",
-            error
-        );
-
-        window.open(
-            shareUrl,
-            "_blank"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   REFERRAL BUTTONS
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const copyButton =
-            event.target.closest(
-                "[data-copy-referral], " +
-                "#copyReferral, " +
-                ".copy-referral-btn"
-            );
-
-
-        if (copyButton) {
-
-            event.preventDefault();
-
-            copyReferralLink();
-
-            return;
-
-        }
-
-
-        const shareButton =
-            event.target.closest(
-                "[data-share-referral], " +
-                "#shareReferral, " +
-                ".share-referral-btn"
-            );
-
-
-        if (shareButton) {
-
-            event.preventDefault();
-
-            shareReferralLink();
-
-            return;
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   PROFILE STATS
-   ========================================================= */
-
-function renderProfileStats() {
-
-    const referrals =
-        Number(
-            userData?.referralCount ||
-            userData?.referrals ||
-            0
-        );
-
-
-    const points =
-        Number(
-            userData?.airdropPoints ||
-            userData?.points ||
-            0
-        );
-
-
-    const claimed =
-        Number(
-            userData?.claimedTasks ||
-            0
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-stat-referrals]"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    formatNumber(
-                        referrals,
-                        0
-                    );
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-stat-points]"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    formatNumber(
-                        points,
-                        0
-                    );
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-stat-claimed]"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    formatNumber(
-                        claimed,
-                        0
-                    );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   LOAD USER DATA
-   ========================================================= */
-
-async function refreshUserData() {
-
-    const telegramId =
-        getUserId();
-
-
-    if (
-        !telegramId ||
-        !firebaseReady
-    ) {
-
-        return userData;
-
-    }
-
-
-    try {
-
-        const latest =
-            await getUser(
-                telegramId
-            );
-
-
-        if (latest) {
-
-            userData =
-                latest;
-
-        }
-
-
-        renderReferral();
-
-        renderProfileStats();
-
-        renderProfile();
-
-        renderAirdrop();
-
-
-        return userData;
-
-
-    } catch (error) {
-
-        console.warn(
-            "User refresh failed:",
-            error
-        );
-
-        return userData;
-
-    }
-
-}
-
-
-/* =========================================================
-   AIRDROP OPEN
-   ========================================================= */
-
-async function openAirdropPage() {
-
-    switchNav(
-        "airdrop"
-    );
-
-
-    await refreshUserData();
-
-
-    await loadAirdropTasks();
-
-}
-
-
-/* =========================================================
-   AIRDROP CLAIM CLICK
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const button =
-            event.target.closest(
-                "[data-claim-task]"
-            );
-
-
-        if (!button) {
-            return;
-        }
-
-
-        event.preventDefault();
-
-
-        const taskId =
-            button.dataset.claimTask;
-
-
-        if (!taskId) {
-            return;
-        }
-
-
-        claimAirdropTask(
-            taskId,
-            button
-        );
-
-    }
-);
-
-
-/* =========================================================
-   AIRDROP REFRESH
-   ========================================================= */
-
-async function refreshAirdrop() {
-
-    await refreshUserData();
-
-    await loadAirdropTasks();
-
-}
-
-
-/* =========================================================
-   PROFILE ACTIONS
-   ========================================================= */
-
-function openProfilePage() {
-
-    switchNav(
-        "profile"
-    );
-
-    renderProfile();
-
-    renderReferral();
-
-    renderProfileStats();
-
-}
-
+/* Logout */
 
 function logoutWallet() {
 
-    showConfirm(
-        "Remove this wallet from this device?",
-        confirmed => {
+  openModal(
+    "Log Out",
+    `
 
-            if (!confirmed) {
-                return;
-            }
-
-
-            clearLocalWallet();
+      <p>
+        This removes the locally stored
+        wallet session from this device.
+      </p>
 
 
-            haptic(
-                "success"
-            );
+      <button
+        class="btn primary"
+        onclick="
+          localStorage.removeItem(
+            CONFIG.WALLET_STORAGE
+          );
 
+          walletData = null;
 
-            showAlert(
-                "Wallet removed from this device."
-            );
+          closeModal();
 
+          switchNav('home');
 
-            if (
-                typeof renderWelcome ===
-                "function"
-            ) {
+          showToast(
+            'Wallet session removed'
+          );
+        "
+      >
+        Confirm Log Out
+      </button>
 
-                renderWelcome();
-
-            } else {
-
-                switchNav(
-                    "home"
-                );
-
-            }
-
-        }
-    );
+    `
+  );
 
 }
 
 
-/* =========================================================
-   PROFILE BUTTONS
-   ========================================================= */
+/* START */
 
-document.addEventListener(
-    "click",
-    event => {
+function boot() {
 
-        const profile =
-            event.target.closest(
-                "[data-profile]"
-            );
+  renderHome();
 
-
-        if (profile) {
-
-            event.preventDefault();
-
-            openProfilePage();
-
-            return;
-
-        }
-
-
-        const logout =
-            event.target.closest(
-                "[data-logout-wallet]"
-            );
-
-
-        if (logout) {
-
-            event.preventDefault();
-
-            logoutWallet();
-
-            return;
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   REFRESH ALL UI
-   ========================================================= */
-
-function refreshAllUI() {
-
-    renderHome();
-
-    renderWallet();
-
-    renderActivity();
-
-    renderAirdrop();
-
-    renderProfile();
-
-    renderReferral();
-
-    renderProfileStats();
+  if (walletData)
+    refreshWallet(false);
 
 }
 
-
-/* =========================================================
-   PERIODIC BALANCE REFRESH
-   ========================================================= */
-
-let balanceTimer =
-    null;
-
-
-function startBalanceRefresh() {
-
-    if (
-        balanceTimer
-    ) {
-
-        clearInterval(
-            balanceTimer
-        );
-
-    }
-
-
-    balanceTimer =
-        setInterval(
-            async () => {
-
-                if (
-                    document.hidden
-                ) {
-                    return;
-                }
-
-
-                if (
-                    hasWallet()
-                ) {
-
-                    await refreshBalance();
-
-                }
-
-            },
-            30000
-        );
-
-}
-
-
-/* =========================================================
-   PAGE VISIBILITY
-   ========================================================= */
-
-document.addEventListener(
-    "visibilitychange",
-    async () => {
-
-        if (
-            !document.hidden
-        ) {
-
-            if (
-                hasWallet()
-            ) {
-
-                await refreshBalance();
-
-            }
-
-
-            if (
-                firebaseReady
-            ) {
-
-                await refreshUserData();
-
-            }
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   TELEGRAM MAIN BUTTON
-   ========================================================= */
-
-function setupTelegramMainButton() {
-
-    if (!tg) {
-        return;
-    }
-
-
-    try {
-
-        tg.MainButton.hide();
-
-    } catch (error) {
-
-        console.warn(
-            "Telegram MainButton setup failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   TELEGRAM BACK BUTTON
-   ========================================================= */
-
-function setupTelegramBackButton() {
-
-    if (!tg) {
-        return;
-    }
-
-
-    try {
-
-        tg.BackButton.onClick(
-            () => {
-
-                if (
-                    currentPage !==
-                    "home"
-                ) {
-
-                    switchNav(
-                        "home"
-                    );
-
-                } else {
-
-                    tg.close();
-
-                }
-
-            }
-        );
-
-
-        tg.BackButton.hide();
-
-    } catch (error) {
-
-        console.warn(
-            "Telegram BackButton setup failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   BACK BUTTON CONTROL
-   ========================================================= */
-
-function updateTelegramBackButton() {
-
-    if (!tg?.BackButton) {
-        return;
-    }
-
-
-    try {
-
-        if (
-            currentPage ===
-            "home"
-        ) {
-
-            tg.BackButton.hide();
-
-        } else {
-
-            tg.BackButton.show();
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "BackButton update failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   WATCH PAGE CHANGES
-   ========================================================= */
-
-const originalSwitchNav =
-    switchNav;
-
-
-switchNav = function (
-    pageName
-) {
-
-    const result =
-        originalSwitchNav(
-            pageName
-        );
-
-
-    updateTelegramBackButton();
-
-
-    return result;
-
-};
-
-
-/* =========================================================
-   INITIAL DATA LOAD
-   ========================================================= */
-
-async function loadInitialData() {
-
-    try {
-
-        initializeLocalState();
-
-        loadWallet();
-
-
-        /*
-         * Initialize Firebase.
-         */
-
-        await initializeFirebase();
-
-
-        /*
-         * Sync Telegram user.
-         */
-
-        if (
-            firebaseReady &&
-            getUserId()
-        ) {
-
-            await syncCurrentUser();
-
-            await refreshUserData();
-
-        }
-
-
-        /*
-         * Initialize wallet.
-         */
-
-        await initializeWallet();
-
-
-        /*
-         * Initial UI.
-         */
-
-        refreshAllUI();
-
-
-        /*
-         * Referral.
-         */
-
-        renderReferral();
-
-
-        /*
-         * Telegram controls.
-         */
-
-        setupTelegramMainButton();
-
-        setupTelegramBackButton();
-
-        updateTelegramBackButton();
-
-
-        /*
-         * Balance refresh.
-         */
-
-        startBalanceRefresh();
-
-
-        /*
-         * Load Airdrop silently.
-         */
-
-        if (
-            firebaseReady
-        ) {
-
-            loadAirdropTasks()
-                .catch(
-                    error => {
-
-                        console.warn(
-                            "Initial Airdrop load failed:",
-                            error
-                        );
-
-                    }
-                );
-
-        }
-
-
-        console.log(
-            "TGN Wallet initial data loaded ✓"
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Initial data load failed:",
-            error
-        );
-
-
-        /*
-         * IMPORTANT:
-         * Never leave the app blank/frozen.
-         */
-
-        try {
-
-            initializeNavigation();
-
-        } catch {}
-
-    }
-
-}
-
-
-/* =========================================================
-   APP STARTUP
-   ========================================================= */
-
-async function finalStartApp() {
-
-    if (
-        window.__TGN_APP_STARTED
-    ) {
-
-        return;
-
-    }
-
-
-    window.__TGN_APP_STARTED =
-        true;
-
-
-    await loadInitialData();
-
-}
-
-
-/* =========================================================
-   GLOBAL API
-   ========================================================= */
-
-window.tgnWallet = {
-
-    ...(window.tgnWallet || {}),
-
-    getReferralLink,
-
-    renderReferral,
-
-    copyReferralLink,
-
-    shareReferralLink,
-
-    renderProfileStats,
-
-    refreshUserData,
-
-    openAirdropPage,
-
-    refreshAirdrop,
-
-    openProfilePage,
-
-    logoutWallet,
-
-    refreshAllUI,
-
-    startBalanceRefresh,
-
-    updateTelegramBackButton
-
-};
-
-
-/* =========================================================
-   HTML COMPATIBILITY GLOBALS
-   =========================================================
-   These are intentionally exposed because the
-   existing index.html may call functions directly
-   through onclick="..."
-   ========================================================= */
-
-window.switchNav =
-    switchNav;
-
-window.openHome =
-    openHome;
-
-window.openWallet =
-    openWallet;
-
-window.openActivity =
-    openActivity;
-
-window.openAirdrop =
-    openAirdropPage;
-
-window.openProfile =
-    openProfilePage;
-
-window.openDeposit =
-    openDeposit;
-
-window.closeDeposit =
-    closeDeposit;
-
-window.openSend =
-    openSend;
-
-window.closeSend =
-    closeSend;
-
-window.sendTON =
-    sendTON;
-
-window.withdrawTON =
-    withdrawTON;
-
-window.copyDepositAddress =
-    copyDepositAddress;
-
-window.copyReferralLink =
-    copyReferralLink;
-
-window.shareReferralLink =
-    shareReferralLink;
-
-window.claimAirdropTask =
-    claimAirdropTask;
-
-window.loadAirdropTasks =
-    loadAirdropTasks;
-
-window.refreshAirdrop =
-    refreshAirdrop;
-
-window.createWallet =
-    createWallet;
-
-window.importWallet =
-    importWallet;
-
-window.deleteWallet =
-    deleteWallet;
-
-
-/* =========================================================
-   START
-   ========================================================= */
-
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        finalStartApp,
-        {
-            once: true
-        }
-    );
-
-} else {
-
-    finalStartApp();
-
-}
-
-
-/* =========================================================
-   END PART 5
-   ========================================================= */
-
-console.log(
-    "TGN Wallet Part 5 loaded ✓"
-);
-/* =========================================================
-   TGN WALLET - APP.JS
-   PART 6
-   Final UI Compatibility / Events / Error Protection
-   ========================================================= */
-
-
-/* =========================================================
-   SAFE CLICK HANDLER
-   ========================================================= */
-
-function safeClick(
-    selector,
-    callback
-) {
-
-    document.addEventListener(
-        "click",
-        event => {
-
-            const element =
-                event.target.closest(
-                    selector
-                );
-
-
-            if (!element) {
-                return;
-            }
-
-
-            try {
-
-                callback(
-                    event,
-                    element
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Click handler error:",
-                    error
-                );
-
-                haptic(
-                    "error"
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   HOME BUTTONS
-   ========================================================= */
-
-safeClick(
-    "[data-home]",
-    event => {
-
-        event.preventDefault();
-
-        openHome();
-
-    }
-);
-
-
-/* =========================================================
-   WALLET BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-wallet]",
-    event => {
-
-        event.preventDefault();
-
-        openWallet();
-
-    }
-);
-
-
-/* =========================================================
-   ACTIVITY BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-activity]",
-    event => {
-
-        event.preventDefault();
-
-        openActivity();
-
-    }
-);
-
-
-/* =========================================================
-   AIRDROP BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-airdrop]",
-    event => {
-
-        event.preventDefault();
-
-        openAirdropPage();
-
-    }
-);
-
-
-/* =========================================================
-   PROFILE BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-profile]",
-    event => {
-
-        event.preventDefault();
-
-        openProfilePage();
-
-    }
-);
-
-
-/* =========================================================
-   INVITE BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-invite], " +
-    "#inviteButton, " +
-    ".invite-btn",
-    event => {
-
-        event.preventDefault();
-
-        shareReferralLink();
-
-    }
-);
-
-
-/* =========================================================
-   REFERRAL COPY
-   ========================================================= */
-
-safeClick(
-    "[data-copy-referral]",
-    event => {
-
-        event.preventDefault();
-
-        copyReferralLink();
-
-    }
-);
-
-
-/* =========================================================
-   DEPOSIT COPY
-   ========================================================= */
-
-safeClick(
-    "[data-copy-deposit]",
-    event => {
-
-        event.preventDefault();
-
-        copyDepositAddress();
-
-    }
-);
-
-
-/* =========================================================
-   DEPOSIT OPEN
-   ========================================================= */
-
-safeClick(
-    "[data-open-deposit]",
-    event => {
-
-        event.preventDefault();
-
-        openDeposit();
-
-    }
-);
-
-
-/* =========================================================
-   SEND OPEN
-   ========================================================= */
-
-safeClick(
-    "[data-open-send]",
-    event => {
-
-        event.preventDefault();
-
-        openSend();
-
-    }
-);
-
-
-/* =========================================================
-   SEND SUBMIT
-   ========================================================= */
-
-safeClick(
-    "[data-submit-send]",
-    event => {
-
-        event.preventDefault();
-
-        submitSendForm(
-            event
-        );
-
-    }
-);
-
-
-/* =========================================================
-   SEND MAX
-   ========================================================= */
-
-safeClick(
-    "[data-send-max]",
-    event => {
-
-        event.preventDefault();
-
-        setMaxSendAmount();
-
-    }
-);
-
-
-/* =========================================================
-   CREATE WALLET BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-create-wallet]",
-    async (
-        event,
-        button
-    ) => {
-
-        event.preventDefault();
-
-
-        setLoading(
-            button,
-            true,
-            "Creating..."
-        );
-
-
-        try {
-
-            await createWallet();
-
-        } finally {
-
-            setLoading(
-                button,
-                false
-            );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   IMPORT WALLET BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-import-wallet]",
-    event => {
-
-        event.preventDefault();
-
-
-        const input =
-            document.querySelector(
-                "#seedPhrase"
-            ) ||
-            document.querySelector(
-                "#importSeed"
-            ) ||
-            document.querySelector(
-                "[data-seed-phrase]"
-            );
-
-
-        if (!input) {
-
-            showAlert(
-                "Seed phrase input not found."
-            );
-
-            return;
-
-        }
-
-
-        importWallet(
-            input.value
-        );
-
-    }
-);
-
-
-/* =========================================================
-   DELETE WALLET BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-delete-wallet]",
-    event => {
-
-        event.preventDefault();
-
-        deleteWallet();
-
-    }
-);
-
-
-/* =========================================================
-   AIRDROP REFRESH BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-refresh-airdrop]",
-    async (
-        event,
-        button
-    ) => {
-
-        event.preventDefault();
-
-
-        setLoading(
-            button,
-            true,
-            "Refreshing..."
-        );
-
-
-        try {
-
-            await refreshAirdrop();
-
-        } finally {
-
-            setLoading(
-                button,
-                false
-            );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   GENERAL COPY
-   ========================================================= */
-
-safeClick(
-    "[data-copy]",
-    async (
-        event,
-        button
-    ) => {
-
-        event.preventDefault();
-
-
-        const value =
-            button.dataset.copy ||
-            button.getAttribute(
-                "data-copy"
-            );
-
-
-        if (!value) {
-            return;
-        }
-
-
-        const copied =
-            await copyText(
-                value
-            );
-
-
-        if (copied) {
-
-            haptic(
-                "success"
-            );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   CLOSE BUTTON
-   ========================================================= */
-
-safeClick(
-    "[data-close]",
-    event => {
-
-        event.preventDefault();
-
-
-        const target =
-            event.target.closest(
-                "[data-close]"
-            );
-
-
-        const selector =
-            target?.dataset.close;
-
-
-        if (
-            selector
-        ) {
-
-            const element =
-                document.querySelector(
-                    selector
-                );
-
-
-            if (element) {
-
-                element.classList.remove(
-                    "active"
-                );
-
-                element.style.display =
-                    "none";
-
-            }
-
-            return;
-
-        }
-
-
-        closeSend();
-
-        closeDeposit();
-
-    }
-);
-
-
-/* =========================================================
-   TAB BUTTONS
-   ========================================================= */
-
-safeClick(
-    "[data-tab]",
-    (
-        event,
-        button
-    ) => {
-
-        event.preventDefault();
-
-
-        const tab =
-            button.dataset.tab;
-
-
-        if (!tab) {
-            return;
-        }
-
-
-        document
-            .querySelectorAll(
-                "[data-tab]"
-            )
-            .forEach(
-                item => {
-
-                    item.classList.toggle(
-                        "active",
-                        item === button
-                    );
-
-                }
-            );
-
-
-        document
-            .querySelectorAll(
-                "[data-tab-content]"
-            )
-            .forEach(
-                content => {
-
-                    const name =
-                        content.dataset
-                            .tabContent;
-
-
-                    content.style.display =
-                        name === tab
-                            ? ""
-                            : "none";
-
-                }
-            );
-
-    }
-);
-
-
-/* =========================================================
-   FORM ENTER SUPPORT
-   ========================================================= */
-
-document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key !==
-            "Enter"
-        ) {
-            return;
-        }
-
-
-        const target =
-            event.target;
-
-
-        if (
-            target.matches(
-                "#sendAddress, " +
-                "#sendAmount, " +
-                "#sendMemo"
-            )
-        ) {
-
-            const form =
-                target.closest(
-                    "form"
-                );
-
-
-            if (form) {
-
-                event.preventDefault();
-
-                submitSendForm(
-                    event
-                );
-
-            }
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   INPUT VALIDATION
-   ========================================================= */
-
-document.addEventListener(
-    "input",
-    event => {
-
-        const input =
-            event.target;
-
-
-        if (
-            input.matches(
-                "#sendAmount, " +
-                "[data-send-amount]"
-            )
-        ) {
-
-            const amount =
-                parseAmount(
-                    input.value
-                );
-
-
-            const max =
-                tonBalance;
-
-
-            if (
-                amount > max
-            ) {
-
-                input.classList.add(
-                    "input-error"
-                );
-
-            } else {
-
-                input.classList.remove(
-                    "input-error"
-                );
-
-            }
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   ONLINE / OFFLINE
-   ========================================================= */
-
-window.addEventListener(
-    "online",
-    () => {
-
-        console.log(
-            "Network online ✓"
-        );
-
-
-        if (
-            hasWallet()
-        ) {
-
-            refreshBalance();
-
-        }
-
-    }
-);
-
-
-window.addEventListener(
-    "offline",
-    () => {
-
-        console.warn(
-            "Network offline"
-        );
-
-    }
-);
-
-
-/* =========================================================
-   GLOBAL ERROR PROTECTION
-   ========================================================= */
-
-window.addEventListener(
-    "error",
-    event => {
-
-        console.error(
-            "Global JS error:",
-            event.error ||
-            event.message
-        );
-
-
-        /*
-         * Do NOT replace the whole UI.
-         * This prevents one JavaScript error
-         * from making the wallet look blank.
-         */
-
-    }
-);
-
-
-/* =========================================================
-   PROMISE ERROR PROTECTION
-   ========================================================= */
-
-window.addEventListener(
-    "unhandledrejection",
-    event => {
-
-        console.error(
-            "Unhandled Promise rejection:",
-            event.reason
-        );
-
-
-        /*
-         * Prevent browser from treating
-         * the error as an app-breaking event.
-         */
-
-        event.preventDefault();
-
-    }
-);
-
-
-/* =========================================================
-   TELEGRAM THEME
-   ========================================================= */
-
-function syncTelegramTheme() {
-
-    if (!tg) {
-        return;
-    }
-
-
-    try {
-
-        const params =
-            tg.themeParams || {};
-
-
-        Object.entries(
-            params
-        )
-        .forEach(
-            ([key, value]) => {
-
-                if (!value) {
-                    return;
-                }
-
-
-                const cssName =
-                    "--tg-" +
-                    key.replace(
-                        /_/g,
-                        "-"
-                    );
-
-
-                document.documentElement
-                    .style.setProperty(
-                        cssName,
-                        value
-                    );
-
-            }
-        );
-
-
-    } catch (error) {
-
-        console.warn(
-            "Telegram theme sync failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   TELEGRAM VIEWPORT
-   ========================================================= */
-
-function syncTelegramViewport() {
-
-    if (!tg) {
-        return;
-    }
-
-
-    try {
-
-        if (
-            tg.viewportHeight
-        ) {
-
-            document.documentElement
-                .style.setProperty(
-                    "--tg-viewport-height",
-                    `${tg.viewportHeight}px`
-                );
-
-        }
-
-
-        if (
-            tg.viewportStableHeight
-        ) {
-
-            document.documentElement
-                .style.setProperty(
-                    "--tg-viewport-stable-height",
-                    `${tg.viewportStableHeight}px`
-                );
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "Viewport sync failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   TELEGRAM EVENTS
-   ========================================================= */
-
-if (tg) {
-
-    try {
-
-        tg.onEvent(
-            "themeChanged",
-            syncTelegramTheme
-        );
-
-
-        tg.onEvent(
-            "viewportChanged",
-            syncTelegramViewport
-        );
-
-
-        syncTelegramTheme();
-
-        syncTelegramViewport();
-
-    } catch (error) {
-
-        console.warn(
-            "Telegram event setup failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   REFRESH UI AFTER WALLET CHANGE
-   ========================================================= */
-
-function afterWalletChanged() {
-
-    loadWallet();
-
-    renderHome();
-
-    renderWallet();
-
-    renderProfile();
-
-    renderReferral();
-
-
-    if (
-        hasWallet()
-    ) {
-
-        refreshBalance();
-
-    }
-
-}
-
-
-/* =========================================================
-   WALLET EVENT COMPATIBILITY
-   ========================================================= */
-
-window.addEventListener(
-    "tgn-wallet-updated",
-    () => {
-
-        afterWalletChanged();
-
-    }
-);
-
-
-/* =========================================================
-   CUSTOM EVENT HELPER
-   ========================================================= */
-
-function notifyWalletUpdated() {
-
-    try {
-
-        window.dispatchEvent(
-            new CustomEvent(
-                "tgn-wallet-updated"
-            )
-        );
-
-    } catch (error) {
-
-        console.warn(
-            "Wallet update event failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   FINAL GLOBAL API
-   ========================================================= */
-
-Object.assign(
-    window.tgnWallet,
-    {
-
-        safeClick,
-
-        getReferralLink,
-
-        copyReferralLink,
-
-        shareReferralLink,
-
-        renderReferral,
-
-        renderProfileStats,
-
-        refreshUserData,
-
-        refreshAllUI,
-
-        afterWalletChanged,
-
-        notifyWalletUpdated,
-
-        syncTelegramTheme,
-
-        syncTelegramViewport
-
-    }
-);
-
-
-/* =========================================================
-   FINAL COMPATIBILITY GLOBALS
-   ========================================================= */
-
-window.getReferralLink =
-    getReferralLink;
-
-window.renderReferral =
-    renderReferral;
-
-window.refreshUserData =
-    refreshUserData;
-
-window.refreshAllUI =
-    refreshAllUI;
-
-window.syncTelegramTheme =
-    syncTelegramTheme;
-
-window.syncTelegramViewport =
-    syncTelegramViewport;
-
-
-/* =========================================================
-   FINAL UI REFRESH
-   ========================================================= */
-
-setTimeout(
-    () => {
-
-        try {
-
-            initializeNavigation();
-
-            renderHome();
-
-            renderWallet();
-
-            renderActivity();
-
-            renderProfile();
-
-            renderReferral();
-
-            renderProfileStats();
-
-        } catch (error) {
-
-            console.warn(
-                "Final UI refresh failed:",
-                error
-            );
-
-        }
-
-    },
-    100
-);
-
-
-/* =========================================================
-   FINAL LOG
-   ========================================================= */
-
-console.log(
-    "===================================="
-);
-
-console.log(
-    "TGN Wallet app.js loaded ✓"
-);
-
-console.log(
-    "Firebase: separated"
-);
-
-console.log(
-    "Worker: separated"
-);
-
-console.log(
-    "Telegram: connected"
-);
-
-console.log(
-    "Referral Bot:",
-    TELEGRAM_BOT_USERNAME
-);
-
-console.log(
-    "===================================="
-);
-/* =========================================================
-   TGN WALLET - APP.JS
-   PART 7
-   FINAL WALLET / TON CONNECT / SAFE STARTUP
-   ========================================================= */
-
-
-/* =========================================================
-   TON CONNECT
-   ========================================================= */
-
-let tonConnectUI = null;
-
-
-/* =========================================================
-   INITIALIZE TON CONNECT
-   ========================================================= */
-
-async function initializeTonConnect() {
-
-    try {
-
-        /*
-         * TON Connect UI library must already exist
-         * in index.html.
-         */
-
-        if (
-            typeof TON_CONNECT_UI ===
-            "undefined"
-        ) {
-
-            console.warn(
-                "TON Connect UI library not found."
-            );
-
-            return null;
-
-        }
-
-
-        /*
-         * Avoid duplicate initialization.
-         */
-
-        if (
-            tonConnectUI
-        ) {
-
-            return tonConnectUI;
-
-        }
-
-
-        /*
-         * IMPORTANT:
-         *
-         * Replace this with your actual
-         * tonconnect-manifest.json URL.
-         */
-
-        const manifestUrl =
-            window.TON_CONNECT_MANIFEST ||
-            (
-                window.location.origin +
-                "/OTTER-WALLET/tonconnect-manifest.json"
-            );
-
-
-        tonConnectUI =
-            new TON_CONNECT_UI.TonConnectUI({
-
-                manifestUrl:
-
-                    manifestUrl
-
-            });
-
-
-        /*
-         * Existing connection.
-         */
-
-        try {
-
-            const wallet =
-                tonConnectUI.wallet;
-
-
-            if (
-                wallet?.account?.address
-            ) {
-
-                window.connectedTonWallet =
-                    wallet;
-
-
-                window.connectedTonAddress =
-                    wallet.account.address;
-
-
-                renderConnectedTonWallet();
-
-            }
-
-        } catch (error) {
-
-            console.warn(
-                "TON Connect existing wallet check failed:",
-                error
-            );
-
-        }
-
-
-        /*
-         * Connection event.
-         */
-
-        try {
-
-            tonConnectUI.onStatusChange(
-                wallet => {
-
-                    window.connectedTonWallet =
-                        wallet || null;
-
-
-                    window.connectedTonAddress =
-                        wallet?.account?.address ||
-                        "";
-
-
-                    renderConnectedTonWallet();
-
-
-                    try {
-
-                        window.dispatchEvent(
-                            new CustomEvent(
-                                "ton-wallet-changed",
-                                {
-                                    detail:
-                                        wallet
-                                }
-                            )
-                        );
-
-                    } catch {}
-
-                }
-            );
-
-        } catch (error) {
-
-            console.warn(
-                "TON Connect status listener failed:",
-                error
-            );
-
-        }
-
-
-        return tonConnectUI;
-
-
-    } catch (error) {
-
-        console.error(
-            "TON Connect initialization failed:",
-            error
-        );
-
-        tonConnectUI =
-            null;
-
-        return null;
-
-    }
-
-}
-
-
-/* =========================================================
-   CONNECT TON WALLET
-   ========================================================= */
-
-async function connectTonWallet() {
-
-    try {
-
-        const ui =
-            await initializeTonConnect();
-
-
-        if (!ui) {
-
-            showAlert(
-                "TON Connect is not available."
-            );
-
-            return null;
-
-        }
-
-
-        haptic(
-            "light"
-        );
-
-
-        /*
-         * Open official TON Connect UI.
-         */
-
-        await ui.openModal();
-
-
-        return ui;
-
-
-    } catch (error) {
-
-        console.error(
-            "TON wallet connection failed:",
-            error
-        );
-
-
-        haptic(
-            "error"
-        );
-
-
-        showAlert(
-            "Unable to connect wallet."
-        );
-
-
-        return null;
-
-    }
-
-}
-
-
-/* =========================================================
-   DISCONNECT TON WALLET
-   ========================================================= */
-
-async function disconnectTonWallet() {
-
-    try {
-
-        if (
-            tonConnectUI
-        ) {
-
-            await tonConnectUI.disconnect();
-
-        }
-
-
-        window.connectedTonWallet =
-            null;
-
-
-        window.connectedTonAddress =
-            "";
-
-
-        renderConnectedTonWallet();
-
-
-        haptic(
-            "success"
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "TON disconnect failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   RENDER CONNECTED TON WALLET
-   ========================================================= */
-
-function renderConnectedTonWallet() {
-
-    const address =
-        window.connectedTonAddress ||
-        "";
-
-
-    document
-        .querySelectorAll(
-            "[data-ton-connect-address], " +
-            ".ton-connect-address"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    address
-                        ? shortAddress(
-                            address,
-                            8,
-                            8
-                        )
-                        : "Not connected";
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-connect-wallet]"
-        )
-        .forEach(
-            button => {
-
-                button.style.display =
-                    address
-                        ? "none"
-                        : "";
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-disconnect-wallet]"
-        )
-        .forEach(
-            button => {
-
-                button.style.display =
-                    address
-                        ? ""
-                        : "none";
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-ton-connected]"
-        )
-        .forEach(
-            element => {
-
-                element.style.display =
-                    address
-                        ? ""
-                        : "none";
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   CONNECT BUTTON
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const button =
-            event.target.closest(
-                "[data-connect-wallet], " +
-                "#connectWallet, " +
-                ".connect-wallet-btn"
-            );
-
-
-        if (!button) {
-            return;
-        }
-
-
-        event.preventDefault();
-
-        connectTonWallet();
-
-    }
-);
-
-
-/* =========================================================
-   DISCONNECT BUTTON
-   ========================================================= */
-
-document.addEventListener(
-    "click",
-    event => {
-
-        const button =
-            event.target.closest(
-                "[data-disconnect-wallet], " +
-                "#disconnectWallet, " +
-                ".disconnect-wallet-btn"
-            );
-
-
-        if (!button) {
-            return;
-        }
-
-
-        event.preventDefault();
-
-        disconnectTonWallet();
-
-    }
-);
-
-
-/* =========================================================
-   TON CONNECT SEND
-   ========================================================= */
-
-async function sendWithTonConnect(
-    recipient,
-    amountNano
-) {
-
-    try {
-
-        if (
-            !tonConnectUI
-        ) {
-
-            await initializeTonConnect();
-
-        }
-
-
-        if (
-            !tonConnectUI
-        ) {
-
-            throw new Error(
-                "TON Connect is not initialized."
-            );
-
-        }
-
-
-        if (
-            !tonConnectUI.wallet
-        ) {
-
-            await connectTonWallet();
-
-        }
-
-
-        if (
-            !tonConnectUI.wallet
-        ) {
-
-            throw new Error(
-                "Please connect a TON wallet."
-            );
-
-        }
-
-
-        const transaction = {
-
-            validUntil:
-                Math.floor(
-                    Date.now() / 1000
-                ) +
-                600,
-
-            messages: [
-
-                {
-
-                    address:
-                        recipient,
-
-                    amount:
-                        String(
-                            amountNano
-                        )
-
-                }
-
-            ]
-
-        };
-
-
-        const result =
-            await tonConnectUI.sendTransaction(
-                transaction
-            );
-
-
-        return result;
-
-
-    } catch (error) {
-
-        console.error(
-            "TON Connect transaction failed:",
-            error
-        );
-
-
-        throw error;
-
-    }
-
-}
-
-
-/* =========================================================
-   OPEN TON CONNECT
-   ========================================================= */
-
-window.connectTonWallet =
-    connectTonWallet;
-
-window.disconnectTonWallet =
-    disconnectTonWallet;
-
-window.sendWithTonConnect =
-    sendWithTonConnect;
-
-
-/* =========================================================
-   TON AMOUNT CONVERSION
-   ========================================================= */
-
-function tonToNano(
-    ton
-) {
-
-    const value =
-        Number(
-            ton
-        );
-
-
-    if (
-        !Number.isFinite(
-            value
-        ) ||
-        value <= 0
-    ) {
-
-        return "0";
-
-    }
-
-
-    /*
-     * 1 TON = 1,000,000,000 nanotons
-     *
-     * String arithmetic avoids unnecessary
-     * floating point rounding where possible.
-     */
-
-    const parts =
-        String(
-            value
-        )
-        .split(".");
-
-
-    const whole =
-        parts[0] ||
-        "0";
-
-
-    const decimal =
-        (
-            parts[1] ||
-            ""
-        )
-        .padEnd(
-            9,
-            "0"
-        )
-        .slice(
-            0,
-            9
-        );
-
-
-    return (
-        BigInt(
-            whole
-        ) *
-        1000000000n +
-        BigInt(
-            decimal ||
-            "0"
-        )
-    ).toString();
-
-}
-
-
-function nanoToTon(
-    nano
-) {
-
-    try {
-
-        const value =
-            BigInt(
-                String(
-                    nano
-                )
-            );
-
-
-        const whole =
-            value /
-            1000000000n;
-
-
-        const decimal =
-            (
-                value %
-                1000000000n
-            )
-            .toString()
-            .padStart(
-                9,
-                "0"
-            );
-
-
-        return (
-            whole.toString() +
-            "." +
-            decimal
-                .replace(
-                    /0+$/,
-                    ""
-                )
-        ) || "0";
-
-    } catch {
-
-        return "0";
-
-    }
-
-}
-
-
-/* =========================================================
-   GLOBAL AMOUNT HELPERS
-   ========================================================= */
-
-window.tonToNano =
-    tonToNano;
-
-window.nanoToTon =
-    nanoToTon;
-
-
-/* =========================================================
-   WALLET CONNECT EVENTS
-   ========================================================= */
-
-window.addEventListener(
-    "ton-wallet-changed",
-    event => {
-
-        const wallet =
-            event.detail;
-
-
-        const address =
-            wallet?.account?.address ||
-            "";
-
-
-        console.log(
-            "TON wallet changed:",
-            address
-                ? shortAddress(
-                    address
-                )
-                : "Disconnected"
-        );
-
-
-        renderConnectedTonWallet();
-
-    }
-);
-
-
-/* =========================================================
-   SAFE WALLET DISPLAY
-   ========================================================= */
-
-function renderWalletConnectionStatus() {
-
-    renderConnectedTonWallet();
-
-
-    const localAddress =
-        getWalletAddress();
-
-
-    document
-        .querySelectorAll(
-            "[data-local-wallet-address]"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    localAddress
-                        ? shortAddress(
-                            localAddress,
-                            8,
-                            8
-                        )
-                        : "No wallet";
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   FINAL FIREBASE REFRESH
-   ========================================================= */
-
-async function finalFirebaseRefresh() {
-
-    try {
-
-        if (
-            !firebaseReady
-        ) {
-
-            await initializeFirebase();
-
-        }
-
-
-        if (
-            firebaseReady &&
-            getUserId()
-        ) {
-
-            await syncCurrentUser();
-
-            await refreshUserData();
-
-        }
-
-
-    } catch (error) {
-
-        console.warn(
-            "Final Firebase refresh failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   FINAL TON INITIALIZATION
-   ========================================================= */
-
-async function finalTonInitialization() {
-
-    try {
-
-        await initializeTonConnect();
-
-        renderWalletConnectionStatus();
-
-    } catch (error) {
-
-        console.warn(
-            "TON initialization failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   FINAL APP INITIALIZATION
-   ========================================================= */
-
-async function initializeTGNWalletFinal() {
-
-    try {
-
-        /*
-         * Telegram.
-         */
-
-        if (tg) {
-
-            try {
-
-                tg.ready();
-
-                tg.expand();
-
-            } catch {}
-
-        }
-
-
-        /*
-         * Telegram theme.
-         */
-
-        syncTelegramTheme();
-
-        syncTelegramViewport();
-
-
-        /*
-         * Navigation.
-         */
-
-        initializeNavigation();
-
-
-        /*
-         * Local state.
-         */
-
-        try {
-
-            initializeLocalState();
-
-        } catch (error) {
-
-            console.warn(
-                "Local state initialization:",
-                error
-            );
-
-        }
-
-
-        /*
-         * Load local wallet.
-         */
-
-        try {
-
-            loadWallet();
-
-        } catch (error) {
-
-            console.warn(
-                "Local wallet load:",
-                error
-            );
-
-        }
-
-
-        /*
-         * Firebase.
-         */
-
-        await finalFirebaseRefresh();
-
-
-        /*
-         * TON Connect.
-         */
-
-        await finalTonInitialization();
-
-
-        /*
-         * Wallet balance.
-         */
-
-        if (
-            hasWallet()
-        ) {
-
-            try {
-
-                await refreshBalance();
-
-            } catch (error) {
-
-                console.warn(
-                    "Balance refresh:",
-                    error
-                );
-
-            }
-
-        }
-
-
-        /*
-         * Render everything.
-         */
-
-        refreshAllUI();
-
-        renderWalletConnectionStatus();
-
-
-        /*
-         * Airdrop.
-         */
-
-        if (
-            firebaseReady
-        ) {
-
-            loadAirdropTasks()
-                .catch(
-                    error => {
-
-                        console.warn(
-                            "Airdrop initialization:",
-                            error
-                        );
-
-                    }
-                );
-
-        }
-
-
-        /*
-         * Balance timer.
-         */
-
-        startBalanceRefresh();
-
-
-        /*
-         * Telegram controls.
-         */
-
-        setupTelegramMainButton();
-
-        setupTelegramBackButton();
-
-        updateTelegramBackButton();
-
-
-        console.log(
-            "TGN Wallet FINAL initialization ✓"
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "FINAL initialization error:",
-            error
-        );
-
-
-        /*
-         * Never wipe the UI because of
-         * an initialization error.
-         */
-
-        try {
-
-            initializeNavigation();
-
-            refreshAllUI();
-
-        } catch {}
-
-    }
-
-}
-
-
-/* =========================================================
-   STARTUP GUARD
-   ========================================================= */
-
-if (
-    !window.__TGN_FINAL_STARTED
-) {
-
-    window.__TGN_FINAL_STARTED =
-        true;
-
-
-    if (
-        document.readyState ===
-        "loading"
-    ) {
-
-        document.addEventListener(
-            "DOMContentLoaded",
-            initializeTGNWalletFinal,
-            {
-                once: true
-            }
-        );
-
-    } else {
-
-        initializeTGNWalletFinal();
-
-    }
-
-}
-
-
-/* =========================================================
-   FINAL GLOBAL API
-   ========================================================= */
-
-Object.assign(
-    window.tgnWallet,
-    {
-
-        initializeTonConnect,
-
-        connectTonWallet,
-
-        disconnectTonWallet,
-
-        sendWithTonConnect,
-
-        tonToNano,
-
-        nanoToTon,
-
-        renderConnectedTonWallet,
-
-        finalFirebaseRefresh,
-
-        finalTonInitialization,
-
-        initializeTGNWalletFinal
-
-    }
-);
-
-
-/* =========================================================
-   FINAL LOG
-   ========================================================= */
-
-console.log(
-    "========================================"
-);
-
-console.log(
-    " TGN WALLET - APP.JS PART 7 READY ✓"
-);
-
-console.log(
-    " Telegram Bot: @TglXWattetBot"
-);
-
-console.log(
-    " Firebase: Connected separately"
-);
-
-console.log(
-    " Worker: Connected separately"
-);
-
-console.log(
-    " TON Connect: Ready"
-);
-
-console.log(
-    "========================================"
-);
+boot();
