@@ -1,128 +1,136 @@
-function switchTab(tabName, element) {
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    if (element) {
-        element.classList.add('active');
-    }
+// Dynamic Data States
+let tonBalance = 0.00; // Real Transaction မလာသေးသမျှ 0.00 TON
+let tgnAirdropBalance = 0; // Tasks လုပ်မှသာ တိုးမည့် Airdrop
+// User ၏ သီးသန့် TON Deposit Address
+const userWalletAddress = "EQBnKobCT_kU4ZC4G89x2_TGN_Wallet_Address";
+let isCheckedIn = false;
+let completedTasks = { joinTg: false, followX: false };
 
-    const contentArea = document.getElementById('main-content');
-
-    if (tabName === 'home') {
-        contentArea.innerHTML = `
-            <div class="card-box">
-                <div class="card-top">
-                    <span>My Wallet</span>
-                    <div class="card-icon"><i class="fa-solid fa-gem"></i></div>
-                </div>
-                <div class="balance-title">0.00 TON</div>
-                <div class="balance-sub">$0.00 USD</div>
-                <div class="btn-group">
-                    <button class="btn-main" onclick="switchTab('wallet', document.querySelectorAll('.nav-item')[3])"><i class="fa-solid fa-arrow-down"></i> Deposit</button>
-                    <button class="btn-sub" onclick="switchTab('send', document.querySelectorAll('.nav-item')[2])"><i class="fa-solid fa-arrow-up"></i> Withdraw</button>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-label">Wallet Address</div>
-                <div class="address-row">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span class="green-dot"></span>
-                        <span class="addr-text">EQBnKobCT...kU4ZC4G</span>
-                    </div>
-                    <button class="copy-btn" onclick="alert('Address Copied!')">Copy</button>
-                </div>
-            </div>
-
-            <div class="section-card">
-                <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>Tokens</span>
-                    <span style="color:#3b82f6; cursor:pointer;" onclick="alert('Refreshed')">Refresh</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div style="width:38px; height:38px; background:rgba(59,130,246,0.2); border-radius:50%; display:flex; justify-content:center; align-items:center; color:#3b82f6;"><i class="fa-solid fa-gem"></i></div>
-                        <div>
-                            <div style="font-weight:600; font-size:14px;">TON</div>
-                            <div style="font-size:11px; color:#64748b;">Toncoin • Mainnet</div>
-                        </div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:600; font-size:14px;">0.0000 TON</div>
-                        <div style="font-size:11px; color:#64748b;">$0.00</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    } else if (tabName === 'airdrop') {
-        // Designer ပုံစံအတိုင်း Referral လုံးဝမလုပ်ရသေးပါက 0 အတိအကျပြရန်
-        contentArea.innerHTML = `
-            <div class="airdrop-card-custom">
-                <div class="airdrop-title">
-                    <i class="fa-solid fa-gift"></i>
-                    <span>Airdrop Rewards</span>
-                </div>
-                <div class="airdrop-desc">Your earned token balance</div>
-
-                <div class="reward-box">
-                    <div>
-                        <span class="stat-label">Total Rewards</span>
-                        <div class="reward-val">0.00 TGN</div>
-                    </div>
-                    <div class="tgn-badge">TGN</div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <span class="stat-label">Claimed</span>
-                        <span class="stat-number">0 / 8</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Your Points</span>
-                        <span class="stat-number">0</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Referrals</span>
-                        <span class="stat-number">0</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    } else if (tabName === 'activity') {
-        contentArea.innerHTML = `<h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Activity</h2><p style="color:#64748b;">No recent activities.</p>`;
-    } else if (tabName === 'send') {
-        contentArea.innerHTML = `
-            <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Send</h2>
-            <div style="margin-bottom:14px;">
-                <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:6px;">Recipient Address</label>
-                <input type="text" placeholder="UQ... / EQ..." style="width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:12px; color:#fff;">
-            </div>
-            <div style="margin-bottom:16px;">
-                <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:6px;">Amount</label>
-                <input type="text" placeholder="0.00 TON" style="width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:12px; color:#fff;">
-            </div>
-            <button style="width:100%; background:#2563eb; color:#fff; padding:14px; border:none; border-radius:12px; font-weight:600; cursor:pointer;">Confirm Withdrawal</button>
-        `;
-    } else if (tabName === 'wallet') {
-        contentArea.innerHTML = `
-            <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Wallet</h2>
-            <div class="section-card">
-                <div class="section-label">TON Wallet Address</div>
-                <div style="font-size:14px; font-weight:600; color:#3b82f6; margin:8px 0 12px 0;">EQBnKobCT...kU4ZC4G</div>
-                <button class="btn-main" onclick="alert('Copied!')"><i class="fa-regular fa-copy"></i> Copy Address</button>
-            </div>
-        `;
-    } else if (tabName === 'profile') {
-        contentArea.innerHTML = `
-            <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Profile</h2>
-            <div class="section-card" style="text-align:center; padding:20px;">
-                <div style="width:64px; height:64px; background:#1e3a8a; border-radius:50%; margin:0 auto 10px auto; display:flex; justify-content:center; align-items:center; font-size:24px; font-weight:700; color:#3b82f6;">J</div>
-                <div style="font-weight:700; font-size:16px;">JAME</div>
-                <div style="font-size:13px; color:#3b82f6; margin-top:2px;">@jame158</div>
-            </div>
-        `;
-    }
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.innerText = msg;
+  toast.classList.add('show');
+  setTimeout(() => { toast.classList.remove('show'); }, 2000);
 }
 
-// Initial load
-window.onload = function() {
-    switchTab('home', document.querySelector('.nav-item'));
-};
+function switchTab(tabName, element) {
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  if (element) element.classList.add('active');
+
+  const contentArea = document.getElementById('main-content');
+
+  if (tabName === 'home' || tabName === 'wallet') {
+    contentArea.innerHTML = `
+      <div class="card-box">
+        <div class="card-top">
+          <span>My Wallet</span>
+          <div class="card-icon"><i class="fa-solid fa-gem"></i></div>
+        </div>
+        <div class="balance-title">${tonBalance.toFixed(2)} TON</div>
+        <div class="balance-sub">≈ $${(tonBalance * 5.5).toFixed(2)} USD</div>
+        <div class="btn-group">
+          <button class="btn-main" onclick="openDepositModal()"><i class="fa-solid fa-arrow-down"></i> Deposit</button>
+          <button class="btn-sub" onclick="showToast('Withdraw feature ready')"><i class="fa-solid fa-arrow-up"></i> Withdraw</button>
+        </div>
+      </div>
+
+      <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.05); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <span style="font-size:12px; color:#cbd5e1; word-break:break-all;">${userWalletAddress}</span>
+        <button style="background:rgba(255,255,255,0.08); border:none; color:#fff; padding:5px 12px; border-radius:8px; cursor:pointer;" onclick="copyAddress()">Copy</button>
+      </div>
+
+      <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.05); border-radius:18px; padding:16px;">
+        <div style="font-size:13px; color:#94a3b8; margin-bottom:14px;">Your Tokens</div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:38px; height:38px; background:rgba(59,130,246,0.2); border-radius:50%; display:flex; justify-content:center; align-items:center; color:#3b82f6;"><i class="fa-solid fa-gem"></i></div>
+            <div>
+              <div style="font-weight:700; font-size:14px;">TON</div>
+              <div style="font-size:11px; color:#64748b;">Toncoin</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700; font-size:14px;">${tonBalance.toFixed(2)} TON</div>
+            <div style="font-size:11px; color:#64748b;">$${(tonBalance * 5.5).toFixed(2)}</div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:38px; height:38px; background:rgba(139,92,246,0.2); border-radius:50%; display:flex; justify-content:center; align-items:center; color:#a855f7;"><i class="fa-solid fa-rocket"></i></div>
+            <div>
+              <div style="font-weight:700; font-size:14px;">TGN</div>
+              <div style="font-size:11px; color:#64748b;">TGN Ecosystem Token</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700; font-size:14px;">${tgnAirdropBalance} TGN</div>
+            <div style="font-size:11px; color:#a855f7; font-weight:600;">Unlisted</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (tabName === 'airdrop') {
+    renderAirdropTab();
+  }
+}
+
+// Deposit Modal (Tonkeeper / Other Wallets Deposit View)
+function openDepositModal() {
+  const contentArea = document.getElementById('main-content');
+  
+  // Deposit QR Code Generator (Using QuickChart API)
+  const qrCodeUrl = `https://quickchart.io/qr?text=ton://transfer/${userWalletAddress}&size=180`;
+  // Tonkeeper Deep Link
+  const tonkeeperUrl = `https://app.tonkeeper.com/transfer/${userWalletAddress}`;
+
+  document.getElementById('deposit-modal').innerHTML = `
+    <div class="modal-header-top">
+      <div class="modal-title-text">Deposit TON</div>
+      <i class="fa-solid fa-xmark modal-close-btn" onclick="closeModal('deposit-modal')"></i>
+    </div>
+    <div style="text-align:center; padding:10px 0;">
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">
+        Tonkeeper သို့မဟုတ် Exchange မှ အောက်ပါ Deposit Address သို့ TON ပေးပို့ပါ -
+      </p>
+      
+      <div style="background:#fff; padding:10px; border-radius:12px; display:inline-block; margin-bottom:12px;">
+        <img src="${qrCodeUrl}" alt="Deposit QR Code" style="width:150px; height:150px;">
+      </div>
+
+      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:10px; font-size:11px; color:#38bdf8; word-break:break-all; margin-bottom:14px;">
+        ${userWalletAddress}
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="btn-main" onclick="copyAddress()"><i class="fa-regular fa-copy"></i> Copy Address</button>
+        <a href="${tonkeeperUrl}" target="_blank" style="text-decoration:none;">
+          <button class="btn-sub" style="width:100%;"><i class="fa-solid fa-wallet"></i> Pay via Tonkeeper</button>
+        </a>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('deposit-modal').classList.add('open');
+}
+
+function copyAddress() {
+  navigator.clipboard.writeText(userWalletAddress);
+  showToast('Deposit Address Copied!');
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('open');
+}
+
+// Blockchain Transaction Listening (Backend Simulation)
+// Real-world တွင် TON Center API / TON Webhook မှ Deposit ဝင်လာချိန်တွင် balance ကို update ပြုလုပ်ပေးပါမည်။
+function checkRealDeposit() {
+  // TON Center API Response Simulation:
+  // Example: fetch('https://toncenter.com/api/v2/getTransactions?address=' + userWalletAddress)
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  switchTab('home', document.querySelector('.nav-item.active'));
+});
