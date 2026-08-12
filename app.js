@@ -103,16 +103,13 @@ if (tg) {
 
 
 import {
-  initFirebase,
-  getDB,
-  getUser,
-  saveUser,
-  getAirdropTasks,
-  claimAirdropTask
+    initFirebase,
+    getDB,
+    getUser,
+    saveUser,
+    getAirdropTasks,
+    claimAirdropTask
 } from "./firebase.js";
-
-}
-
 
 /* =========================================================
    TON WEB INIT
