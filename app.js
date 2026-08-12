@@ -99,7 +99,7 @@ function switchTab(tabName, element) {
     `;
   }
 
-  // 3. SEND TAB (Telegram Username စာသား လုံးဝဖျက်ထားပါသည်)
+  // 3. SEND TAB (Standard Wallet Address Placeholder Only)
   else if (tabName === 'send') {
     contentArea.innerHTML = `
       <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Send TON</h2>
@@ -129,7 +129,7 @@ function switchTab(tabName, element) {
     `;
   }
 
-  // 5. AIRDROP TAB (Designer ပုံစံအတိုင်း Exact 1:1, Task အပိုများ လုံးဝမပါပါ)
+  // 5. AIRDROP TAB (Clean Design - Task များ မပါပါ)
   else if (tabName === 'airdrop') {
     contentArea.innerHTML = `
       <div class="airdrop-card-custom">
@@ -165,7 +165,7 @@ function switchTab(tabName, element) {
     `;
   }
 
-  // 6. PROFILE TAB (DESIGNER UI SCREENSHOT file_0000000079d881f4b6832395dbee0db8.png 100% MATCHING)
+  // 6. PROFILE TAB (UI DESIGN 100% EXACT MATCHING)
   else if (tabName === 'profile') {
     contentArea.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -240,7 +240,7 @@ function switchTab(tabName, element) {
   }
 }
 
-// Profile Item Component Helper
+// Menu Helper
 function renderProfileMenuItem(icon, title, desc) {
   return `
     <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.05); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="showToast('${title}')">
@@ -258,7 +258,7 @@ function renderProfileMenuItem(icon, title, desc) {
   `;
 }
 
-// Deposit Modal (Clean UI English - မြန်မာစာ လုံးဝ မပါပါ)
+// Deposit Modal (Clean English Only)
 function openDepositModal() {
   const qrCodeUrl = `https://quickchart.io/qr?text=ton://transfer/${userWalletAddress}&size=180`;
   const tonkeeperUrl = `https://app.tonkeeper.com/transfer/${userWalletAddress}`;
@@ -280,7 +280,7 @@ function openDepositModal() {
       
       <div style="text-align:center;">
         <p style="font-size:12px; color:#94a3b8; margin-bottom:14px;">
-          Send TON to the deposit address below from Tonkeeper or Exchanges
+          Send TON to the deposit address below from Tonkeeper or Exchange
         </p>
         
         <div style="background:#fff; padding:10px; border-radius:14px; display:inline-block; margin-bottom:14px;">
@@ -316,7 +316,7 @@ function closeModal() {
   }
 }
 
-// Default Home Tab Loading
+// Initial Load
 document.addEventListener('DOMContentLoaded', () => {
   const firstNavItem = document.querySelector('.nav-item');
   switchTab('home', firstNavItem);
