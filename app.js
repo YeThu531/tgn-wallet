@@ -1,143 +1,128 @@
-let tonBalance = 0.00;
-
-function switchNav(tab) {
+function switchTab(tabName, element) {
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    
-    if(tab === 'home') document.getElementById('nav-home')?.classList.add('active');
-    if(tab === 'activity') document.getElementById('nav-activity')?.classList.add('active');
-    if(tab === 'send') document.getElementById('nav-send')?.classList.add('active');
-    if(tab === 'wallet') document.getElementById('nav-wallet')?.classList.add('active');
-    if(tab === 'airdrop') document.getElementById('nav-airdrop')?.classList.add('active');
-    if(tab === 'profile') document.getElementById('nav-profile')?.classList.add('active');
+    if (element) {
+        element.classList.add('active');
+    }
 
-    const content = document.getElementById('content');
+    const contentArea = document.getElementById('main-content');
 
-    if (tab === 'home') {
-        content.innerHTML = `
-            <div class="wallet-card">
-                <div class="wallet-card-top">
+    if (tabName === 'home') {
+        contentArea.innerHTML = `
+            <div class="card-box">
+                <div class="card-top">
                     <span>My Wallet</span>
-                    <div class="wallet-icon-box"><i class="fa-solid fa-gem"></i></div>
+                    <div class="card-icon"><i class="fa-solid fa-gem"></i></div>
                 </div>
-                <div class="wallet-balance">${tonBalance.toFixed(2)} TON</div>
-                <div class="wallet-usd">$0.00 USD</div>
-                <div class="wallet-actions">
-                    <button class="btn-primary" onclick="switchNav('wallet')"><i class="fa-solid fa-arrow-down"></i> Deposit</button>
-                    <button class="btn-secondary" onclick="switchNav('send')"><i class="fa-solid fa-arrow-up"></i> Withdraw</button>
-                </div>
-            </div>
-
-            <div class="section-box">
-                <div class="section-title">Wallet Address</div>
-                <div class="address-box">
-                    <span class="dot"></span>
-                    <span class="address-text">EQBnKobCT...kU4ZC4G</span>
-                    <button class="btn-copy" onclick="showToast('Address Copied!')">Copy</button>
+                <div class="balance-title">0.00 TON</div>
+                <div class="balance-sub">$0.00 USD</div>
+                <div class="btn-group">
+                    <button class="btn-main" onclick="switchTab('wallet', document.querySelectorAll('.nav-item')[3])"><i class="fa-solid fa-arrow-down"></i> Deposit</button>
+                    <button class="btn-sub" onclick="switchTab('send', document.querySelectorAll('.nav-item')[2])"><i class="fa-solid fa-arrow-up"></i> Withdraw</button>
                 </div>
             </div>
 
-            <div class="section-box">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <span class="section-title" style="margin:0;">Tokens</span>
-                    <span style="font-size:12px; color:#60a5fa; cursor:pointer;" onclick="showToast('Refreshed')"><i class="fa-solid fa-rotate"></i> Refresh</span>
+            <div class="section-card">
+                <div class="section-label">Wallet Address</div>
+                <div class="address-row">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="green-dot"></span>
+                        <span class="addr-text">EQBnKobCT...kU4ZC4G</span>
+                    </div>
+                    <button class="copy-btn" onclick="alert('Address Copied!')">Copy</button>
                 </div>
-                <div class="token-item">
-                    <div class="token-info">
-                        <div class="token-logo"><i class="fa-solid fa-gem"></i></div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Tokens</span>
+                    <span style="color:#3b82f6; cursor:pointer;" onclick="alert('Refreshed')">Refresh</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:38px; height:38px; background:rgba(59,130,246,0.2); border-radius:50%; display:flex; justify-content:center; align-items:center; color:#3b82f6;"><i class="fa-solid fa-gem"></i></div>
                         <div>
-                            <div class="token-name">TON</div>
-                            <div class="token-network">Toncoin • Mainnet</div>
+                            <div style="font-weight:600; font-size:14px;">TON</div>
+                            <div style="font-size:11px; color:#64748b;">Toncoin • Mainnet</div>
                         </div>
                     </div>
-                    <div class="token-amt">
-                        <div class="amt-val">0.0000 TON</div>
-                        <div class="amt-usd">$0.00</div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:600; font-size:14px;">0.0000 TON</div>
+                        <div style="font-size:11px; color:#64748b;">$0.00</div>
                     </div>
                 </div>
             </div>
         `;
-    } 
-    else if (tab === 'airdrop') {
-        // မှန်ကန်သော Design အတိုင်း Referral နှင့် Total Rewards များ 0 ဖြင့်စတင်စေရန် ပြင်ဆင်ထားသည်
-        content.innerHTML = `
-            <div class="airdrop-header-card">
-                <div class="airdrop-title-row">
-                    <i class="fa-solid fa-gift gift-icon"></i>
-                    <h2>Airdrop</h2>
+    } else if (tabName === 'airdrop') {
+        // Designer ပုံစံအတိုင်း Referral လုံးဝမလုပ်ရသေးပါက 0 အတိအကျပြရန်
+        contentArea.innerHTML = `
+            <div class="airdrop-card-custom">
+                <div class="airdrop-title">
+                    <i class="fa-solid fa-gift"></i>
+                    <span>Airdrop Rewards</span>
                 </div>
-                <p class="airdrop-sub">Check your tgn airdrop balance and rewards</p>
+                <div class="airdrop-desc">Your earned token balance</div>
 
-                <div class="total-reward-box">
-                    <div class="reward-left">
-                        <span class="rew-label">Total Rewards</span>
-                        <div class="rew-amount">0.00 TGN</div>
+                <div class="reward-box">
+                    <div>
+                        <span class="stat-label">Total Rewards</span>
+                        <div class="reward-val">0.00 TGN</div>
                     </div>
-                    <div class="tgn-logo-badge">TGN</div>
+                    <div class="tgn-badge">TGN</div>
                 </div>
 
-                <div class="airdrop-stats">
-                    <div class="stat-item">
-                        <span class="stat-lbl">Claimed</span>
-                        <span class="stat-val">0 / 8</span>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-label">Claimed</span>
+                        <span class="stat-number">0 / 8</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-lbl">Your Points</span>
-                        <span class="stat-val">0</span>
+                    <div class="stat-box">
+                        <span class="stat-label">Your Points</span>
+                        <span class="stat-number">0</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-lbl">Referrals</span>
-                        <span class="stat-val">0</span>
+                    <div class="stat-box">
+                        <span class="stat-label">Referrals</span>
+                        <span class="stat-number">0</span>
                     </div>
                 </div>
             </div>
         `;
-    }
-    else if (tab === 'activity') {
-        content.innerHTML = `<h2 class="screen-heading">Activity</h2><p style="color:#64748b; font-size:13px;">No recent activities found.</p>`;
-    }
-    else if (tab === 'send') {
-        content.innerHTML = `
-            <h2 class="screen-heading">Send</h2>
-            <div class="form-group">
-                <label>Recipient Address</label>
-                <input type="text" placeholder="UQ... / EQ...">
+    } else if (tabName === 'activity') {
+        contentArea.innerHTML = `<h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Activity</h2><p style="color:#64748b;">No recent activities.</p>`;
+    } else if (tabName === 'send') {
+        contentArea.innerHTML = `
+            <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Send</h2>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:6px;">Recipient Address</label>
+                <input type="text" placeholder="UQ... / EQ..." style="width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:12px; color:#fff;">
             </div>
-            <div class="form-group">
-                <label>Amount</label>
-                <input type="text" placeholder="0.00 TON">
+            <div style="margin-bottom:16px;">
+                <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:6px;">Amount</label>
+                <input type="text" placeholder="0.00 TON" style="width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:12px; color:#fff;">
             </div>
-            <button class="btn-full glow-btn" onclick="showToast('Withdrawal confirmed')">Confirm Withdrawal</button>
+            <button style="width:100%; background:#2563eb; color:#fff; padding:14px; border:none; border-radius:12px; font-weight:600; cursor:pointer;">Confirm Withdrawal</button>
         `;
-    }
-    else if (tab === 'wallet') {
-        content.innerHTML = `
-            <h2 class="screen-heading">Wallet</h2>
-            <div class="section-box">
-                <span class="section-title">TON Wallet Address</span>
-                <div style="font-size:14px; font-weight:600; color:#60a5fa; margin:8px 0 12px 0;">EQBnKobCT...kU4ZC4G</div>
-                <button class="btn-full glow-btn" onclick="showToast('Address Copied!')"><i class="fa-regular fa-copy"></i> Copy Address</button>
+    } else if (tabName === 'wallet') {
+        contentArea.innerHTML = `
+            <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Wallet</h2>
+            <div class="section-card">
+                <div class="section-label">TON Wallet Address</div>
+                <div style="font-size:14px; font-weight:600; color:#3b82f6; margin:8px 0 12px 0;">EQBnKobCT...kU4ZC4G</div>
+                <button class="btn-main" onclick="alert('Copied!')"><i class="fa-regular fa-copy"></i> Copy Address</button>
             </div>
         `;
-    }
-    else if (tab === 'profile') {
-        content.innerHTML = `
-            <h2 class="screen-heading">Profile</h2>
-            <div class="section-box" style="text-align:center; padding:20px;">
-                <div style="width:64px; height:64px; background:#1e3a8a; border-radius:50%; margin:0 auto 10px auto; display:flex; justify-content:center; align-items:center; font-size:24px; font-weight:700; color:#60a5fa;">J</div>
+    } else if (tabName === 'profile') {
+        contentArea.innerHTML = `
+            <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">Profile</h2>
+            <div class="section-card" style="text-align:center; padding:20px;">
+                <div style="width:64px; height:64px; background:#1e3a8a; border-radius:50%; margin:0 auto 10px auto; display:flex; justify-content:center; align-items:center; font-size:24px; font-weight:700; color:#3b82f6;">J</div>
                 <div style="font-weight:700; font-size:16px;">JAME</div>
-                <div style="font-size:13px; color:#60a5fa; margin-top:2px;">@jame158</div>
+                <div style="font-size:13px; color:#3b82f6; margin-top:2px;">@jame158</div>
             </div>
         `;
     }
 }
 
-function showToast(msg) {
-    let t = document.getElementById('toast');
-    if(!t) return;
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-// Initial Load
-switchNav('home');
+// Initial load
+window.onload = function() {
+    switchTab('home', document.querySelector('.nav-item'));
+};
