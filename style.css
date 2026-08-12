@@ -28,34 +28,11 @@ body {
   border: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Header */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #94a3b8;
-  background: #0d121f;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-icons {
-  display: flex;
-  gap: 16px;
-}
-
 /* Main Content Area */
 .main-content {
   flex: 1;
   padding: 16px;
+  padding-bottom: 70px;
   overflow-y: auto;
   background: #060911;
 }
