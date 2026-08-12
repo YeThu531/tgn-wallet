@@ -356,5 +356,11 @@ export async function claimAirdropTask(
 export {
   firebaseApp,
   db,
-  firestore
+  firestore,
+  getDB,
+  isFirebaseReady,
+  getUser,
+  saveUser,
+  getAirdropTasks,
+  claimAirdropTask
 };
