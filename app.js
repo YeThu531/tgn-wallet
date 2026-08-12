@@ -1,3 +1,13 @@
+import {
+    initFirebase,
+    getDB,
+    getUser,
+    saveUser,
+    getAirdropTasks,
+    claimAirdropTask
+} from "./firebase.js";
+
+// ဒီအောက်မှာ မင်းရဲ့ မူရင်း app.js code
 /* =========================================================
    TGN WALLET
    Telegram Mini App
@@ -102,14 +112,7 @@ if (tg) {
 }
 
 
-import {
-    initFirebase,
-    getDB,
-    getUser,
-    saveUser,
-    getAirdropTasks,
-    claimAirdropTask
-} from "./firebase.js";
+
 
 /* =========================================================
    TON WEB INIT
