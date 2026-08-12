@@ -102,55 +102,14 @@ if (tg) {
 }
 
 
-/* =========================================================
-   FIREBASE INIT
-   ========================================================= */
-
-async function initFirebase() {
-
-  if (firebaseReady)
-    return true;
-
-  try {
-
-    const firebase =
-      await import(
-        "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js"
-      );
-
-    const firestore =
-      await import(
-        "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
-      );
-
-    const app =
-      firebase.initializeApp(
-        CONFIG.FIREBASE
-      );
-
-    db =
-      firestore.getFirestore(app);
-
-    firebaseReady = true;
-
-    console.log(
-      "Firebase connected ✓"
-    );
-
-    return true;
-
-  } catch (error) {
-
-    console.error(
-      "Firebase initialization failed:",
-      error
-    );
-
-    firebaseReady = false;
-
-    return false;
-
-  }
+import {
+  initFirebase,
+  getDB,
+  getUser,
+  saveUser,
+  getAirdropTasks,
+  claimAirdropTask
+} from "./firebase.js";
 
 }
 
