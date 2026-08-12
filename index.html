@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TGN Wallet</title>
+  <title>TGN Wallet Bot</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+
   <div class="app-container">
+    <div id="toast" class="toast-msg">Copied!</div>
+
     <header class="app-header">
       <div class="header-title">
         <i class="fa-solid fa-xmark"></i> 
@@ -52,6 +55,19 @@
         <span>Profile</span>
       </button>
     </nav>
+
+    <div id="deposit-modal" class="step-modal">
+      <div class="modal-header-top">
+        <div class="modal-title-text">Deposit TON</div>
+        <i class="fa-solid fa-xmark modal-close-btn" onclick="closeModal('deposit-modal')"></i>
+      </div>
+      <div style="margin-top: 10px;">
+        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">ထည့်သွင်းလိုသော TON ပမာဏကို ရိုက်ထည့်ပါ -</p>
+        <input type="number" id="deposit-input" placeholder="e.g. 5.0" style="width: 100%; padding: 12px; background: rgba(15,23,42,0.8); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; color: #fff; font-size: 16px; outline: none; margin-bottom: 16px;">
+        <button class="btn-main" style="width: 100%; padding: 12px;" onclick="confirmDeposit()">Confirm Deposit</button>
+      </div>
+    </div>
+
   </div>
 
   <script src="app.js"></script>
