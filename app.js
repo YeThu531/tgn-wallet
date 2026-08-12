@@ -1,4 +1,4 @@
-// Dynamic States
+// State Variables
 let tonBalance = 0.00;
 let tgnAirdropBalance = 0.00;
 const userWalletAddress = "EQBnKobCT_kU4ZC4G89x2_TGN_Wallet_Address";
@@ -22,7 +22,7 @@ function switchTab(tabName, element) {
 
   const contentArea = document.getElementById('main-content');
 
-  // HOME TAB
+  // 1. HOME TAB
   if (tabName === 'home') {
     contentArea.innerHTML = `
       <div style="background: linear-gradient(135deg, #10192d 0%, #0a0f1d 100%); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 20px; padding: 20px; margin-bottom: 14px; color: #fff;">
@@ -38,7 +38,7 @@ function switchTab(tabName, element) {
         </div>
       </div>
 
-      <div style="background:#0d1322; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px; margin-bottom:14px; color:#fff;">
+      <div style="background:#0d1322 !important; border:1px solid rgba(255,255,255,0.08) !important; border-radius:16px; padding:16px; margin-bottom:14px; color:#fff;">
         <div style="font-size:11px; color:#64748b; margin-bottom:6px;">Wallet Address</div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:12px; color:#38bdf8; word-break:break-all;">${userWalletAddress}</span>
@@ -46,7 +46,7 @@ function switchTab(tabName, element) {
         </div>
       </div>
 
-      <div style="background:#0d1322; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px; color:#fff;">
+      <div style="background:#0d1322 !important; border:1px solid rgba(255,255,255,0.08) !important; border-radius:16px; padding:16px; color:#fff;">
         <div style="font-size:13px; font-weight:700; margin-bottom:14px; color:#f8fafc;">Tokens</div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; align-items:center; gap:12px;">
@@ -65,22 +65,22 @@ function switchTab(tabName, element) {
     `;
   }
 
-  // ACTIVITY TAB
+  // 2. ACTIVITY TAB
   else if (tabName === 'activity') {
     contentArea.innerHTML = `
       <h2 style="font-size:20px; font-weight:700; margin-bottom:16px; color:#fff;">Activity</h2>
-      <div style="background:#0d1322; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:30px 20px; text-align:center;">
+      <div style="background:#0d1322 !important; border:1px solid rgba(255,255,255,0.08) !important; border-radius:16px; padding:30px 20px; text-align:center;">
         <i class="fa-solid fa-clock-rotate-left" style="font-size:32px; color:#334155; margin-bottom:12px;"></i>
         <p style="color:#64748b; font-size:13px;">No recent activities.</p>
       </div>
     `;
   }
 
-  // SEND TAB
+  // 3. SEND TAB
   else if (tabName === 'send') {
     contentArea.innerHTML = `
       <h2 style="font-size:20px; font-weight:700; margin-bottom:16px; color:#fff;">Send TON</h2>
-      <div style="background:#0d1322; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px; color:#fff;">
+      <div style="background:#0d1322 !important; border:1px solid rgba(255,255,255,0.08) !important; border-radius:16px; padding:16px; color:#fff;">
         <div style="margin-bottom:14px;">
           <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:6px;">Recipient Address</label>
           <input type="text" placeholder="UQ... or EQ..." style="width:100%; background:#060911; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:12px; color:#fff; font-size:13px; outline:none;">
@@ -94,11 +94,11 @@ function switchTab(tabName, element) {
     `;
   }
 
-  // WALLET TAB
+  // 4. WALLET TAB
   else if (tabName === 'wallet') {
     contentArea.innerHTML = `
       <h2 style="font-size:20px; font-weight:700; margin-bottom:16px; color:#fff;">Wallet Details</h2>
-      <div style="background:#0d1322; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px; color:#fff;">
+      <div style="background:#0d1322 !important; border:1px solid rgba(255,255,255,0.08) !important; border-radius:16px; padding:16px; color:#fff;">
         <div style="font-size:12px; color:#64748b;">TON Network Address</div>
         <div style="font-size:12px; font-weight:600; color:#38bdf8; margin:10px 0 14px 0; word-break:break-all;">${userWalletAddress}</div>
         <button style="width:100%; background:#2563eb; color:#fff; border:none; padding:12px; border-radius:12px; font-weight:600; font-size:13px; cursor:pointer;" onclick="copyAddress()"><i class="fa-regular fa-copy"></i> Copy Address</button>
@@ -106,7 +106,7 @@ function switchTab(tabName, element) {
     `;
   }
 
-  // AIRDROP TAB
+  // 5. AIRDROP TAB
   else if (tabName === 'airdrop') {
     contentArea.innerHTML = `
       <div style="background:linear-gradient(135deg, #0d1222 0%, #080c18 100%); border:1px solid rgba(139,92,246,0.25); border-radius:20px; padding:20px; margin-bottom:16px; color:#fff;">
@@ -144,7 +144,7 @@ function switchTab(tabName, element) {
     `;
   }
 
-  // PROFILE TAB (FIXED DARK BACKGROUNDS ON ALL MENU ITEMS)
+  // 6. PROFILE TAB
   else if (tabName === 'profile') {
     contentArea.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -216,7 +216,6 @@ function switchTab(tabName, element) {
   }
 }
 
-// Menu Items Helper (Explicit Dark Blue Background)
 function renderMenuItem(icon, title, desc) {
   return `
     <div style="background:#0d1322 !important; border:1px solid rgba(255,255,255,0.06) !important; border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="showToast('${title}')">
