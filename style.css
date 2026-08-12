@@ -2,7 +2,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 body {
@@ -28,6 +28,7 @@ body {
   border: 1px solid rgba(255,255,255,0.08);
 }
 
+/* Header */
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -40,6 +41,18 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icons {
+  display: flex;
+  gap: 16px;
+}
+
+/* Main Content Area */
 .main-content {
   flex: 1;
   padding: 16px;
@@ -47,135 +60,7 @@ body {
   background: #060911;
 }
 
-/* Common Card Style */
-.ui-card {
-  background: #0d1322;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 18px;
-  padding: 18px;
-  margin-bottom: 14px;
-}
-
-/* Balance Card */
-.card-box {
-  background: linear-gradient(135deg, #10192d 0%, #0a0f1d 100%);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 14px;
-}
-
-.card-top {
-  display: flex;
-  justify-content: space-between;
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.balance-title {
-  font-size: 28px;
-  font-weight: 800;
-  color: #ffffff;
-  margin-top: 6px;
-}
-
-.balance-sub {
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 16px;
-}
-
-.btn-group {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-main {
-  flex: 1;
-  background: #2563eb;
-  color: #ffffff;
-  border: none;
-  padding: 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.btn-sub {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-/* Profile Section Styles */
-.profile-card {
-  background: linear-gradient(135deg, #0d172e 0%, #090e1a 100%);
-  border: 1px solid rgba(59,130,246,0.25);
-  border-radius: 20px;
-  padding: 18px;
-  margin-bottom: 16px;
-}
-
-.profile-avatar-wrap {
-  position: relative;
-  width: 54px;
-  height: 54px;
-  background: #2563eb;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 22px;
-  color: #ffffff;
-}
-
-.camera-badge {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  background: #1d4ed8;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 9px;
-  border: 2px solid #0d172e;
-}
-
-.menu-item {
-  background: #0d1322;
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 14px;
-  padding: 12px 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-}
-
-.menu-icon {
-  width: 36px;
-  height: 36px;
-  background: rgba(59,130,246,0.1);
-  border-radius: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #3b82f6;
-  font-size: 15px;
-}
-
-/* Bottom Nav */
+/* Bottom Navigation */
 .bottom-nav {
   position: absolute;
   bottom: 0;
@@ -185,7 +70,9 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   justify-content: space-around;
+  align-items: center;
   padding: 8px 4px 12px 4px;
+  z-index: 10;
 }
 
 .nav-item {
@@ -206,5 +93,26 @@ body {
 }
 
 .nav-item i {
+  font-size: 18px;
+}
+
+.send-nav-btn {
+  position: relative;
+  top: -12px;
+}
+
+.send-circle {
+  width: 44px;
+  height: 44px;
+  background: #2563eb;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+.send-circle i {
   font-size: 18px;
 }
