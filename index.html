@@ -1,199 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  >
-
-  <meta name="theme-color" content="#07101f">
-
-  <title>TGN Wallet</title>
-
-  <!-- Telegram -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- TON Web -->
-  <script src="https://cdn.jsdelivr.net/npm/tonweb@0.0.60/dist/tonweb.js"></script>
-
-  <!-- Existing Design -->
-  <link rel="stylesheet" href="style.css">
-
-  <style>
-    /* Keep the original 6-button navigation */
-    .bottom-nav {
-      grid-template-columns: repeat(6, 1fr) !important;
-    }
-
-    .nav-svg {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-    }
-
-    .nav-svg svg {
-      width: 22px;
-      height: 22px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TGN Wallet</title>
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <link rel="stylesheet" href="./style.css">
 </head>
-
 <body>
 
-  <div class="app-shell">
+    <div id="app" class="tgn-app-container">
+        
+        <div id="loading-screen" class="loading-screen">
+            <div class="spinner"></div>
+            <p>Loading TGN Wallet...</p>
+        </div>
 
-    <main id="content" class="content">
-      Loading…
-    </main>
+        <div id="main-content" style="display: none;">
+            
+            <header class="app-header">
+                <div class="user-info">
+                    <span id="user-name">TGN User</span>
+                    <span id="user-id" class="sub-text"></span>
+                </div>
+            </header>
 
-    <nav class="bottom-nav" aria-label="Main navigation">
+            <section class="wallet-section">
+                <div class="balance-card">
+                    <h3>TON Balance</h3>
+                    <h1 id="ton-balance">0.00 TON</h1>
+                    <button id="connect-wallet-btn" class="btn-primary">Connect Wallet</button>
+                </div>
+            </section>
 
-      <!-- HOME -->
-      <button
-        class="nav-item active"
-        id="nav-home"
-        type="button"
-        onclick="switchNav('home')"
-      >
-        <span class="nav-svg" data-icon="home"></span>
-        <span>Home</span>
-      </button>
+            <section class="tasks-section">
+                <h2>Airdrop Tasks</h2>
+                <div id="tasks-list" class="tasks-list">
+                    </div>
+            </section>
 
-
-      <!-- ACTIVITY -->
-      <button
-        class="nav-item"
-        id="nav-activity"
-        type="button"
-        onclick="switchNav('activity')"
-      >
-        <span class="nav-svg" data-icon="activity"></span>
-        <span>Activity</span>
-      </button>
-
-
-      <!-- SEND -->
-      <button
-        class="nav-item nav-send"
-        id="nav-send"
-        type="button"
-        onclick="switchNav('send')"
-      >
-        <span class="send-fab">
-
-          <span
-            class="nav-svg send-icon"
-            data-icon="send"
-          ></span>
-
-        </span>
-
-        <span>Send</span>
-      </button>
-
-
-      <!-- WALLET -->
-      <button
-        class="nav-item"
-        id="nav-wallet"
-        type="button"
-        onclick="switchNav('wallet')"
-      >
-        <span
-          class="nav-svg"
-          data-icon="wallet"
-        ></span>
-
-        <span>Wallet</span>
-      </button>
-
-
-      <!-- AIRDROP -->
-      <button
-        class="nav-item"
-        id="nav-airdrop"
-        type="button"
-        onclick="switchNav('airdrop')"
-      >
-        <span
-          class="nav-svg"
-          data-icon="airdrop"
-        ></span>
-
-        <span>Airdrop</span>
-      </button>
-
-
-      <!-- PROFILE -->
-      <button
-        class="nav-item"
-        id="nav-profile"
-        type="button"
-        onclick="switchNav('profile')"
-      >
-        <span
-          class="nav-svg"
-          data-icon="profile"
-        ></span>
-
-        <span>Profile</span>
-      </button>
-
-    </nav>
-
-  </div>
-
-
-  <!-- TOAST -->
-  <div
-    id="toast"
-    class="toast"
-  ></div>
-
-
-  <!-- MODAL -->
-  <div
-    id="modal"
-    class="modal"
-    onclick="if(event.target === this) closeModal()"
-  >
-
-    <div class="modal-card">
-
-      <div
-        class="modal-title"
-        id="mTitle"
-      >
-        TGN Wallet
-      </div>
-
-      <div
-        id="mBody"
-        class="modal-body"
-      ></div>
-
-      <button
-        class="btn secondary"
-        type="button"
-        onclick="closeModal()"
-      >
-        Close
-      </button>
-
+        </div>
     </div>
 
-  </div>
-
-
-  <!-- APP -->
-  <script
-    type="module"
-    src="app.js"
-  ></script>
-
+    <script type="module" src="./app.js"></script>
 </body>
 </html>
