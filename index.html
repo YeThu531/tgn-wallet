@@ -3,66 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#07101f">
   <title>TGN Wallet</title>
-
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
-  <div class="app-shell">
-    <div class="app-header">
-      <div class="header-left">
-        <i class="fa-solid fa-xmark close-btn"></i>
-        <span class="bot-name">TGNWallet-bot</span>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-title">
+        <i class="fa-solid fa-xmark"></i> 
+        <span>TGNWallet-bot</span>
       </div>
-      <div class="header-right">
+      <div class="header-icons">
         <i class="fa-solid fa-chevron-down"></i>
         <i class="fa-solid fa-ellipsis-vertical"></i>
       </div>
-    </div>
+    </header>
 
-    <main id="content" class="content">Loading…</main>
+    <main id="main-content" class="main-content">
+      </main>
 
-    <nav class="bottom-nav" aria-label="Main navigation">
-      <button class="nav-item active" id="nav-home" type="button" onclick="switchNav('home')">
+    <nav class="bottom-nav">
+      <button class="nav-item active" onclick="switchTab('home', this)">
         <i class="fa-solid fa-house"></i>
         <span>Home</span>
       </button>
-
-      <button class="nav-item" id="nav-activity" type="button" onclick="switchNav('activity')">
+      <button class="nav-item" onclick="switchTab('activity', this)">
         <i class="fa-solid fa-chart-line"></i>
         <span>Activity</span>
       </button>
-
-      <button class="nav-item nav-send" id="nav-send" type="button" onclick="switchNav('send')">
-        <div class="send-fab">
+      <button class="nav-item send-nav-btn" onclick="switchTab('send', this)">
+        <div class="send-circle">
           <i class="fa-solid fa-paper-plane"></i>
         </div>
         <span>Send</span>
       </button>
-
-      <button class="nav-item" id="nav-wallet" type="button" onclick="switchNav('wallet')">
+      <button class="nav-item" onclick="switchTab('wallet', this)">
         <i class="fa-solid fa-wallet"></i>
         <span>Wallet</span>
       </button>
-
-      <button class="nav-item" id="nav-airdrop" type="button" onclick="switchNav('airdrop')">
+      <button class="nav-item" onclick="switchTab('airdrop', this)">
         <i class="fa-solid fa-parachute-box"></i>
         <span>Airdrop</span>
-        <span class="nav-badge">NEW</span>
+        <span class="badge-new">NEW</span>
       </button>
-
-      <button class="nav-item" id="nav-profile" type="button" onclick="switchNav('profile')">
-        <i class="fa-regular fa-user"></i>
+      <button class="nav-item" onclick="switchTab('profile', this)">
+        <i class="fa-solid fa-user"></i>
         <span>Profile</span>
       </button>
     </nav>
   </div>
 
-  <div id="toast" class="toast"></div>
   <script src="app.js"></script>
 </body>
 </html>
