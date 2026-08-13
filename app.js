@@ -3,7 +3,7 @@ import {
   doc,
   getDoc,
   setDoc
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // =========================
 // TGN WALLET - APP.JS
@@ -1774,9 +1774,6 @@ function confirmWithdrawal() {
     return;
   }
 
-  // Real TON signing/transfer
-  // will be added later.
-
   showToast(
     "Withdrawal ready for wallet signing"
   );
@@ -1805,7 +1802,7 @@ window.confirmWithdrawal =
   confirmWithdrawal;
 
 // -------------------------
-// Startup
+// Startup Execution Fixed
 // -------------------------
 
 async function startApp() {
@@ -1855,7 +1852,9 @@ async function startApp() {
   }
 }
 
-document.addEventListener(
-  "DOMContentLoaded",
-  startApp
-);
+// Immediate execution check for Module scripts
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp);
+} else {
+  startApp();
+}
