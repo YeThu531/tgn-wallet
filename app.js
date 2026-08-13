@@ -1,3 +1,4 @@
+import { db } from "./firebase.js";
 // State Variables
 let tonBalance = 0.00;
 let tgnAirdropBalance = 0.00;
