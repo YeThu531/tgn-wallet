@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TGN Wallet</title>
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -11,7 +15,7 @@
 
   <div class="app-container">
     <main id="main-content" class="main-content">
-      </main>
+    </main>
 
     <nav class="bottom-nav">
       <button class="nav-item active" onclick="switchTab('home', this)">
@@ -43,7 +47,8 @@
     </nav>
   </div>
 
+  <!-- Firebase & App Scripts loaded as Modules -->
   <script type="module" src="firebase.js"></script>
-<script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
